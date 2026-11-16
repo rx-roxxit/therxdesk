@@ -1,3 +1,5 @@
+> **Start here:** The RX Desk's scope and decisions live in `idea.md`, and its vocabulary in `GLOSSARY.md`. Read both before planning or changing anything. `AGENTS.md` below describes upstream TryPost (much of it Cloud-only: billing, offers, PostHog). Use it as coding rules, not as the scope of this project.
+
 @AGENTS.md
 
 ## The RX Desk overrides
