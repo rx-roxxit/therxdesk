@@ -1,0 +1,17 @@
+# The RX Desk — Caddy in front of the app (see compose.rxdesk.yaml).
+# APP_DOMAIN comes from the caddy service's environment. Caddy gets the
+# certificate for it on its own (Let's Encrypt) and passes WebSocket upgrades
+# (Reverb, /app) through. It sits directly on the internet, so it replaces any
+# X-Forwarded-For a client sends; the app trusts Caddy's fixed address only.
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Billing is off, so Stripe never calls this site. Cashier's webhook is
+	# still registered and, without STRIPE_WEBHOOK_SECRET, accepts unsigned
+	# events: nothing may reach it from outside.
+	@stripe path /stripe /stripe/*
+	respond @stripe 404
+
+	reverse_proxy app:80
+}
