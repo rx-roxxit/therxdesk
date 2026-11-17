@@ -4,6 +4,7 @@ import { getCurrentScope, onScopeDispose } from 'vue';
 import { toast } from 'vue-sonner';
 
 import type { MediaUploader } from '@/composables/useMediaUpload';
+import { filled } from '@/lib/helpers';
 import { show, store } from '@/routes/app/media/imports';
 import type { MediaItem } from '@/types/media';
 
@@ -41,11 +42,26 @@ const FAILURE_REASONS = [
     'video_not_ready',
 ] as const;
 
+/** Import failures refused by the storage Quota, and their RX Desk copy. */
+const STORAGE_FAILURE_KEYS = new Map<string, string>([
+    ['storage_full', 'rxdesk.storage.errors.import_owner'],
+    ['owner_storage_full', 'rxdesk.storage.errors.quota_member'],
+]);
+
 /** Lang key for an import failure reason; unknown reasons read as a generic failure. */
-export const importErrorKey = (reason: string): string =>
-    (FAILURE_REASONS as readonly string[]).includes(reason)
-        ? `posts.composer.media_sources.errors.${reason}`
-        : 'posts.composer.media_sources.errors.import_failed';
+export const importErrorKey = (reason: string): string => {
+    const storageKey = STORAGE_FAILURE_KEYS.get(reason);
+
+    if (filled(storageKey)) {
+        return storageKey;
+    }
+
+    if ((FAILURE_REASONS as readonly string[]).includes(reason)) {
+        return `posts.composer.media_sources.errors.${reason}`;
+    }
+
+    return 'posts.composer.media_sources.errors.import_failed';
+};
 
 const MAX_POLLS = 800;
 
@@ -74,6 +90,21 @@ export const useMediaImport = () => {
         return null;
     };
 
+    /** A pick the server refused says why (a full storage), else fails generically. */
+    const refused = (message: string | undefined): void => {
+        if (disposed) {
+            return;
+        }
+
+        if (filled(message)) {
+            toast.error(message);
+
+            return;
+        }
+
+        failed();
+    };
+
     /** The imports a pick started, in tile order; empty when it could not start. */
     const run = async (payload: MediaImportPayload): Promise<string[]> => {
         const http = useHttp<MediaImportPayload, { import_ids: string[] }>(
@@ -85,7 +116,7 @@ export const useMediaImport = () => {
 
             return response.import_ids;
         } catch {
-            failed();
+            refused(http.errors.source);
 
             return [];
         }
