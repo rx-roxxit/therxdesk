@@ -24,6 +24,8 @@ use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\Storage\AccountStorage;
+use App\Support\ByteSize;
 use App\Support\HeicConverter;
 use App\Support\LinkTlds;
 use Illuminate\Http\Request;
@@ -71,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                     ? array_map(fn (ReferralSource $source): string => $source->value, ReferralSource::cases())
                     : null,
             'mcpPrompt' => fn (): ?array => $this->mcpPrompt($user),
+            'storage' => fn (): ?array => $this->storage($user),
             'usage' => fn (): ?array => $account && ! $isSelfHosted ? $account->usage() : null,
             'features' => fn (): ?array => $account && ! $isSelfHosted ? $account->featureLimits() : null,
             ...($user ? BuildChangelogProps::execute($user) : []),
@@ -173,6 +176,51 @@ class HandleInertiaRequests extends Middleware
         }
 
         return ['mcp_url' => route('mcp.trypost')];
+    }
+
+    /**
+     * The Owner's storage bar: Storage used and the Quota as bytes and as
+     * readable sizes, and the share used (0 to 100). Null for anyone who is
+     * not an account Owner. It is a closure, so it is read only when the page
+     * is rendered, and costs one account lookup and one sum.
+     *
+     * @return array{used: int, limit: int, used_label: string, limit_label: string, percent: int}|null
+     */
+    private function storage(?User $user): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        $storage = app(AccountStorage::class);
+        $account = $storage->ownerAccountOf($user);
+
+        if ($account === null) {
+            return null;
+        }
+
+        $usage = $storage->usage($account);
+
+        return [
+            'used' => $usage->used,
+            'limit' => $usage->limit,
+            'used_label' => ByteSize::format($usage->used),
+            'limit_label' => ByteSize::format($usage->limit),
+            'percent' => $this->percentOf($usage->used, $usage->limit),
+        ];
+    }
+
+    private function percentOf(int $used, int $limit): int
+    {
+        if ($used <= 0) {
+            return 0;
+        }
+
+        if ($limit <= 0) {
+            return 100;
+        }
+
+        return min(100, (int) round($used / $limit * 100));
     }
 
     private function showsReferralSources(?User $user, ?Account $account, bool $isSelfHosted): bool
