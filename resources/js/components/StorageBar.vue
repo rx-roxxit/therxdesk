@@ -25,7 +25,11 @@ const preferencesUrl = computed<string>(
     () => `${preferences.url()}${VIDEO_POLICY_ANCHOR}`,
 );
 const progressClass = computed<string>(() => {
-    if (storage.value !== null && storage.value.percent >= FULL_PERCENT) {
+    if (storage.value === null) {
+        return 'h-1.5';
+    }
+
+    if (storage.value.percent >= FULL_PERCENT) {
         return 'h-1.5 bg-destructive/20 [&>[data-slot=progress-indicator]]:bg-destructive';
     }
 
