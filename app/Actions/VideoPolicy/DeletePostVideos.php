@@ -90,6 +90,12 @@ class DeletePostVideos
 
             SyncOwnedMedia::execute($locked, self::without($locked->media ?? [], $videoIds), $batch);
 
+            VideoRecord::query()
+                ->where('post_id', $locked->id)
+                ->whereIn('media_id', $videoIds)
+                ->where('outcome', Outcome::BackupFailed)
+                ->delete();
+
             foreach ($videos as $video) {
                 VideoRecord::query()->create([
                     'post_id' => $locked->id,

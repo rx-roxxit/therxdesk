@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Media\Sources;
 
 use App\Enums\Media\Source;
+use App\Exceptions\Media\GoogleTokenRejected;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use RuntimeException;
@@ -88,6 +89,10 @@ class GoogleMediaOAuth
             ]);
 
         $accessToken = (string) $response->json('access_token', '');
+
+        if ($response->json('error') === 'invalid_grant') {
+            throw new GoogleTokenRejected('Google rejected the refresh token (invalid_grant).');
+        }
 
         if (! $response->successful() || $accessToken === '') {
             throw new RuntimeException("Google token refresh failed ({$response->status()}).");
