@@ -42,6 +42,8 @@ use App\Models\Workspace;
 use App\Models\WorkspaceLabel;
 use App\Models\WorkspaceSignature;
 use App\Services\PostHogService;
+use App\Services\Storage\DiskSpace;
+use App\Services\Storage\LocalDiskSpace;
 use App\Socialite\DiscordProvider;
 use App\Socialite\InstagramProvider;
 use App\Socialite\LinkedInPageExtendSocialite;
@@ -81,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(DiskSpace::class, LocalDiskSpace::class);
+
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);

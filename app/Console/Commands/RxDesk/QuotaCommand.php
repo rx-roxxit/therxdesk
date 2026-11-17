@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
 /**
  * The System admin's way to see and change an Owner's Quota, by email and in
  * human-readable sizes. Every change reports the Quotas handed out against
- * the usable storage, and warns when they add up to more.
+ * the space the disk can give to media, and warns when they add up to more.
  */
 class QuotaCommand extends Command
 {
@@ -113,25 +113,21 @@ class QuotaCommand extends Command
     }
 
     /**
-     * Compares the Quotas handed out with the usable storage, when it is set.
+     * Compares the Quotas handed out with the space media can actually use:
+     * free disk plus what the Owners store, minus the Disk guard threshold.
      */
     private function reportCommitment(AccountStorage $storage): void
     {
         $usable = $storage->usableSize();
-
-        if ($usable === null) {
-            return;
-        }
-
         $total = $storage->totalQuota();
 
         if ($total > $usable) {
-            $this->warn("Warning: the Quotas add up to {$this->size($total)}, more than the {$this->size($usable)} of usable storage (RXDESK_USABLE_STORAGE).");
+            $this->warn("Warning: the Quotas add up to {$this->size($total)}, more than the {$this->size($usable)} the disk can give to media (free disk plus Storage used, minus the Disk guard threshold).");
 
             return;
         }
 
-        $this->line("The Quotas add up to {$this->size($total)}, within the {$this->size($usable)} of usable storage.");
+        $this->line("The Quotas add up to {$this->size($total)}, within the {$this->size($usable)} the disk can give to media.");
     }
 
     private function email(): string

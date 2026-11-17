@@ -6,8 +6,12 @@ use App\Models\Media;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Support\FakeDiskSpace;
 
-beforeEach(fn () => config(['rxdesk.storage.default_quota' => '5GB']));
+beforeEach(fn () => config([
+    'rxdesk.storage.default_quota' => '5GB',
+    'rxdesk.storage.disk_guard_threshold' => '10GB',
+]));
 
 /**
  * An Owner with one workspace whose uploads take `$bytes`.
@@ -46,4 +50,27 @@ test("usage lists each Owner's Storage used and Quota", function () {
 test('usage says when there are no Owners yet', function () {
     expect(Artisan::call('rxdesk:usage'))->toBe(0)
         ->and(Artisan::output())->toContain('No Owners yet.');
+});
+
+test('usage shows the disk total, free space, the threshold and an inactive Disk guard', function () {
+    FakeDiskSpace::bind(free: 40 * 1024 ** 3, total: 100 * 1024 ** 3);
+    usageOwner('Ann', 'ann@example.com', 1024);
+
+    Artisan::call('rxdesk:usage');
+
+    expect(Artisan::output())
+        ->toContain('Disk total: 100 GB')
+        ->toContain('Disk free: 40 GB')
+        ->toContain('Disk guard threshold: 10 GB')
+        ->toContain('Disk guard: inactive');
+});
+
+test('usage says the Disk guard is active once free space drops under the threshold', function () {
+    FakeDiskSpace::bind(free: 9 * 1024 ** 3, total: 100 * 1024 ** 3);
+
+    Artisan::call('rxdesk:usage');
+
+    expect(Artisan::output())
+        ->toContain('Disk free: 9 GB')
+        ->toContain('Disk guard: ACTIVE: uploads and imports are refused');
 });
