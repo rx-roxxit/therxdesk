@@ -42,10 +42,11 @@ const FAILURE_REASONS = [
     'video_not_ready',
 ] as const;
 
-/** Import failures refused by the storage Quota, and their RX Desk copy. */
+/** Import failures refused by the storage Quota or the Disk guard, and their RX Desk copy. */
 const STORAGE_FAILURE_KEYS = new Map<string, string>([
     ['storage_full', 'rxdesk.storage.errors.import_owner'],
     ['owner_storage_full', 'rxdesk.storage.errors.quota_member'],
+    ['server_out_of_space', 'rxdesk.storage.errors.disk_guard'],
 ]);
 
 /** Lang key for an import failure reason; unknown reasons read as a generic failure. */
