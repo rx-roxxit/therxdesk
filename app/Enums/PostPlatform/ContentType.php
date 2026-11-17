@@ -538,7 +538,7 @@ enum ContentType: string
      */
     public function supportsCoverImage(): bool
     {
-        return in_array($this, [self::InstagramFeed, self::InstagramReel], true);
+        return in_array($this, [self::InstagramFeed, self::InstagramReel, self::YouTubeShort], true);
     }
 
     /**
