@@ -16,6 +16,7 @@ import PlatformBrandIcon from '@/components/PlatformBrandIcon.vue';
 import ThreadView from '@/components/posts/ThreadView.vue';
 import PostCardLabels from '@/components/publish/PostCardLabels.vue';
 import PostCardMenu from '@/components/publish/PostCardMenu.vue';
+import PostCoverOutcome from '@/components/publish/PostCoverOutcome.vue';
 import PostDetailsMedia from '@/components/publish/PostDetailsMedia.vue';
 import PostMetricsBand from '@/components/publish/PostMetricsBand.vue';
 import PostPollResults from '@/components/publish/PostPollResults.vue';
@@ -470,6 +471,8 @@ const siblingMoment = (sibling: PostCard): string | null => {
                     </template>
 
                     <PostVideoRecords :post="current" :test-key="currentKey" />
+
+                    <PostCoverOutcome :post="current" :test-key="currentKey" />
 
 
                     <PostCardLabels

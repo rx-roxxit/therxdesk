@@ -114,5 +114,8 @@ return [
             'too_large' => 'The Cover image must be :max MB or smaller. Export a smaller file, then upload it again.',
             'upload_failed' => "Couldn't upload the Cover image. Try again.",
         ],
+        'outcome' => [
+            'failed' => "Cover couldn't be set",
+        ],
     ],
 ];

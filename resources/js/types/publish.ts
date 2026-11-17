@@ -14,7 +14,7 @@ import type {
 } from '@/types/post';
 import type { VerifiedBadge } from '@/types/social-account';
 import type { SocialAccountStatusValue } from '@/types/social-account-status';
-import type { VideoRecord } from '@/types/video-policy';
+import type { CoverOutcome, VideoRecord } from '@/types/video-policy';
 
 export type PublishTab = 'queue' | 'approvals' | 'drafts' | 'sent';
 
@@ -101,6 +101,7 @@ export interface PostCard {
     notes_count: number;
     media?: MediaItem[];
     video_records?: VideoRecord[];
+    cover_outcome?: CoverOutcome | null;
     can_delete: boolean;
     metrics?: PostCardMetrics | null;
 }
