@@ -38,6 +38,14 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - Baseline (November 2026): the full suite takes about 13 minutes and passes except `BillingControllerTest` › "an amount discount is formatted in the user's language". Upstream's Alpine image ships English ICU data only (no `icu-data-full`), so `pt-BR` currency formatting falls back to `$18.00`. Billing is off when self-hosted; do not chase this failure.
 - After `docker compose down -v` (volumes wiped): `docker compose run --rm --no-deps app chown 1001:1001 vendor node_modules`, then `$R composer install` and `$R npm ci`.
 
+### The brand (The RX Desk, not TryPost)
+
+- Upstream lang files say "TryPost". After every upstream merge, run `$R php artisan rxdesk:rebrand-lang` and commit the result. It rewrites values only, never keys, and running it twice changes nothing. `tests/Feature/RxDesk/LangBrandTest.php` fails while any locale still says TryPost.
+- Upstream tests that pin a translated string containing the brand (e.g. `DeleteAccountCopyTest`) or its length (`tests/fixtures/single-line-copy.php`: "The RX Desk" is 4 characters longer) are updated to match after the rewrite.
+- The mark ("RX" on a rounded square) is defined once in `resources/js/lib/rxMark.ts` (`AppLogo.vue`, the share card). `public/favicon.svg` repeats its path; the PNG/ICO icons were rasterized from it with ImageMagick in the dev container (no SVG decoder there, so draw the path with `magick -draw`).
+- Email header and footer are `maizzle/components/{header,footer}.html`. Rebuild with `$R sh -c 'cd maizzle && npm ci && npm run build'`, never by editing `resources/views/mail`.
+- App name, mail-from name, legal links (the fork's README) and the disabled changelog come from env (`docker/.env.docker.example` for dev). Production build args are set by the production compose file.
+
 ## Agent skills
 
 ### Issue tracker

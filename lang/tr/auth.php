@@ -20,8 +20,8 @@ return [
     'throttle' => 'Çok fazla giriş denemesi. Lütfen :seconds saniye sonra tekrar deneyin.',
 
     'flash' => [
-        'welcome' => 'TryPost\'a hoş geldiniz!',
-        'welcome_trial' => 'TryPost\'a hoş geldiniz! Deneme süreniz başladı.',
+        'welcome' => 'The RX Desk\'a hoş geldiniz!',
+        'welcome_trial' => 'The RX Desk\'a hoş geldiniz! Deneme süreniz başladı.',
     ],
 
     'legal' => 'Devam ederek <a href=":terms_url" target="_blank">Hizmet Şartları</a> ve <a href=":privacy_url" target="_blank">Gizlilik Politikası</a>\'nı kabul etmiş olursunuz.',
@@ -35,7 +35,7 @@ return [
         ],
         'diego' => [
             'role' => 'CEO, Globalfy.com',
-            'quote' => 'TryPost\'un ne kadar kolay olduğunu seviyorum. Gönderiyi doğrudan Claude içinde hazırlayıp MCP ile yayımlıyor ve ileri bir tarihe planlıyorum. Kurulumu beş dakika sürdü.',
+            'quote' => 'The RX Desk\'un ne kadar kolay olduğunu seviyorum. Gönderiyi doğrudan Claude içinde hazırlayıp MCP ile yayımlıyor ve ileri bir tarihe planlıyorum. Kurulumu beş dakika sürdü.',
         ],
         'luiz' => [
             'role' => 'İçerik üreticisi',
@@ -60,7 +60,7 @@ return [
     'github_email_unavailable' => 'GitHub\'dan e-postanız alınamadı. GitHub e-postanızı herkese açık yapın veya e-posta iznini verin, ardından tekrar deneyin.',
 
     'login' => [
-        'title' => 'TryPost\'a giriş yapın',
+        'title' => 'The RX Desk\'a giriş yapın',
         'page_title' => 'Giriş yap',
         'email' => 'E-posta adresi',
         'password' => 'Parola',
@@ -74,7 +74,7 @@ return [
     ],
 
     'register' => [
-        'title' => 'TryPost hesabı oluşturun',
+        'title' => 'The RX Desk hesabı oluşturun',
         'page_title' => 'Kayıt ol',
         'name' => 'Ad',
         'name_placeholder' => 'Ad soyad',

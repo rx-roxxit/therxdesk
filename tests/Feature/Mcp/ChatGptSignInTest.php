@@ -125,7 +125,7 @@ describe('Claude keeps the plain OAuth flow', function () {
 
 describe('ChatGPT connects without a token and signs in from the conversation', function () {
     test('connecting and listing tools answer without a token, with the OAuth security scheme', function () {
-        chatGptSignInRequest($this, 'initialize', chatGptSignInInitializeParams(), CHATGPT_SIGN_IN_CHATGPT_IP)->assertOk()->assertJsonPath('result.serverInfo.name', 'TryPost');
+        chatGptSignInRequest($this, 'initialize', chatGptSignInInitializeParams(), CHATGPT_SIGN_IN_CHATGPT_IP)->assertOk()->assertJsonPath('result.serverInfo.name', 'The RX Desk');
         chatGptSignInRequest($this, 'notifications/initialized', ip: CHATGPT_SIGN_IN_CHATGPT_IP, notification: true)->assertAccepted();
         chatGptSignInRequest($this, 'ping', ip: CHATGPT_SIGN_IN_CHATGPT_IP)->assertOk();
 

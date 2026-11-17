@@ -281,7 +281,7 @@ test('the main sidebar navigation is ordered and the logo is the vector mark wit
     JS))->toMatchArray([
         'images' => 0,
         'visible' => 1,
-        'text' => 'trypost.it',
+        'text' => 'The RX Desk',
         'mark' => true,
     ])
         ->and($page->script("getComputedStyle(document.querySelector('[data-testid=\"sidebar-logo\"] [data-testid=\"app-logo\"]')).fontFamily"))->toContain('Roboto Slab');

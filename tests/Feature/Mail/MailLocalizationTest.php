@@ -91,8 +91,9 @@ test('the subject and body of a rendered mailable are actually translated', func
 
     $mailable->assertSeeInHtml(__('mail.account_disconnected.heading', [], 'pt-BR'));
     $mailable->assertSeeInHtml(__('mail.account_disconnected.reason_expired', [], 'pt-BR'));
-    $footer = (new Crawler($mailable->render()))->filter('p > a[href="https://trypost.it"]')->ancestors()->first();
-    expect($footer->text())->toBe(__('mail.layout.tagline', ['brand' => 'TryPost'], 'pt-BR'));
+    $appUrl = config('app.url');
+    $footer = (new Crawler($mailable->render()))->filter("p > a[href=\"{$appUrl}\"]")->ancestors()->first();
+    expect($footer->text())->toBe(__('mail.layout.tagline', ['brand' => 'The RX Desk'], 'pt-BR'));
     $mailable->assertDontSeeInHtml(__('mail.account_disconnected.heading', [], 'en'));
 });
 

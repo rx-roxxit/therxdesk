@@ -20,8 +20,8 @@ return [
     'throttle' => 'Zbyt wiele prób logowania. Spróbuj ponownie za :seconds s.',
 
     'flash' => [
-        'welcome' => 'Witamy w TryPost!',
-        'welcome_trial' => 'Witamy w TryPost! Twój okres próbny właśnie się rozpoczął.',
+        'welcome' => 'Witamy w The RX Desk!',
+        'welcome_trial' => 'Witamy w The RX Desk! Twój okres próbny właśnie się rozpoczął.',
     ],
 
     'legal' => 'Kontynuując, akceptujesz nasze <a href=":terms_url" target="_blank">Warunki korzystania z usługi</a> oraz <a href=":privacy_url" target="_blank">Politykę prywatności</a>.',
@@ -35,7 +35,7 @@ return [
         ],
         'diego' => [
             'role' => 'CEO, Globalfy.com',
-            'quote' => 'Podoba mi się, jak łatwo korzysta się z TryPost. Tworzę post bezpośrednio w Claude, a potem przez MCP publikuję go i planuję na przyszłość. Konfiguracja zajęła mi pięć minut.',
+            'quote' => 'Podoba mi się, jak łatwo korzysta się z The RX Desk. Tworzę post bezpośrednio w Claude, a potem przez MCP publikuję go i planuję na przyszłość. Konfiguracja zajęła mi pięć minut.',
         ],
         'luiz' => [
             'role' => 'Twórca treści',
@@ -60,7 +60,7 @@ return [
     'github_email_unavailable' => 'Nie udało się pobrać Twojego adresu e-mail z GitHuba. Ustaw swój adres e-mail w GitHubie jako publiczny lub przyznaj uprawnienie do e-maila, a następnie spróbuj ponownie.',
 
     'login' => [
-        'title' => 'Zaloguj się do TryPost',
+        'title' => 'Zaloguj się do The RX Desk',
         'page_title' => 'Zaloguj się',
         'email' => 'Adres e-mail',
         'password' => 'Hasło',
@@ -74,7 +74,7 @@ return [
     ],
 
     'register' => [
-        'title' => 'Utwórz konto TryPost',
+        'title' => 'Utwórz konto The RX Desk',
         'page_title' => 'Rejestracja',
         'name' => 'Imię i nazwisko',
         'name_placeholder' => 'Imię i nazwisko',

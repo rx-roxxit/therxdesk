@@ -82,8 +82,8 @@ return [
             'edit_in_canva' => ':name bewerken in Canva',
             'errors' => [
                 'import_failed' => 'Het bestand kon niet worden geïmporteerd. Probeer het opnieuw.',
-                'popup_blocked' => 'Je browser heeft het venster geblokkeerd. Sta pop-ups toe voor TryPost en probeer het opnieuw.',
-                'scope_not_granted' => 'TryPost heeft toegang nodig tot het bestand dat je kiest. Probeer het opnieuw en sta het toe.',
+                'popup_blocked' => 'Je browser heeft het venster geblokkeerd. Sta pop-ups toe voor The RX Desk en probeer het opnieuw.',
+                'scope_not_granted' => 'The RX Desk heeft toegang nodig tot het bestand dat je kiest. Probeer het opnieuw en sta het toe.',
                 'session_expired' => 'Je sessie is verlopen. Open de bron opnieuw.',
                 'video_not_ready' => 'Google Photos verwerkt deze video nog. Probeer het over een paar minuten opnieuw.',
                 'google_connect_failed' => 'Kan geen verbinding maken met Google. Probeer het opnieuw.',
@@ -386,7 +386,7 @@ return [
                 'play' => 'Voorbeeld afspelen',
                 'pause' => 'Voorbeeld pauzeren',
                 'remove' => 'Muziek verwijderen',
-                'part_hint' => 'Instagram laat TryPost niet kiezen welk deel van het nummer speelt.',
+                'part_hint' => 'Instagram laat The RX Desk niet kiezen welk deel van het nummer speelt.',
                 'volume' => 'Volume',
                 'video_volume' => 'Video',
                 'audio_volume' => 'Muziek',
@@ -1101,7 +1101,7 @@ return [
         ],
         'created_by' => 'Gemaakt door :name :when',
         'welcome' => [
-            'title' => 'Welkom bij TryPost 👋',
+            'title' => 'Welkom bij The RX Desk 👋',
             'description' => 'Koppel een kanaal om je posts te plannen en te publiceren.',
             'invite' => 'Nodig je team uit',
             'connect_more' => 'Meer kanalen koppelen',
