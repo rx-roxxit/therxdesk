@@ -9,7 +9,7 @@ use App\Support\ByteSize;
 
 /**
  * Why `AccountStorage` refuses to store more bytes for an account. The Disk
-guard is checked first, so its "server is out of space" wins over the Quota.
+ * guard is checked first, so its "server is out of space" wins over the Quota.
  */
 enum StorageRefusal: string
 {
