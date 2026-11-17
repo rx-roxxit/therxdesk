@@ -49,13 +49,16 @@ use App\Http\Controllers\App\RssFeedCollectionController;
 use App\Http\Controllers\App\RssFeedController;
 use App\Http\Controllers\App\RssFeedItemController;
 use App\Http\Controllers\App\Settings\ConnectedAccountController;
+use App\Http\Controllers\App\Settings\DriveBackupController;
 use App\Http\Controllers\App\Settings\NotificationPreferenceController;
 use App\Http\Controllers\App\Settings\PasswordController;
 use App\Http\Controllers\App\Settings\PreferencesController;
 use App\Http\Controllers\App\Settings\ProfileController;
 use App\Http\Controllers\App\Settings\SessionController;
+use App\Http\Controllers\App\Settings\VideoPolicyController;
 use App\Http\Controllers\App\TourController;
 use App\Http\Controllers\App\UnsplashController;
+use App\Http\Controllers\App\VideoBackupRetryController;
 use App\Http\Controllers\App\WebhookController;
 use App\Http\Controllers\App\WelcomeController;
 use App\Http\Controllers\App\WorkspaceController;
@@ -262,6 +265,7 @@ Route::middleware(['auth', EnsureAccountReady::class, EnsureHasWorkspace::class]
     Route::patch('posts/{post}/labels', [PostLabelController::class, 'update'])->name('app.posts.labels.update');
     Route::patch('posts/{post}/recurrence', [PostRecurrenceController::class, 'update'])->name('app.posts.recurrence.update');
     Route::delete('posts/{post}/recurrence', [PostRecurrenceController::class, 'destroy'])->name('app.posts.recurrence.destroy');
+    Route::post('posts/{post}/video-backup/retry', [VideoBackupRetryController::class, 'store'])->name('app.posts.video-backup.retry');
     Route::get('posts/{post}/group', [PostGroupController::class, 'show'])->name('app.posts.group.show');
     Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('app.posts.destroy');
     Route::post('posts/{post}/duplicate', [PostController::class, 'duplicate'])->name('app.posts.duplicate');
@@ -440,6 +444,14 @@ Route::middleware(['auth'])->group(function () {
     Route::put('settings/language', [ProfileController::class, 'updateLanguage'])->name('app.profile.language');
     Route::get('settings/preferences', [PreferencesController::class, 'edit'])->name('app.settings.preferences');
     Route::patch('settings/preferences', [PreferencesController::class, 'update'])->name('app.settings.preferences.update');
+    Route::patch('settings/preferences/video-policy', [VideoPolicyController::class, 'update'])->name('app.settings.video-policy.update');
+    Route::get('settings/preferences/drive/connect', [DriveBackupController::class, 'connect'])
+        ->middleware('throttle:media-imports')
+        ->name('app.settings.drive-backup.connect');
+    Route::get('settings/preferences/drive/callback', [DriveBackupController::class, 'callback'])
+        ->middleware('throttle:media-imports')
+        ->name('app.settings.drive-backup.callback');
+    Route::delete('settings/preferences/drive', [DriveBackupController::class, 'destroy'])->name('app.settings.drive-backup.destroy');
 });
 
 Route::middleware(['auth'])->group(function () {

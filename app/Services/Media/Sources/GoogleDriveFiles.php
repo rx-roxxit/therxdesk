@@ -18,7 +18,7 @@ class GoogleDriveFiles
     public const string FILE_ID_PATTERN = '/^[A-Za-z0-9_-]+$/';
 
     /**
-     * @param  array{id: string, name?: ?string}  $file
+     * @param  array{id: string, name?: ?string, size?: ?int}  $file  `size` is the Picker's declared byte size
      */
     public static function toRemoteFile(string $accessToken, array $file): RemoteFile
     {
@@ -37,6 +37,7 @@ class GoogleDriveFiles
             Source::GoogleDrive->downloadHosts(),
             Source::GoogleDrive,
             ['file_id' => $fileId],
+            transform(data_get($file, 'size'), fn (mixed $size): int => (int) $size),
         );
     }
 }

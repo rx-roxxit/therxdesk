@@ -9,10 +9,18 @@ import type {
     TimeFormat,
     WeekStart,
 } from '@/preferences';
-import type { ScrollChangelogEntries, SharedChangelog } from '@/types/changelog';
+import type {
+    ScrollChangelogEntries,
+    SharedChangelog,
+} from '@/types/changelog';
 import type { AuthPlan, Features, PlanOption } from '@/types/plan';
 
-export type { AuthPlan, BillingInterval, Features, PlanOption } from '@/types/plan';
+export type {
+    AuthPlan,
+    BillingInterval,
+    Features,
+    PlanOption,
+} from '@/types/plan';
 export type { WelcomeStep } from '@/types/welcome';
 
 export interface Workspace {
@@ -100,6 +108,15 @@ export interface MediaUploadLimits {
     heic: boolean;
 }
 
+/** The Owner's Storage used and Quota (`HandleInertiaRequests::storage()`). */
+export interface StorageSummary {
+    used: number;
+    limit: number;
+    used_label: string;
+    limit_label: string;
+    percent: number;
+}
+
 export interface SharedData {
     name: string;
     auth: Auth;
@@ -114,6 +131,7 @@ export interface SharedData {
     mediaSources?: { menu: MediaSourceOption[] } | null;
     referralSources?: string[] | null;
     mcpPrompt?: { mcp_url: string } | null;
+    storage?: StorageSummary | null;
     changelog?: SharedChangelog | null;
     changelogEntries?: ScrollChangelogEntries;
     mediaUploadLimits?: MediaUploadLimits | null;

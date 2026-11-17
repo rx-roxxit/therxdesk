@@ -9,8 +9,11 @@ use App\Dto\RemoteFile;
 use App\Enums\Media\Type as MediaType;
 use App\Models\Media;
 use App\Models\Workspace;
+use App\Exceptions\Storage\StorageRefused;
 use App\Services\Http\SafeHttpFetcher;
+use App\Services\Storage\AccountStorage;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -21,12 +24,27 @@ use Throwable;
  * The one way a remote file becomes a temporary upload: SSRF guard and host
  * allowlist on every hop, a byte cap while streaming, the MIME sniffed from
  * the bytes, then the per-type cap.
+ *
+ * The RX Desk: the account's storage (`AccountStorage`) is asked before any
+ * byte lands. A file whose source declared its size is refused before the
+ * request when it does not fit, and one of unknown size while the storage is
+ * full; the stream is capped at the room left, so a response announcing more
+ * (its Content-Length) stops before the body. Each throws `StorageRefused`.
+ * The new media row's own check (`MediaStorageObserver`) stays the backstop.
  */
 class RemoteMediaImporter
 {
     private const int MAX_FILENAME_LENGTH = 255;
 
-    public function __construct(private readonly SafeHttpFetcher $safeHttp) {}
+    /**
+     * The download outgrew the room left in the account's storage.
+     */
+    private const string OVER_STORAGE = 'over_storage';
+
+    public function __construct(
+        private readonly SafeHttpFetcher $safeHttp,
+        private readonly AccountStorage $storage,
+    ) {}
 
     /**
      * `$deadline` bounds the whole transfer, redirects included; a transfer
@@ -34,6 +52,8 @@ class RemoteMediaImporter
      * Redirects are refused unless `$followRedirects`.
      *
      * @param  array<MediaType>  $allowedTypes
+     *
+     * @throws StorageRefused when the file does not fit the account's storage
      */
     public function import(Workspace $workspace, RemoteFile $file, array $allowedTypes, int $timeoutSeconds, ?CarbonInterface $deadline = null, bool $followRedirects = false): ImportedFile
     {
@@ -45,7 +65,15 @@ class RemoteMediaImporter
             return ImportedFile::failed(ImportedFile::HOST_NOT_ALLOWED);
         }
 
-        $download = $this->download($file, max(array_map(fn (MediaType $type): int => $type->maxSizeInBytes(), $allowedTypes)), $timeoutSeconds, $deadline, $followRedirects);
+        $this->storage->ensureCanStore($workspace, $file->size ?? 1, Auth::user());
+
+        $typeCap = max(array_map(fn (MediaType $type): int => $type->maxSizeInBytes(), $allowedTypes));
+        $room = $this->storage->room($workspace->account);
+        $download = $this->download($file, min($typeCap, $room), $timeoutSeconds, $deadline, $followRedirects, capIsStorage: $room < $typeCap);
+
+        if ($download === self::OVER_STORAGE) {
+            $this->storage->ensureCanStore($workspace, $room + 1, Auth::user());
+        }
 
         if (is_string($download)) {
             return ImportedFile::failed($download);
@@ -105,11 +133,12 @@ class RemoteMediaImporter
 
     /**
      * Stream the file to a temp path. A failure reason when the transfer is
-     * blocked, oversized or unsuccessful.
+     * blocked, oversized or unsuccessful; `OVER_STORAGE` when it outgrew a cap
+     * set by the room left in storage (`$capIsStorage`).
      *
      * @return array{path: string, mime: ?string, bytes: int}|string
      */
-    private function download(RemoteFile $file, int $cap, int $timeoutSeconds, ?CarbonInterface $deadline, bool $followRedirects): array|string
+    private function download(RemoteFile $file, int $cap, int $timeoutSeconds, ?CarbonInterface $deadline, bool $followRedirects, bool $capIsStorage = false): array|string
     {
         if ($this->pastDeadline($deadline)) {
             return ImportedFile::UNREACHABLE;
@@ -141,8 +170,12 @@ class RemoteMediaImporter
                 $cap,
                 $deadline,
                 timeoutSeconds: $timeoutSeconds,
-                onExceeded: function () use (&$failure): void {
+                onExceeded: function () use (&$failure, $capIsStorage): void {
                     $failure = ImportedFile::TOO_LARGE;
+
+                    if ($capIsStorage) {
+                        $failure = self::OVER_STORAGE;
+                    }
                 },
             )->sink($temp)->get($file->url);
         } catch (Throwable) {
