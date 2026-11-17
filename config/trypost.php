@@ -214,6 +214,12 @@ return [
         'google_drive' => [
             'enabled' => (bool) env('GOOGLE_DRIVE_ENABLED', true),
             'api' => $url('GOOGLE_DRIVE_API_URL', 'https://www.googleapis.com/drive/v3'),
+            'upload_api' => $url('GOOGLE_DRIVE_UPLOAD_API_URL', 'https://www.googleapis.com/upload/drive/v3'),
+            /*
+             * Bytes sent per request of a Video policy backup (a resumable
+             * upload). Google wants a multiple of 256 KiB; 8 MiB by default.
+             */
+            'backup_chunk_bytes' => (int) env('GOOGLE_DRIVE_BACKUP_CHUNK_BYTES', 8 * 1024 * 1024),
             'picker_sdk' => $url('GOOGLE_PICKER_SDK_URL', 'https://apis.google.com/js/api.js'),
             'download_hosts' => env('GOOGLE_DRIVE_DOWNLOAD_HOSTS', 'www.googleapis.com,*.googleusercontent.com'),
         ],
