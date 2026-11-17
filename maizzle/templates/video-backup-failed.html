@@ -1,0 +1,38 @@
+<x-main>
+  <x-message authenticated="true">
+    <x-heading>
+      @{{ __('rxdesk.video_backup_failed.heading') }}
+    </x-heading>
+
+    <p class="m-0 leading-6">
+      @{{ __('rxdesk.video_backup_failed.body', ['workspace' => $workspaceName]) }}
+    </p>
+
+    @if(count($fileNames) > 0)
+      <div class="email-context">
+        @foreach($fileNames as $fileName)
+          <p dir="ltr" class="m-0 text-sm font-semibold text-foreground break-all">
+            @{{ $fileName }}
+          </p>
+        @endforeach
+      </div>
+    @endif
+
+    @if($needsReconnect)
+      <p class="m-0 mt-6 leading-6">
+        @{{ __('rxdesk.video_backup_failed.reconnect') }}
+        <a href="@{{ $preferencesUrl }}">@{{ __('rxdesk.video_backup_failed.reconnect_link') }}</a>
+      </p>
+    @endif
+
+    <p class="m-0 mt-6 leading-6">
+      @{{ __('rxdesk.video_backup_failed.next_steps') }}
+    </p>
+
+    <x-spacer height="24px" />
+
+    <x-button href="@{{ $url }}">
+      @{{ __('rxdesk.video_backup_failed.button') }}
+    </x-button>
+  </x-message>
+</x-main>
