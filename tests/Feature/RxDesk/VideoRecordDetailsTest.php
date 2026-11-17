@@ -74,3 +74,22 @@ test('the post details carry the video backed up line with its drive link', func
         ->assertJsonPath('0.video_records.0.drive_link', 'https://drive.google.test/file/d/drive-file-1/view')
         ->assertJsonMissingPath('0.video_records.0.drive_file_id');
 });
+
+test('the post details carry the backup failed line without the error', function () {
+    VideoRecord::query()->delete();
+    VideoRecord::factory()->create([
+        'post_id' => $this->post->id,
+        'original_filename' => 'launch.mp4',
+        'outcome' => Outcome::BackupFailed,
+        'attempts' => 6,
+        'last_error' => 'internal detail',
+    ]);
+
+    $this->actingAs($this->user)
+        ->getJson(route('app.posts.group.show', $this->post))
+        ->assertOk()
+        ->assertJsonPath('0.video_records.0.outcome', 'backup_failed')
+        ->assertJsonPath('0.video_records.0.original_filename', 'launch.mp4')
+        ->assertJsonMissingPath('0.video_records.0.last_error')
+        ->assertJsonMissingPath('0.video_records.0.attempts');
+});

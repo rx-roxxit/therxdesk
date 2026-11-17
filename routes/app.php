@@ -58,6 +58,7 @@ use App\Http\Controllers\App\Settings\SessionController;
 use App\Http\Controllers\App\Settings\VideoPolicyController;
 use App\Http\Controllers\App\TourController;
 use App\Http\Controllers\App\UnsplashController;
+use App\Http\Controllers\App\VideoBackupRetryController;
 use App\Http\Controllers\App\WebhookController;
 use App\Http\Controllers\App\WelcomeController;
 use App\Http\Controllers\App\WorkspaceController;
@@ -264,6 +265,7 @@ Route::middleware(['auth', EnsureAccountReady::class, EnsureHasWorkspace::class]
     Route::patch('posts/{post}/labels', [PostLabelController::class, 'update'])->name('app.posts.labels.update');
     Route::patch('posts/{post}/recurrence', [PostRecurrenceController::class, 'update'])->name('app.posts.recurrence.update');
     Route::delete('posts/{post}/recurrence', [PostRecurrenceController::class, 'destroy'])->name('app.posts.recurrence.destroy');
+    Route::post('posts/{post}/video-backup/retry', [VideoBackupRetryController::class, 'store'])->name('app.posts.video-backup.retry');
     Route::get('posts/{post}/group', [PostGroupController::class, 'show'])->name('app.posts.group.show');
     Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('app.posts.destroy');
     Route::post('posts/{post}/duplicate', [PostController::class, 'duplicate'])->name('app.posts.duplicate');

@@ -54,4 +54,20 @@ return [
             'scope_not_granted' => 'Google Drive was not connected because access was not granted. Try again and allow access.',
         ],
     ],
+    'video_backup_failed' => [
+        'subject' => 'A video backup failed in :workspace',
+        'title' => 'Video backup failed',
+        'preview' => "We couldn't back up a video to your Google Drive.",
+        'heading' => 'Video backup failed',
+        'body' => "We tried several times and couldn't back up a video from a post in :workspace to your Google Drive. The video is still on the server.",
+        'reconnect' => 'Google rejected the Drive connection.',
+        'reconnect_link' => 'Reconnect Google Drive',
+        'next_steps' => 'Open the post and choose Retry once the problem is fixed.',
+        'button' => 'Open the post',
+    ],
+    'video_backup' => [
+        'failed' => 'Backup failed',
+        'retry' => 'Retry',
+        'retrying' => 'Retrying the backup.',
+    ],
 ];
