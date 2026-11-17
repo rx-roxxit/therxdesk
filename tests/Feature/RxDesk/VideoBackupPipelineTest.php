@@ -9,6 +9,7 @@ use App\Enums\Post\Status as PostStatus;
 use App\Enums\VideoRecord\Outcome;
 use App\Jobs\Media\DeleteMediaFiles;
 use App\Jobs\VideoPolicy\ApplyVideoPolicy;
+use App\Mail\VideoBackupFailed;
 use App\Models\Media;
 use App\Models\MediaSourceConnection;
 use App\Models\Post;
@@ -18,10 +19,14 @@ use App\Models\Workspace;
 use Illuminate\Http\Client\Request;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 
 const BACKUP_TEST_DRIVE_API = 'https://drive.google.test/drive/v3';
 
@@ -34,6 +39,7 @@ const BACKUP_TEST_FOLDER_MIME = 'application/vnd.google-apps.folder';
 beforeEach(function () {
     $this->freezeTime();
     Storage::fake();
+    Mail::fake();
     config()->set([
         'queue.default' => 'database',
         'services.google_media.client_id' => 'media-client-id',
@@ -118,11 +124,17 @@ function fakeDrive(): stdClass
     $drive->folders = [];
     $drive->sessions = [];
     $drive->failUploads = false;
+    $drive->tokenGrantRejected = false;
+    $drive->onChunk = null;
 
     Http::fake(function (Request $request) use ($drive) {
         $url = $request->url();
 
         if (Str::startsWith($url, BACKUP_TEST_TOKEN_API)) {
+            if ($drive->tokenGrantRejected) {
+                return Http::response(['error' => 'invalid_grant', 'error_description' => 'Token has been expired or revoked.'], 400);
+            }
+
             return Http::response(['access_token' => 'drive-refreshed', 'expires_in' => 3599]);
         }
 
@@ -160,6 +172,10 @@ function fakeDrive(): stdClass
         if ($request->method() === 'PUT' && Str::startsWith($url, BACKUP_TEST_UPLOAD_API.'/files')) {
             if ($drive->failUploads) {
                 return Http::response(['error' => ['code' => 500, 'message' => 'Backend Error']], 500);
+            }
+
+            if ($drive->onChunk !== null) {
+                ($drive->onChunk)();
             }
 
             $session = Str::after($url, 'upload_id=');
@@ -297,7 +313,7 @@ test('a post whose group upload is not done yet waits, then reuses the drive fil
     $this->assertDatabaseCount('failed_jobs', 0);
 });
 
-test('a failed upload keeps the video and records no backup', function () {
+test('a backup that keeps failing is recorded as failed after the last try, keeps the file and emails the Owner once', function () {
     $drive = fakeDrive();
     $drive->failUploads = true;
     ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
@@ -306,14 +322,260 @@ test('a failed upload keeps the video and records no backup', function () {
     $this->travel(1)->hours();
     runDueBackupJobs();
 
+    foreach (ApplyVideoPolicy::BACKOFF_SECONDS as $index => $seconds) {
+        expect(VideoRecord::query()->count())->toBe(0);
+        Mail::assertNothingQueued();
+
+        $this->travel($seconds)->seconds();
+        runDueBackupJobs();
+    }
+
+    $record = VideoRecord::query()->sole();
+
+    expect($drive->sessions)->toHaveCount(6)
+        ->and($record->outcome)->toBe(Outcome::BackupFailed)
+        ->and($record->post_id)->toBe($post->id)
+        ->and($record->media_id)->toBe($video->id)
+        ->and($record->attempts)->toBe(6)
+        ->and($record->last_error)->toContain('500')
+        ->and(data_get($post->refresh()->media, '0.id'))->toBe($video->id);
+    Storage::assertExists($video->path);
+    expect(Media::query()->whereKey($video->id)->exists())->toBeTrue()
+        ->and($this->queue->size('default'))->toBe(0);
+    $this->assertDatabaseCount('failed_jobs', 0);
+
+    Mail::assertQueuedCount(1);
+    Mail::assertQueued(VideoBackupFailed::class, fn (VideoBackupFailed $mail): bool => $mail->hasTo($this->account->owner->email)
+        && $mail->post->is($post)
+        && $mail->needsReconnect === false);
+});
+
+test('a token Google rejects marks the connection as needing reconnect and fails the backup at once', function () {
+    $this->connection->forceFill(['expires_at' => now()->subMinute(), 'refresh_token' => 'stored-refresh'])->save();
+    $drive = fakeDrive();
+    $drive->tokenGrantRejected = true;
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+
+    markBackupPostPublished($post);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    expect($this->connection->refresh()->needsReconnect())->toBeTrue()
+        ->and($drive->sessions)->toHaveCount(0)
+        ->and($this->queue->size('default'))->toBe(0);
+
+    $record = VideoRecord::query()->sole();
+    expect($record->outcome)->toBe(Outcome::BackupFailed)
+        ->and($record->attempts)->toBe(1)
+        ->and(Media::query()->whereKey($video->id)->exists())->toBeTrue();
+    Storage::assertExists($video->path);
+
+    Mail::assertQueued(VideoBackupFailed::class, fn (VideoBackupFailed $mail): bool => $mail->needsReconnect === true);
+
+    $this->actingAs($this->account->owner)
+        ->get(route('app.settings.preferences'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('driveConnection', 'needs_reconnect'));
+});
+
+test('a second run of the same upload does not upload the file twice at once', function () {
+    $drive = fakeDrive();
+    ['post' => $post] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $second = null;
+    $drive->onChunk = function () use ($drive, $post, &$second): void {
+        $drive->onChunk = null;
+        $second = \App\Actions\VideoPolicy\BackupPostVideos::execute($post->fresh());
+    };
+
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    expect($second)->toBeFalse()
+        ->and($drive->sessions)->toHaveCount(1)
+        ->and(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackedUp);
+});
+
+test('a file whose upload lock is held is not uploaded until the lock is released', function () {
+    $drive = fakeDrive();
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $lock = Cache::lock("video-backup:{$this->groupId}:{$video->id}", 86400);
+    $lock->get();
+
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    expect($drive->sessions)->toHaveCount(0)
+        ->and(VideoRecord::query()->count())->toBe(0);
+
+    $lock->release();
+    $this->travel(5)->minutes();
+    runDueBackupJobs();
+
+    expect($drive->sessions)->toHaveCount(1)
+        ->and(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackedUp);
+});
+
+test('when the uploader succeeds the posts waiting on it finish at once', function () {
+    $drive = fakeDrive();
+    $drive->failUploads = true;
+    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
+    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
+    markBackupPostPublished($first);
+    $this->travel(2)->minutes();
+    markBackupPostPublished($second);
+
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+    expect(Media::query()->whereKey($copy->id)->exists())->toBeTrue();
+
+    $drive->failUploads = false;
+    DB::table('jobs')->delete();
+    ApplyVideoPolicy::dispatch($first->id);
+    $this->worker->runNextJob('database', 'default', $this->workerOptions);
+
+    expect(VideoRecord::query()->count())->toBe(1);
+    expect($this->queue->pendingSize('default'))->toBeGreaterThan(0);
+
+    runDueBackupJobs();
+
+    expect(VideoRecord::query()->pluck('outcome')->all())->toBe([Outcome::BackedUp, Outcome::BackedUp])
+        ->and(Media::query()->whereKey($copy->id)->exists())->toBeFalse()
+        ->and($drive->sessions)->toHaveCount(2);
+});
+
+test('a waiting post that runs out of tries before its uploader has given up is not marked failed', function () {
+    $drive = fakeDrive();
+    $drive->failUploads = true;
+    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
+    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
+    markBackupPostPublished($first);
+    $this->travel(2)->minutes();
+    markBackupPostPublished($second);
+    DB::table('jobs')->where('payload', 'like', '%ApplyVideoPolicy%')->where('payload', 'like', "%{$first->id}%")->delete();
+
+    $this->travel(1)->hours();
+    $this->travel(2)->minutes();
+    runDueBackupJobs();
+
     foreach (ApplyVideoPolicy::BACKOFF_SECONDS as $seconds) {
         $this->travel($seconds)->seconds();
         runDueBackupJobs();
     }
 
-    expect($drive->sessions)->toHaveCount(6)
-        ->and(VideoRecord::query()->count())->toBe(0)
-        ->and(data_get($post->refresh()->media, '0.id'))->toBe($video->id);
-    Storage::assertExists($video->path);
-    expect($this->queue->size('default'))->toBe(0);
+    expect(VideoRecord::query()->count())->toBe(0)
+        ->and($this->queue->size('default'))->toBe(1);
+    Mail::assertNothingQueued();
+    Storage::assertExists([$original->path, $copy->path]);
+
+    $drive->failUploads = false;
+    ApplyVideoPolicy::dispatch($first->id);
+    runDueBackupJobs();
+    $this->travel(20)->minutes();
+    runDueBackupJobs();
+
+    expect(VideoRecord::query()->pluck('outcome')->all())->toBe([Outcome::BackedUp, Outcome::BackedUp])
+        ->and($this->queue->size('default'))->toBe(0);
 });
+
+test('a waiting post is marked failed, without a second email, once its uploader gave up', function () {
+    $drive = fakeDrive();
+    $drive->failUploads = true;
+    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
+    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
+    markBackupPostPublished($first);
+    $this->travel(2)->minutes();
+    markBackupPostPublished($second);
+
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    foreach ([...ApplyVideoPolicy::BACKOFF_SECONDS, 300] as $seconds) {
+        $this->travel($seconds)->seconds();
+        runDueBackupJobs();
+    }
+
+    $records = VideoRecord::query()->get()->keyBy('post_id');
+    expect($records)->toHaveCount(2)
+        ->and($records[$first->id]->outcome)->toBe(Outcome::BackupFailed)
+        ->and($records[$second->id]->outcome)->toBe(Outcome::BackupFailed)
+        ->and($records[$second->id]->last_error)->toBe($records[$first->id]->last_error)
+        ->and($this->queue->size('default'))->toBe(0);
+    Storage::assertExists([$original->path, $copy->path]);
+    Mail::assertQueuedCount(1);
+});
+
+test('retry runs the backup again right away and uploads when the policy is still backup', function () {
+    $drive = fakeDrive();
+    $drive->failUploads = true;
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+    foreach (ApplyVideoPolicy::BACKOFF_SECONDS as $seconds) {
+        $this->travel($seconds)->seconds();
+        runDueBackupJobs();
+    }
+    expect(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackupFailed);
+
+    $drive->failUploads = false;
+    $this->actingAs(retryOwner())
+        ->post(route('app.posts.video-backup.retry', $post))
+        ->assertRedirect();
+    runDueBackupJobs();
+
+    $record = VideoRecord::query()->sole();
+    expect($record->outcome)->toBe(Outcome::BackedUp)
+        ->and(Media::query()->whereKey($video->id)->exists())->toBeFalse();
+    Storage::assertMissing($video->path);
+});
+
+test('retry applies the policy in force at that moment', function (VideoPolicy $policy, ?Outcome $outcome, bool $fileKept) {
+    $drive = fakeDrive();
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    VideoRecord::factory()->create([
+        'post_id' => $post->id,
+        'media_id' => $video->id,
+        'outcome' => Outcome::BackupFailed,
+        'attempts' => 6,
+        'last_error' => 'Backend Error',
+    ]);
+    $this->account->forceFill(['video_policy' => $policy])->save();
+
+    $this->actingAs(retryOwner())->post(route('app.posts.video-backup.retry', $post))->assertRedirect();
+    runDueBackupJobs();
+
+    expect(VideoRecord::query()->pluck('outcome')->all())->toBe($outcome === null ? [] : [$outcome])
+        ->and(Media::query()->whereKey($video->id)->exists())->toBe($fileKept);
+    expect($drive->sessions)->toHaveCount($policy === VideoPolicy::Backup ? 1 : 0);
+})->with([
+    'keep stops and clears the failure' => [VideoPolicy::Keep, null, true],
+    'delete deletes' => [VideoPolicy::Delete, Outcome::Deleted, false],
+    'backup uploads' => [VideoPolicy::Backup, Outcome::BackedUp, false],
+]);
+
+test('only the Owner can retry a backup', function () {
+    fakeDrive();
+    ['post' => $post] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $record = VideoRecord::factory()->create(['post_id' => $post->id, 'outcome' => Outcome::BackupFailed]);
+
+    $member = workspaceMember($this->workspace, 'admin');
+    $queued = $this->queue->size('default');
+
+    $this->actingAs($member)->post(route('app.posts.video-backup.retry', $post))->assertForbidden();
+    expect($this->queue->size('default'))->toBe($queued)
+        ->and($record->fresh())->not->toBeNull();
+
+    $this->actingAs(retryOwner())->post(route('app.posts.video-backup.retry', $post))->assertRedirect();
+    expect($record->fresh())->toBeNull();
+});
+
+function retryOwner(): \App\Models\User
+{
+    $owner = test()->account->owner;
+    $owner->update(['current_workspace_id' => test()->workspace->id]);
+
+    return $owner->fresh();
+}
