@@ -7,6 +7,7 @@ namespace App\Actions\Post;
 use App\Enums\Post\RecurrenceFrequency;
 use App\Enums\Post\Status as PostStatus;
 use App\Models\Post;
+use App\Services\Storage\AccountStorage;
 use App\Support\Media\MediaCopyBatch;
 use App\Support\PostingSchedule;
 use App\Support\Timezone;
@@ -24,7 +25,8 @@ use Throwable;
  * leap-day series never drifts to the clamped day and keeps its local time across
  * daylight saving changes. Runs inside the transaction that settles the post, so a
  * retried settlement never creates a second copy; a failed copy leaves the rule
- * on the post for the next settlement.
+ * on the post for the next settlement. Its media copies are never refused for
+ * storage (`AccountStorage::unguarded()`): a series already scheduled keeps going.
  */
 class ScheduleNextOccurrence
 {
@@ -79,7 +81,7 @@ class ScheduleNextOccurrence
         }
 
         try {
-            return MediaCopyBatch::run(function (MediaCopyBatch $batch) use ($post, $plans, $user, $frequency, $interval): Collection {
+            return AccountStorage::unguarded(fn (): Collection => MediaCopyBatch::run(function (MediaCopyBatch $batch) use ($post, $plans, $user, $frequency, $interval): Collection {
                 $groupId = (string) Str::uuid7();
                 $occurrences = $plans->map(function (array $plan) use ($post, $user, $batch, $groupId, $frequency, $interval): Post {
                     $occurrence = CreateChannelPost::execute($post->workspace, $user, [
@@ -105,7 +107,7 @@ class ScheduleNextOccurrence
                 $post->update(Post::withoutRecurrence());
 
                 return $occurrences;
-            });
+            }));
         } catch (Throwable $exception) {
             report($exception);
 
