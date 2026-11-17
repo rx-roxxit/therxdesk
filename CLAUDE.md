@@ -52,6 +52,12 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - Google and GitHub signup stay off (`GOOGLE_AUTH_ENABLED` / `GITHUB_AUTH_ENABLED` false), and their callbacks still require an Invite (`PreservesInvite`); `tests/Feature/RxDesk/OAuthSignupGateTest.php` guards it. Turning OAuth signup on means adding the code to that flow first.
 - The System admin manages codes with `$R php artisan rxdesk:code create --note="..."`, `rxdesk:code list` and `rxdesk:code revoke <code>`.
 
+### Video policy (what happens to a post's videos after it publishes)
+
+- The Owner picks it on Preferences (`accounts.video_policy`: `keep` default, `delete`, `backup`; `PATCH app.settings.video-policy.update`, Owner only through `AccountPolicy::update`). The request accepts `VideoPolicy::selectable()`; `backup` joins it with the Drive connection.
+- `ScheduleVideoPolicy` (listener on `PostStatusChanged`) queues `ApplyVideoPolicy` one hour after a post moves into `published`; nothing else starts it. The job reads the policy when it runs, and `DeletePostVideos` re-reads the post under its lock and acts only while it is still published, so failed, retrying, pending and pending-review posts keep their files for `posts:retry`.
+- Videos are removed only through `SyncOwnedMedia` (which hands them to `DeleteOwnedMedia`), never by deleting files or rows directly, so `posts.media` and the thread replies stop listing them. Each removed video leaves a `video_records` row, shown in the post details by `PostVideoRecords.vue` (the card queries eager-load `videoRecords`).
+
 ## Agent skills
 
 ### Issue tracker
