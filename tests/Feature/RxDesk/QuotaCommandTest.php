@@ -6,11 +6,12 @@ use App\Models\Media;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Support\FakeDiskSpace;
 
 beforeEach(function () {
     config([
         'rxdesk.storage.default_quota' => '5GB',
-        'rxdesk.storage.usable_size' => null,
+        'rxdesk.storage.disk_guard_threshold' => '10GB',
     ]);
 });
 
@@ -86,18 +87,28 @@ test('an unknown email or a user who owns no workspaces has no Quota', function 
     'member' => [fn () => User::factory()->create(['email' => 'bob@example.com']), 'bob@example.com owns no workspaces, so they have no Quota.'],
 ]);
 
-test('set warns when the Quotas handed out add up to more than the usable storage', function () {
-    config(['rxdesk.storage.usable_size' => '12GB']);
-    quotaOwner('ann@example.com');
+test('set warns when the Quotas add up to more than free disk plus Storage used, minus the Disk guard threshold', function () {
+    FakeDiskSpace::bind(free: 20 * 1024 ** 3);
+    $ann = quotaOwner('ann@example.com');
     quotaOwner('bob@example.com', 'Bob');
+    Media::factory()->temporaryUpload($ann->account->workspaces()->first())->create(['size' => 2 * 1024 ** 3]);
 
     Artisan::call('rxdesk:quota', ['action' => 'set', 'email' => 'ann@example.com', 'size' => '7GB']);
 
-    expect(Artisan::output())->toContain('The Quotas add up to 12 GB, within the 12 GB of usable storage.');
+    expect(Artisan::output())->toContain('The Quotas add up to 12 GB, within the 12 GB the disk can give to media.');
 
     Artisan::call('rxdesk:quota', ['action' => 'set', 'email' => 'ann@example.com', 'size' => '8GB']);
 
-    expect(Artisan::output())->toContain('Warning: the Quotas add up to 13 GB, more than the 12 GB of usable storage (RXDESK_USABLE_STORAGE).');
+    expect(Artisan::output())->toContain('Warning: the Quotas add up to 13 GB, more than the 12 GB the disk can give to media');
+});
+
+test('the space media can use never goes below nothing', function () {
+    FakeDiskSpace::bind(free: 4 * 1024 ** 3);
+    quotaOwner('ann@example.com');
+
+    Artisan::call('rxdesk:quota', ['action' => 'show', 'email' => 'ann@example.com']);
+
+    expect(Artisan::output())->toContain('Warning: the Quotas add up to 5 GB, more than the 0 B the disk can give to media');
 });
 
 test('an unknown action fails', function () {
