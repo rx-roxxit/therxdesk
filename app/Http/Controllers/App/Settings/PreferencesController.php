@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App\Settings;
 
+use App\Enums\Account\DriveConnection;
 use App\Enums\Account\VideoPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Settings\UpdatePreferencesRequest;
@@ -22,6 +23,7 @@ class PreferencesController extends Controller
         return Inertia::render('settings/profile/Preferences', [
             'timezones' => Timezone::options(),
             'videoPolicy' => $this->videoPolicyFor($request->user()),
+            'driveConnection' => $this->driveConnectionFor($request->user()),
         ]);
     }
 
@@ -37,6 +39,20 @@ class PreferencesController extends Controller
         }
 
         return $account->video_policy;
+    }
+
+    /**
+     * Only the account's Owner sees the Google Drive connection.
+     */
+    private function driveConnectionFor(User $user): ?DriveConnection
+    {
+        $account = $user->account;
+
+        if ($account === null || $user->cannot('update', $account)) {
+            return null;
+        }
+
+        return $account->driveConnection();
     }
 
     public function update(UpdatePreferencesRequest $request): RedirectResponse|HttpResponse
