@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import {
-    IconDeviceDesktop,
-    IconMoon,
-    IconSun,
-} from '@tabler/icons-vue';
-import { computed, ref } from 'vue';
+import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-vue';
+import { trans } from 'laravel-vue-i18n';
+import { computed, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 
+import DriveBackupController from '@/actions/App/Http/Controllers/App/Settings/DriveBackupController';
 import PreferencesController from '@/actions/App/Http/Controllers/App/Settings/PreferencesController';
 import { updateLanguage } from '@/actions/App/Http/Controllers/App/Settings/ProfileController';
+import VideoPolicyController from '@/actions/App/Http/Controllers/App/Settings/VideoPolicyController';
+import ConfirmDeleteModal from '@/components/ConfirmDeleteModal.vue';
 import LanguageSelect from '@/components/LanguageSelect.vue';
 import SettingsRow from '@/components/settings/SettingsRow.vue';
 import SettingsSelect, {
     type SettingsSelectOption,
 } from '@/components/settings/SettingsSelect.vue';
 import TimezoneSelect from '@/components/TimezoneSelect.vue';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import dayjs from '@/dayjs';
 import { activeLocale } from '@/language';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
+import { filled } from '@/lib/helpers';
 import {
     applyTheme,
     type DefaultPostAction,
@@ -28,9 +31,14 @@ import {
 } from '@/preferences';
 import type { Language, User } from '@/types';
 import type { TimezoneOption } from '@/types/posting-schedule';
+import type { DriveConnection, VideoPolicy } from '@/types/video-policy';
 
-defineProps<{
+const props = defineProps<{
     timezones: TimezoneOption[];
+    /** Null for a Member: only the account's Owner sees the Video policy. */
+    videoPolicy: VideoPolicy | null;
+    /** Null for a Member: only the account's Owner sees the Drive connection. */
+    driveConnection: DriveConnection | null;
 }>();
 
 type PreferenceField =
@@ -39,7 +47,8 @@ type PreferenceField =
     | 'time_format'
     | 'week_starts_on'
     | 'default_post_action'
-    | 'locale';
+    | 'locale'
+    | 'video_policy';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user as User);
@@ -60,14 +69,17 @@ const themeOptions: SettingsSelectOption[] = [
         labelKey: 'settings.preferences.theme.light',
         icon: IconSun,
     },
-    { value: 'dark', labelKey: 'settings.preferences.theme.dark', icon: IconMoon },
+    {
+        value: 'dark',
+        labelKey: 'settings.preferences.theme.dark',
+        icon: IconMoon,
+    },
     {
         value: 'system',
         labelKey: 'settings.preferences.theme.system',
         icon: IconDeviceDesktop,
     },
 ];
-
 
 const languages = computed<Language[]>(
     () => (page.props.languages as Language[] | undefined) ?? [],
@@ -101,7 +113,10 @@ const defaultPostActionOptions: SettingsSelectOption[] = [
     { value: 'top', labelKey: 'posts.composer.queue.top' },
 ];
 
-const save = (field: Exclude<PreferenceField, 'locale'>, value: string): void => {
+const save = (
+    field: Exclude<PreferenceField, 'locale' | 'video_policy'>,
+    value: string,
+): void => {
     savedField.value = null;
 
     router.patch(
@@ -158,6 +173,124 @@ const changeWeekStart = (value: string): void => {
 const changeDefaultPostAction = (value: string): void => {
     defaultPostAction.value = value as DefaultPostAction;
     save('default_post_action', value);
+};
+
+/** The saved Video policy; Keep when the page has none (never for an Owner). */
+const savedVideoPolicy = (): VideoPolicy => {
+    if (filled(props.videoPolicy)) {
+        return props.videoPolicy;
+    }
+
+    return 'keep';
+};
+
+const selectedVideoPolicy = ref<string>(savedVideoPolicy());
+
+watch(
+    () => props.videoPolicy,
+    () => {
+        selectedVideoPolicy.value = savedVideoPolicy();
+    },
+);
+
+const showsVideoPolicy = computed(() => filled(props.videoPolicy));
+
+const keepAndDeleteOptions: SettingsSelectOption[] = [
+    { value: 'keep', labelKey: 'rxdesk.video_policy.options.keep' },
+    { value: 'delete', labelKey: 'rxdesk.video_policy.options.delete' },
+];
+
+const backupOption: SettingsSelectOption = {
+    value: 'backup',
+    labelKey: 'rxdesk.video_policy.options.backup',
+};
+
+const isDriveConnected = computed(() => props.driveConnection === 'connected');
+
+/** Backup is offered with a working Drive, and kept visible while it is the saved choice. */
+const offersBackup = computed(() => {
+    if (isDriveConnected.value) {
+        return true;
+    }
+
+    return selectedVideoPolicy.value === 'backup';
+});
+
+const videoPolicyOptions = computed<SettingsSelectOption[]>(() => {
+    if (offersBackup.value) {
+        return [...keepAndDeleteOptions, backupOption];
+    }
+
+    return keepAndDeleteOptions;
+});
+
+const driveStatusKey = computed(() => {
+    if (filled(props.driveConnection)) {
+        return `rxdesk.drive_backup.status.${props.driveConnection}`;
+    }
+
+    return 'rxdesk.drive_backup.status.none';
+});
+
+const needsDriveReconnect = computed(
+    () => props.driveConnection === 'needs_reconnect',
+);
+
+const hasDriveConnection = computed(() => props.driveConnection !== 'none');
+
+const disconnectDriveModal = ref<InstanceType<
+    typeof ConfirmDeleteModal
+> | null>(null);
+
+const openDisconnectDrive = (): void => {
+    disconnectDriveModal.value?.open({
+        url: DriveBackupController.destroy.url(),
+    });
+};
+
+/** A Backup policy goes back to Keep when Drive is disconnected, and the dialog says so. */
+const disconnectDriveDescription = (
+    translate: (key: string) => string,
+): string => {
+    if (selectedVideoPolicy.value === 'backup') {
+        return translate(
+            'rxdesk.drive_backup.disconnect_modal.description_backup',
+        );
+    }
+
+    return translate('rxdesk.drive_backup.disconnect_modal.description');
+};
+
+const videoPolicySaveFailedMessage = (
+    errors: Record<string, string>,
+): string => {
+    if (filled(errors.video_policy)) {
+        return errors.video_policy;
+    }
+
+    return trans('rxdesk.video_policy.save_failed');
+};
+
+const changeVideoPolicy = (value: string): void => {
+    const previous = selectedVideoPolicy.value;
+    selectedVideoPolicy.value = value;
+    savedField.value = null;
+
+    router.patch(
+        VideoPolicyController.update.url(),
+        { video_policy: value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                savedField.value = 'video_policy';
+            },
+            onError: (errors) => {
+                selectedVideoPolicy.value = previous;
+                toast.error(videoPolicySaveFailedMessage(errors));
+            },
+        },
+    );
 };
 </script>
 
@@ -260,10 +393,80 @@ const changeDefaultPostAction = (value: string): void => {
                 />
             </SettingsRow>
 
+            <template v-if="showsVideoPolicy">
+                <Separator />
+
+                <SettingsRow
+                    id="video-policy"
+                    :title="$t('rxdesk.video_policy.heading')"
+                    :description="$t('rxdesk.video_policy.description')"
+                >
+                    <SettingsSelect
+                        :model-value="selectedVideoPolicy"
+                        :options="videoPolicyOptions"
+                        :label="$t('rxdesk.video_policy.heading')"
+                        testid="preferences-video-policy"
+                        @update:model-value="changeVideoPolicy"
+                    />
+                </SettingsRow>
+
+                <Separator />
+
+                <SettingsRow
+                    id="drive-backup"
+                    :title="$t('rxdesk.drive_backup.heading')"
+                    :description="$t('rxdesk.drive_backup.description')"
+                >
+                    <div class="flex flex-col items-end gap-2">
+                        <p
+                            class="text-sm text-muted-foreground"
+                            data-testid="preferences-drive-status"
+                        >
+                            {{ $t(driveStatusKey) }}
+                        </p>
+                        <div class="flex gap-2">
+                            <Button
+                                v-if="hasDriveConnection"
+                                variant="outline"
+                                data-testid="preferences-drive-disconnect"
+                                @click="openDisconnectDrive"
+                            >
+                                {{ $t('rxdesk.drive_backup.disconnect') }}
+                            </Button>
+                            <Button
+                                v-if="!isDriveConnected"
+                                as-child
+                                data-testid="preferences-drive-connect"
+                            >
+                                <a :href="DriveBackupController.connect.url()">
+                                    <template v-if="needsDriveReconnect">
+                                        {{
+                                            $t('rxdesk.drive_backup.reconnect')
+                                        }}
+                                    </template>
+                                    <template v-else>
+                                        {{ $t('rxdesk.drive_backup.connect') }}
+                                    </template>
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
+                </SettingsRow>
+            </template>
+
             <span
                 v-if="savedField"
                 :data-testid="`preferences-saved-${savedField}`"
                 class="sr-only"
+            />
+
+            <ConfirmDeleteModal
+                ref="disconnectDriveModal"
+                :title="$t('rxdesk.drive_backup.disconnect_modal.title')"
+                :description="disconnectDriveDescription($t)"
+                :action="$t('rxdesk.drive_backup.disconnect')"
+                :cancel="$t('rxdesk.drive_backup.disconnect_modal.cancel')"
+                action-test-id="preferences-drive-disconnect-confirm"
             />
         </div>
     </SettingsLayout>

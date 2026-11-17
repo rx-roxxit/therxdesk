@@ -25,6 +25,7 @@ use Illuminate\Testing\TestResponse;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
 use Tests\BrowserTestCase;
+use Tests\Support\FakeDiskSpace;
 use Tests\TestCase;
 
 /*
@@ -44,6 +45,7 @@ pest()->extend(TestCase::class)
         Http::preventStrayRequests();
         fakePwnedPasswords();
         fakeChatGptEgressRanges();
+        FakeDiskSpace::bindRoomy();
         Queue::fake([BootstrapAccountAnalytics::class]);
     })
     ->in('Feature', 'Unit');
@@ -52,6 +54,7 @@ pest()->extend(BrowserTestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
         fakePwnedPasswords();
+        FakeDiskSpace::bindRoomy();
         config(['trypost.tours.enabled' => false]);
     })
     ->in('Browser');

@@ -13,6 +13,7 @@ use App\Models\Account;
 use App\Models\Invite;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Rules\DiskHasRoom;
 use App\Services\PostHogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -161,7 +162,7 @@ class WorkspaceController extends Controller
         $this->authorize('update', $workspace);
 
         $request->validate([
-            'photo' => ['required', 'image', 'max:2048'],
+            'photo' => ['bail', 'required', 'image', 'max:2048', new DiskHasRoom],
         ]);
 
         $workspace->clearMediaCollection('logo');

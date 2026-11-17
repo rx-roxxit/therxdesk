@@ -80,7 +80,7 @@ class PostMediaRules
             'media.*.original_filename' => ['sometimes', 'nullable', 'string', 'max:500'],
             'media.*.size' => ['sometimes', 'nullable', 'integer'],
             'media.*.meta' => self::metaRules(),
-            'media.*.source' => ['sometimes', 'nullable', 'string', Rule::in(array_column(Source::cases(), 'value'))],
+            'media.*.source' => ['sometimes', 'nullable', 'string', Rule::enum(Source::class)->except([Source::GoogleDriveBackup])],
             'media.*.source_meta' => ['sometimes', 'nullable', 'array'],
         ];
     }

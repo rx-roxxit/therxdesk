@@ -7,7 +7,9 @@ namespace App\Models;
 use App\Enums\Media\Type as MediaType;
 use App\Exceptions\MediaOwnershipViolation;
 use App\Jobs\Media\DeleteMediaFiles;
+use App\Observers\MediaStorageObserver;
 use Database\Factories\MediaFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+#[ObservedBy([MediaStorageObserver::class])]
 class Media extends Model
 {
     /** @use HasFactory<MediaFactory> */

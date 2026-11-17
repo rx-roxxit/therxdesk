@@ -35,12 +35,15 @@ use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\User;
+use App\Models\VideoRecord;
 use App\Models\Webhook;
 use App\Models\WebhookLog;
 use App\Models\Workspace;
 use App\Models\WorkspaceLabel;
 use App\Models\WorkspaceSignature;
 use App\Services\PostHogService;
+use App\Services\Storage\DiskSpace;
+use App\Services\Storage\LocalDiskSpace;
 use App\Socialite\DiscordProvider;
 use App\Socialite\InstagramProvider;
 use App\Socialite\LinkedInPageExtendSocialite;
@@ -80,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(DiskSpace::class, LocalDiskSpace::class);
+
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);
@@ -150,6 +155,7 @@ class AppServiceProvider extends ServiceProvider
             'postNoteReaction' => PostNoteReaction::class,
             'postTemplate' => PostTemplate::class,
             'signupCode' => SignupCode::class,
+            'videoRecord' => VideoRecord::class,
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,
