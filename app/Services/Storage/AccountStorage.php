@@ -21,11 +21,13 @@ use InvalidArgumentException;
  * without a workspace (avatars) and workspace logos are left out, and so are
  * temporary files that never get a row (crops, chunks, derivatives).
  *
- * `refusal()` is the only decision: a new reason to refuse bytes (the Disk
- * guard) is one more check there and one more `StorageRefusal` case.
+ * `refusal()` is the only decision: a new reason to refuse bytes is one more
+ * check there and one more `StorageRefusal` case. The Disk guard comes first.
  */
 class AccountStorage
 {
+    public function __construct(private readonly DiskSpace $disk) {}
+
     /**
      * Collections that belong to the workspace's look, not its content.
      */
@@ -51,6 +53,10 @@ class AccountStorage
     {
         if (self::$unguardedDepth > 0) {
             return null;
+        }
+
+        if ($this->diskStatus()->isGuarding()) {
+            return StorageRefusal::DiskGuard;
         }
 
         if (! $this->usage($account)->fits($bytes)) {
@@ -211,12 +217,40 @@ class AccountStorage
     }
 
     /**
-     * How much the disk can give to media (`RXDESK_USABLE_STORAGE`), or null
-     * when it is not set.
+     * The disk the media lives on and the Disk guard's threshold.
      */
-    public function usableSize(): ?int
+    public function diskStatus(): DiskStatus
     {
-        return ByteSize::parse(config('rxdesk.storage.usable_size'));
+        return new DiskStatus($this->disk->total(), $this->disk->free(), self::diskGuardThreshold());
+    }
+
+    /**
+     * How much the disk can give to media: free space, plus what the Owners
+     * already store (it sits on the same disk), minus the Disk guard's
+     * threshold. Space taken by the system, images, database and logs is
+     * already out of the free space.
+     */
+    public function usableSize(): int
+    {
+        $usable = $this->diskStatus()->free + $this->totalUsed() - self::diskGuardThreshold();
+
+        return max(0, $usable);
+    }
+
+    /**
+     * Every Owner's Storage used added up.
+     */
+    public function totalUsed(): int
+    {
+        return (int) $this->ownerAccounts()->sum(fn (Account $account): int => $this->used($account));
+    }
+
+    public static function diskGuardThreshold(): int
+    {
+        $configured = (string) config('rxdesk.storage.disk_guard_threshold');
+
+        return ByteSize::parse($configured)
+            ?? throw new InvalidArgumentException("RXDESK_DISK_GUARD_THRESHOLD \"{$configured}\" is not a size such as 10GB.");
     }
 
     public static function defaultQuota(): int
