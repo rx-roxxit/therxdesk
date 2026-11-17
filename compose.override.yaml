@@ -1,0 +1,36 @@
+# The RX Desk — dev overrides for the shared VPS (merged on top of compose.yaml).
+#
+# Docker writes its own iptables rules, so a published port skips ufw and is
+# open to the internet. Every dev port here is bound to 127.0.0.1 instead;
+# reach them from your machine with an SSH tunnel (ssh -L 8000:127.0.0.1:8000).
+# `!override` replaces compose.yaml's port list instead of appending to it.
+#
+# UID/GID match the `rxdev` user that owns this checkout, so files the
+# container writes into the bind mount stay editable on the host.
+
+services:
+    app:
+        build:
+            args:
+                UID: 1001
+                GID: 1001
+        environment:
+            UID: 1001
+            GID: 1001
+        ports: !override
+            - '127.0.0.1:${APP_PORT:-8000}:80'
+            - '127.0.0.1:${REVERB_PORT:-8080}:8080'
+            - '127.0.0.1:${VITE_PORT:-5173}:5173'
+
+    pgsql:
+        ports: !override
+            - '127.0.0.1:${FORWARD_DB_PORT:-5432}:5432'
+
+    redis:
+        ports: !override
+            - '127.0.0.1:${FORWARD_REDIS_PORT:-6379}:6379'
+
+    mailpit:
+        ports: !override
+            - '127.0.0.1:${FORWARD_MAILPIT_SMTP_PORT:-1025}:1025'
+            - '127.0.0.1:${FORWARD_MAILPIT_UI_PORT:-8025}:8025'
