@@ -13,6 +13,7 @@ use App\Exceptions\Storage\StorageRefused;
 use App\Services\Http\SafeHttpFetcher;
 use App\Services\Storage\AccountStorage;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -64,14 +65,14 @@ class RemoteMediaImporter
             return ImportedFile::failed(ImportedFile::HOST_NOT_ALLOWED);
         }
 
-        $this->storage->ensureCanStore($workspace, $file->size ?? 1, null);
+        $this->storage->ensureCanStore($workspace, $file->size ?? 1, Auth::user());
 
         $typeCap = max(array_map(fn (MediaType $type): int => $type->maxSizeInBytes(), $allowedTypes));
         $room = $this->storage->room($workspace->account);
         $download = $this->download($file, min($typeCap, $room), $timeoutSeconds, $deadline, $followRedirects, capIsStorage: $room < $typeCap);
 
         if ($download === self::OVER_STORAGE) {
-            $this->storage->ensureCanStore($workspace, $room + 1, null);
+            $this->storage->ensureCanStore($workspace, $room + 1, Auth::user());
         }
 
         if (is_string($download)) {

@@ -52,6 +52,10 @@ class AccountStorage
      */
     public function refusal(Account $account, int $bytes): ?StorageRefusal
     {
+        if (self::$unguardedDepth > 0) {
+            return null;
+        }
+
         $diskRefusal = $this->diskRefusal();
 
         if (filled($diskRefusal)) {

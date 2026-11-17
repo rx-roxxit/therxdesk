@@ -137,7 +137,7 @@ services:
       GOOGLE_MEDIA_BACKUP_REDIRECT: https://${APP_DOMAIN}/settings/preferences/drive/callback
       GOOGLE_MEDIA_API_KEY: ${GOOGLE_MEDIA_API_KEY:-}
       GOOGLE_MEDIA_APP_ID: ${GOOGLE_MEDIA_APP_ID:-}
-      GOOGLE_DRIVE_ENABLED: ${GOOGLE_DRIVE_ENABLED:-true}
+      GOOGLE_DRIVE_ENABLED: ${GOOGLE_DRIVE_ENABLED:-false}
       GOOGLE_PHOTOS_ENABLED: "false"
       CANVA_ENABLED: "false"
 

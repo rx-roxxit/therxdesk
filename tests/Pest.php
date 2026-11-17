@@ -45,7 +45,7 @@ pest()->extend(TestCase::class)
         Http::preventStrayRequests();
         fakePwnedPasswords();
         fakeChatGptEgressRanges();
-        FakeDiskSpace::bind(free: 500 * 1024 ** 3);
+        FakeDiskSpace::bindRoomy();
         Queue::fake([BootstrapAccountAnalytics::class]);
     })
     ->in('Feature', 'Unit');
@@ -54,7 +54,7 @@ pest()->extend(BrowserTestCase::class)
     ->use(RefreshDatabase::class)
     ->beforeEach(function (): void {
         fakePwnedPasswords();
-        FakeDiskSpace::bind(free: 500 * 1024 ** 3);
+        FakeDiskSpace::bindRoomy();
         config(['trypost.tours.enabled' => false]);
     })
     ->in('Browser');

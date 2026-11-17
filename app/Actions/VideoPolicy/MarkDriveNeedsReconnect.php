@@ -17,7 +17,7 @@ class MarkDriveNeedsReconnect
     {
         $connection = $account->driveBackupConnection();
 
-        if ($connection === null) {
+        if (blank($connection)) {
             return;
         }
 

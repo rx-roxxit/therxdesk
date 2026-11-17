@@ -25,7 +25,8 @@ class LocalDiskSpace implements DiskSpace
 
     private function path(): string
     {
-        $root = config('filesystems.disks.'.config('filesystems.default').'.root');
+        $disk = config('filesystems.default');
+        $root = config("filesystems.disks.{$disk}.root");
 
         if (is_string($root) && is_dir($root)) {
             return $root;
