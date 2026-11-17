@@ -66,6 +66,13 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 
 - `AcceptInvite` is the one place an Invite moves a user into the inviting account, and it refuses (`Result::OwnerHasWorkspaces`, copy `rxdesk.invite.owner_has_workspaces`) a user who owns their account while it still has workspaces: moving them would lock them out of their own. They join as a Member with a different email. An Owner with no workspace left (the empty shell a signup through an Invite leaves) still accepts. Never move the guard out of `AcceptInvite`.
 
+### Storage (Quota)
+
+- `App\Services\Storage\AccountStorage` is the only code that computes storage: Storage used (media rows of the account's workspaces, minus logos; avatars have no workspace), the Quota (`accounts.quota_bytes`, null = `RXDESK_DEFAULT_QUOTA`), `canStore()` / `refusal()` and the refusal message (the Owner hears "your storage", anyone else "the workspace owner's"). A new reason to refuse (the Disk guard) is one more check in `refusal()` and one more `App\Enums\Storage\StorageRefusal` case. Never sum `medias.size` anywhere else.
+- Enforcement: `MediaStorageObserver` refuses every new media row over the Quota (upload, import, per-channel copy) with a `StorageRefused` validation error and deletes the file stored for it; `FitsStorage` refuses a chunked upload's declared size and a picker import when the storage is already full. A queued import records `storage_full` / `owner_storage_full` instead (`ImportRemoteMedia`, mapped in `useMediaImport.ts`).
+- Publishing is never refused: `ScheduleNextOccurrence` copies media inside `AccountStorage::unguarded()`. Any other system path that must keep working over Quota goes through it too. Nothing is ever deleted for being over Quota.
+- The System admin uses `$R php artisan rxdesk:quota show|set <email> [20GB|default]` and `$R php artisan rxdesk:usage`.
+
 ## Agent skills
 
 ### Issue tracker

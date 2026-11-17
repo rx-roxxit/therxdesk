@@ -7,6 +7,7 @@ namespace App\Jobs\Media;
 use App\Dto\ImportedFile;
 use App\Dto\RemoteFile;
 use App\Enums\Media\Type as MediaType;
+use App\Exceptions\Storage\StorageRefused;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Media\RemoteMediaImporter;
@@ -114,14 +115,20 @@ class ImportRemoteMedia implements ShouldBeEncrypted, ShouldQueue
 
     private function store(RemoteMediaImporter $importer, Workspace $workspace, RemoteFile $file): void
     {
-        $imported = $importer->import(
-            $workspace,
-            $file,
-            MediaType::cases(),
-            $this->timeout,
-            now()->addSeconds(intdiv($this->timeout, 2)),
-            followRedirects: true,
-        );
+        try {
+            $imported = $importer->import(
+                $workspace,
+                $file,
+                MediaType::cases(),
+                $this->timeout,
+                now()->addSeconds(intdiv($this->timeout, 2)),
+                followRedirects: true,
+            );
+        } catch (StorageRefused $refused) {
+            MediaImportStatus::fail($this->importId, $refused->importFailure(User::query()->find($this->userId)));
+
+            return;
+        }
 
         if (! $imported->succeeded()) {
             MediaImportStatus::fail($this->importId, (string) $imported->failure);
