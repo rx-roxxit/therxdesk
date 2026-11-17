@@ -11,6 +11,7 @@ use App\Exceptions\Post\QueueBusyException;
 use App\Http\Resources\Api\PostResource;
 use App\Mcp\Concerns\AuthorizesMcpTool;
 use App\Models\Post;
+use App\Support\Media\CoverImage;
 use App\Support\PostMediaRules;
 use App\Support\Requests\Post\PostMediaRequestRules;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -50,7 +51,7 @@ class AttachMediaFromUploadTool extends Tool
 
         $validated = $request->validate([
             ...PostMediaRequestRules::attachFromUpload(),
-            'meta' => PostMediaRules::metaRules(),
+            'meta' => PostMediaRules::metaRules(referenced: true),
         ]);
 
         $media = ResolveWorkspaceMedia::byUploadTokens($post->workspace, [(string) data_get($validated, 'upload_token')])->first();
@@ -64,7 +65,7 @@ class AttachMediaFromUploadTool extends Tool
         }
 
         try {
-            AppendPostMedia::execute($post, [HostInlineMedia::item($media, $validated)], $request->user());
+            AppendPostMedia::execute($post, [HostInlineMedia::item($media, $validated, $post->workspace, '')], $request->user());
         } catch (QueueBusyException) {
             return Response::error(__('posts.errors.queue_busy'));
         }
@@ -82,7 +83,7 @@ class AttachMediaFromUploadTool extends Tool
             'post_id' => $schema->string()->required()->description('UUID of the post to attach the uploaded media to.'),
             'upload_token' => $schema->string()->required()->description('upload_token returned by request-media-upload-tool, after the file was sent to its upload_url.'),
             'alt' => $schema->string()->description('Optional accessibility alt text for the media (applies to images).'),
-            'meta' => $schema->object()->description('Optional per-item settings: user_tags (Instagram feed images only: up to 20 of {username, x, y}, x and y between 0 and 1 from the top-left corner), cover_offset_ms (video cover frame in milliseconds, for content types with supports_video_cover).'),
+            'meta' => $schema->object()->description('Optional per-item settings: user_tags (Instagram feed images only: up to 20 of {username, x, y}, x and y between 0 and 1 from the top-left corner), cover_offset_ms (video cover frame in milliseconds, for content types with supports_video_cover), '.CoverImage::documentation().'.'),
         ];
     }
 }

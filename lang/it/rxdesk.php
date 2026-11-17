@@ -113,6 +113,7 @@ return [
             'type' => 'The Cover image must be a JPEG or PNG. Export it in one of those formats, then upload it again.',
             'too_large' => 'The Cover image must be :max MB or smaller. Export a smaller file, then upload it again.',
             'upload_failed' => "Couldn't upload the Cover image. Try again.",
+            'reference' => 'Give the Cover image as exactly one of upload_token, url or id.',
         ],
     ],
 ];

@@ -24,7 +24,7 @@ class AttachMediaFromUrlRequest extends FormRequest
     {
         return [
             ...PostMediaRequestRules::attachFromUrl(),
-            'urls.*.meta' => PostMediaRules::metaRules(),
+            'urls.*.meta' => PostMediaRules::metaRules(referenced: true),
         ];
     }
 }

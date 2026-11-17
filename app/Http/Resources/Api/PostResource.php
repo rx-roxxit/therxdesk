@@ -28,6 +28,7 @@ class PostResource extends JsonResource
             'author' => $this->person($this->user),
             'content' => $this->content,
             'media' => $this->media,
+            'cover_outcome' => $this->when($this->coverOutcome() !== null, fn (): ?array => $this->coverOutcome()),
             'status' => $this->status?->value,
             'schedule_mode' => $this->schedule_mode?->value,
             'scheduled_at' => $this->scheduled_at?->format('Y-m-d H:i:s'),
@@ -56,6 +57,20 @@ class PostResource extends JsonResource
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
+    }
+
+    /**
+     * What happened when a network was given the video's Cover after it was
+     * published (YouTube and Facebook), for a post read to show. A video's Cover
+     * itself is `media.*.meta.cover_image`. The record of the outcome is
+     * written by the post-publish Cover job (ticket #18), which fills this in;
+     * until it does, no outcome exists and the `cover_outcome` key is left out.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function coverOutcome(): ?array
+    {
+        return null;
     }
 
     /**
