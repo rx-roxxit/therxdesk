@@ -72,6 +72,7 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - Enforcement: `MediaStorageObserver` refuses every new media row over the Quota (upload, import, per-channel copy) with a `StorageRefused` validation error and deletes the file stored for it; `FitsStorage` refuses a chunked upload's declared size and a picker import when the storage is already full. A queued import records `storage_full` / `owner_storage_full` instead (`ImportRemoteMedia`, mapped in `useMediaImport.ts`).
 - Publishing is never refused: `ScheduleNextOccurrence` copies media inside `AccountStorage::unguarded()`. Any other system path that must keep working over Quota goes through it too. Nothing is ever deleted for being over Quota.
 - The System admin uses `$R php artisan rxdesk:quota show|set <email> [20GB|default]` and `$R php artisan rxdesk:usage`.
+- The Owner's storage bar (account menu, `StorageBar.vue`, links to Preferences `#video-policy`) reads the shared `storage` prop (`HandleInertiaRequests::storage()`, a closure, null for anyone who is not an account Owner), which gets its numbers from `AccountStorage::usage()`.
 
 ## Agent skills
 
