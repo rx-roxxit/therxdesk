@@ -21,6 +21,7 @@ import { computed, ref } from 'vue';
 
 import PreferencesController from '@/actions/App/Http/Controllers/App/Settings/PreferencesController';
 import { updateLanguage } from '@/actions/App/Http/Controllers/App/Settings/ProfileController';
+import StorageBar from '@/components/StorageBar.vue';
 import { Avatar } from '@/components/ui/avatar';
 import { buttonVariants } from '@/components/ui/button';
 import {
@@ -193,6 +194,7 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
                 {{ $t('sidebar.manage_team') }}
             </Link>
         </DropdownMenuItem>
+        <StorageBar />
     </div>
 
     <DropdownMenuSeparator />
