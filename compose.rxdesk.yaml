@@ -111,7 +111,21 @@ services:
 
       # ===== Social platforms =====
       # Redirect URIs are built from the domain; register the same ones in
-      # each developer portal.
+      # each developer portal. A network that needs our own developer app
+      # stays off until its credentials are in .env.production and its
+      # *_ENABLED is set to true there (Bluesky, Mastodon, Telegram and
+      # Discord need no app of ours and keep upstream's default, on).
+      FACEBOOK_ENABLED: ${FACEBOOK_ENABLED:-false}
+      INSTAGRAM_ENABLED: ${INSTAGRAM_ENABLED:-false}
+      INSTAGRAM_FACEBOOK_ENABLED: ${INSTAGRAM_FACEBOOK_ENABLED:-false}
+      THREADS_ENABLED: ${THREADS_ENABLED:-false}
+      TIKTOK_ENABLED: ${TIKTOK_ENABLED:-false}
+      YOUTUBE_ENABLED: ${YOUTUBE_ENABLED:-false}
+      LINKEDIN_ENABLED: ${LINKEDIN_ENABLED:-false}
+      LINKEDIN_PAGE_ENABLED: ${LINKEDIN_PAGE_ENABLED:-false}
+      X_ENABLED: ${X_ENABLED:-false}
+      PINTEREST_ENABLED: ${PINTEREST_ENABLED:-false}
+      GOOGLE_BUSINESS_ENABLED: ${GOOGLE_BUSINESS_ENABLED:-false}
       FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID:-}
       FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET:-}
       FACEBOOK_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/facebook/callback
