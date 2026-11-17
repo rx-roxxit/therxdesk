@@ -70,4 +70,7 @@ return [
         'retry' => 'Retry',
         'retrying' => 'Retrying the backup.',
     ],
+    'invite' => [
+        'owner_has_workspaces' => "You own workspaces with this email, so you can't join another account with it. Join as a Member with a different email instead.",
+    ],
 ];

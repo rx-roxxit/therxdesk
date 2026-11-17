@@ -52,6 +52,15 @@ class AcceptInvite
                 return Result::AlreadyMember;
             }
 
+            /**
+             * The RX Desk: moving an Owner into another account would strand
+             * their own workspaces. An Owner with none left (the empty shell a
+             * signup through an Invite leaves) moves as upstream does.
+             */
+            if ($user->account?->owner_id === $user->id && $user->account->workspaces()->exists()) {
+                return Result::OwnerHasWorkspaces;
+            }
+
             $previousAccountId = $user->account_id;
 
             $user->update(['account_id' => $lockedInvite->account_id]);
