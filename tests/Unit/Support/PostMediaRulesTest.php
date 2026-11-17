@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Support\PostMediaRules;
+use Illuminate\Support\Facades\Validator;
 
 test('hosted media rules require id, path and url', function () {
     $rules = PostMediaRules::hostedRules();
@@ -30,3 +31,15 @@ test('both variants keep the meta rule so validated() preserves it', function ()
     expect(PostMediaRules::rules())->toHaveKey('media.*.meta')
         ->and(PostMediaRules::hostedRules())->toHaveKey('media.*.meta');
 });
+
+test('a post media item may never claim the Drive backup source', function (string $source, bool $passes) {
+    $validator = Validator::make(
+        ['media' => [['id' => 'a', 'path' => 'p', 'url' => 'u', 'source' => $source]]],
+        PostMediaRules::hostedRules(),
+    );
+
+    expect($validator->errors()->has('media.0.source'))->toBe(! $passes);
+})->with([
+    'picker source' => ['google_drive', true],
+    'backup source' => ['google_drive_backup', false],
+]);
