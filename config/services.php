@@ -145,6 +145,7 @@ return [
         'client_id' => env('GOOGLE_MEDIA_CLIENT_ID'),
         'client_secret' => env('GOOGLE_MEDIA_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_MEDIA_CLIENT_REDIRECT'),
+        'backup_redirect' => env('GOOGLE_MEDIA_BACKUP_REDIRECT'),
         'api_key' => env('GOOGLE_MEDIA_API_KEY'),
         'app_id' => env('GOOGLE_MEDIA_APP_ID'),
     ],

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A person's remembered sign-in to a media source (Canva). One per user and
+ * A person's remembered sign-in to a media source (Canva, or the Owner's Google Drive backup). One per user and
  * source; the tokens are encrypted at rest and never serialized.
  */
 class MediaSourceConnection extends Model
@@ -28,6 +28,7 @@ class MediaSourceConnection extends Model
         'access_token',
         'refresh_token',
         'expires_at',
+        'needs_reconnect_at',
     ];
 
     protected $hidden = [
@@ -42,7 +43,16 @@ class MediaSourceConnection extends Model
             'access_token' => 'encrypted',
             'refresh_token' => 'encrypted',
             'expires_at' => 'datetime',
+            'needs_reconnect_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Google rejected the stored token: the person has to sign in again.
+     */
+    public function needsReconnect(): bool
+    {
+        return $this->needs_reconnect_at !== null;
     }
 
     public function user(): BelongsTo

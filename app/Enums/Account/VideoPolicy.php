@@ -15,13 +15,17 @@ enum VideoPolicy: string
     case Backup = 'backup';
 
     /**
-     * The policies an Owner may pick today. Backup needs the Google Drive
-     * connection, which is not built yet.
+     * The policies an Owner may pick. Backup needs a working Google Drive
+     * connection.
      *
      * @return list<self>
      */
-    public static function selectable(): array
+    public static function selectable(DriveConnection $drive): array
     {
+        if ($drive === DriveConnection::Connected) {
+            return [self::Keep, self::Delete, self::Backup];
+        }
+
         return [self::Keep, self::Delete];
     }
 }
