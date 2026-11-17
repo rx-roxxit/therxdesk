@@ -12,6 +12,7 @@ use App\Enums\Media\Type as MediaType;
 use App\Models\Media;
 use App\Models\Workspace;
 use App\Services\Post\MediaAttacher;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -124,13 +125,13 @@ class HostInlineMedia
                 if (filled($token = data_get($item, 'upload_token'))) {
                     $row = $byToken->get($token) ?? throw ValidationException::withMessages(["{$key}.upload_token" => __('posts.errors.media_expired')]);
 
-                    return [...self::item($row, $item), 'upload_token' => $token];
+                    return [...self::item($row, $item, $workspace, $key, $fetched), 'upload_token' => $token];
                 }
 
                 if (filled($id = data_get($item, 'id'))) {
                     $row = $byId->get($id) ?? throw ValidationException::withMessages(["{$key}.id" => __('validation.exists', ['attribute' => 'media'])]);
 
-                    return self::item($row, $item);
+                    return self::item($row, $item, $workspace, $key, $fetched);
                 }
 
                 $url = (string) data_get($item, 'url');
@@ -143,7 +144,7 @@ class HostInlineMedia
                     $fetched[$url] = $upload->id;
                 }
 
-                return self::item(Media::query()->findOrFail($fetched[$url]), $item);
+                return self::item(Media::query()->findOrFail($fetched[$url]), $item, $workspace, $key, $fetched);
             })->all();
         } catch (ValidationException $exception) {
             if ($fetched !== []) {
@@ -184,23 +185,77 @@ class HostInlineMedia
     /**
      * The row as the composer shape the save validates, with the client's
      * editable meta (alt text, user tags) on top of what is stored. The `alt`
-     * shorthand only applies to images.
+     * shorthand only applies to images. A Cover image given as a reference
+     * (`meta.cover_image`: an `upload_token`, an `id` or a `url`) is resolved
+     * into a whole hosted item, so every entry point stores the same thing
+     * (The RX Desk; `$errorKey` is the item's key in an error, empty for a single
+     * item).
      *
      * @param  array<string, mixed>  $reference
+     * @param  array<string, string>  $fetched
      * @return array<string, mixed>
+     *
+     * @throws ValidationException
      */
-    public static function item(Media $row, array $reference): array
+    public static function item(Media $row, array $reference, Workspace $workspace, string $errorKey = 'media.0', array &$fetched = []): array
     {
         $item = MediaItem::fromMedia($row)->toArray();
         $edits = array_intersect_key((array) data_get($reference, 'meta', []), array_flip(SyncOwnedMedia::EDITABLE_META));
+        $cover = Arr::pull($edits, SyncOwnedMedia::COVER_IMAGE);
 
         if ($row->type === MediaType::Image && filled($alt = data_get($reference, 'alt')) && ! array_key_exists('alt_text', $edits)) {
             $edits['alt_text'] = $alt;
         }
 
+        if (is_array($cover)) {
+            $prefix = filled($errorKey) ? "{$errorKey}." : '';
+            $edits[SyncOwnedMedia::COVER_IMAGE] = self::coverImage($workspace, $cover, $prefix.'meta.'.SyncOwnedMedia::COVER_IMAGE, $fetched);
+        }
+
         $item['meta'] = [...(array) data_get($item, 'meta', []), ...$edits];
 
         return $item;
+    }
+
+    /**
+     * A Cover image reference as a whole hosted image item: the temporary
+     * upload of its `upload_token` (kept on the item so the save consumes it
+     * once), a media row of the workspace by `id`, or a `url` downloaded as a
+     * new temporary upload. Which files and posts may have a Cover is checked
+     * by `CoverImage` on the save, like the web composer's.
+     *
+     * @param  array<string, mixed>  $cover
+     * @param  array<string, string>  $fetched
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private static function coverImage(Workspace $workspace, array $cover, string $key, array &$fetched): array
+    {
+        if (filled($token = data_get($cover, 'upload_token'))) {
+            $row = ResolveWorkspaceMedia::byUploadTokens($workspace, [(string) $token])->first()
+                ?? throw ValidationException::withMessages(["{$key}.upload_token" => __('posts.errors.media_expired')]);
+
+            return [...MediaItem::fromMedia($row)->toArray(), 'upload_token' => $token];
+        }
+
+        if (filled($id = data_get($cover, 'id'))) {
+            $row = Str::isUuid($id) ? ResolveWorkspaceMedia::execute($workspace, [$id])->first() : null;
+
+            return MediaItem::fromMedia($row ?? throw ValidationException::withMessages(["{$key}.id" => __('rxdesk.cover.errors.not_found')]))->toArray();
+        }
+
+        $url = (string) data_get($cover, 'url');
+
+        if (! array_key_exists($url, $fetched)) {
+            $imported = app(MediaAttacher::class)->importUpload($workspace, [MediaType::Image], $url);
+            $upload = $imported->media
+                ?? throw ValidationException::withMessages(["{$key}.url" => MediaAttacher::failureMessage($imported, $url)]);
+
+            $fetched[$url] = $upload->id;
+        }
+
+        return MediaItem::fromMedia(Media::query()->findOrFail($fetched[$url]))->toArray();
     }
 
     /**

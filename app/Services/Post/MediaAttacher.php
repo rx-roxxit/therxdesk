@@ -48,7 +48,7 @@ class MediaAttacher
         $failed = [];
         $failures = [];
 
-        foreach ($urls as $entry) {
+        foreach ($urls as $index => $entry) {
             $url = (string) data_get($entry, 'url', '');
             $imported = $this->importUpload($post->workspace, $post->allowedMediaTypes(), $url);
             $hosted = $imported->media;
@@ -60,7 +60,7 @@ class MediaAttacher
                 continue;
             }
 
-            $attached[] = HostInlineMedia::item($hosted, $entry);
+            $attached[] = HostInlineMedia::item($hosted, $entry, $post->workspace, "urls.{$index}");
         }
 
         if ($attached !== []) {

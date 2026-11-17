@@ -33,6 +33,17 @@ class CoverImage
     public const array MIME_TYPES = ['image/jpeg', 'image/png'];
 
     /**
+     * What an MCP tool or API client reads about `meta.cover_image`, one text
+     * for every description that mentions it.
+     */
+    public static function documentation(): string
+    {
+        $max = self::MAX_BYTES / 1024 / 1024;
+
+        return "cover_image (the Cover of a video: an image the network shows before the video plays, only for content types with supports_cover_image in list-content-types-tool, and only on the single video of a post; exactly one of upload_token, url or id, as for a media item; JPEG or PNG up to {$max} MB, ideally the clip's aspect ratio, 9:16 for a vertical video; the same image goes to every channel the video is posted to, and it replaces cover_offset_ms; leave it out to remove it)";
+    }
+
+    /**
      * A Cover image goes on the single video of a post whose content type
      * takes one: a carousel, a story or an image never does.
      *

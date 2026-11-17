@@ -8,6 +8,7 @@ use App\Enums\Post\Status as PostStatus;
 use App\Enums\PostPlatform\ContentType;
 use App\Models\Post;
 use App\Models\User;
+use App\Support\Media\CoverImage;
 use App\Support\Media\MediaCopyBatch;
 use App\Support\PostApproval;
 use App\Support\PostStatusRules;
@@ -32,6 +33,7 @@ class AppendPostMedia
     {
         PostApproval::locked($post, fn () => MediaCopyBatch::run(function (MediaCopyBatch $batch) use ($post, $items, $actor): void {
             self::ensureAcceptsMedia($post);
+            self::ensureCoverImagesFit($post, $items);
 
             $post->appendMedia($items, $batch);
 
@@ -61,5 +63,25 @@ class AppendPostMedia
         if ($post->content_type === ContentType::XPoll) {
             throw ValidationException::withMessages([$field => trans('posts.errors.media_not_accepted')]);
         }
+    }
+
+    /**
+     * Refuses a Cover image the post cannot take, with the same rules a save
+     * checks (`CoverImage`), over the media the post would have after the
+     * append. Keyed `media.{n}.meta.cover_image` like a save.
+     *
+     * @param  list<array<string, mixed>>  $items
+     *
+     * @throws ValidationException
+     */
+    private static function ensureCoverImagesFit(Post $post, array $items): void
+    {
+        $violations = CoverImage::violations($post->workspace, $post->content_type, [...($post->media ?? []), ...array_values($items)]);
+
+        if ($violations === []) {
+            return;
+        }
+
+        throw ValidationException::withMessages(collect($violations)->mapWithKeys(fn (string $message, string $key): array => ["media.{$key}" => $message])->all());
     }
 }

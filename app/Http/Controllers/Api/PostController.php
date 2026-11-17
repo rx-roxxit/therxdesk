@@ -175,7 +175,7 @@ class PostController extends Controller
             throw ValidationException::withMessages(['upload_token' => $violation]);
         }
 
-        AppendPostMedia::execute($post, [HostInlineMedia::item($media, $request->validated())], $request->user());
+        AppendPostMedia::execute($post, [HostInlineMedia::item($media, $request->validated(), $post->workspace, '')], $request->user());
 
         $post->refresh()->load(['socialAccount', 'labels']);
 
