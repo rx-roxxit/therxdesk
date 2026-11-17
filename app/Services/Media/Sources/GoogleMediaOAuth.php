@@ -47,9 +47,31 @@ class GoogleMediaOAuth
     }
 
     /**
-     * @return array{access_token: string, expires_in: int, scopes: list<string>}
+     * The Owner's Drive backup sign-in: `drive.file` only, offline access
+     * and a consent prompt (so Google always returns a refresh token).
+     * `include_granted_scopes` is never sent.
      */
-    public function exchangeCode(string $code, string $verifier): array
+    public function authorizeOfflineUrl(string $state, string $codeChallenge): string
+    {
+        $query = http_build_query([
+            'client_id' => (string) config('services.google_media.client_id'),
+            'redirect_uri' => (string) config('services.google_media.backup_redirect'),
+            'response_type' => 'code',
+            'scope' => self::scope(Source::GoogleDrive),
+            'access_type' => 'offline',
+            'prompt' => 'consent',
+            'state' => $state,
+            'code_challenge' => $codeChallenge,
+            'code_challenge_method' => 'S256',
+        ], encoding_type: PHP_QUERY_RFC3986);
+
+        return config('trypost.media_sources.google_oauth.authorize_url')."?{$query}";
+    }
+
+    /**
+     * @return array{access_token: string, refresh_token: ?string, expires_in: int, scopes: list<string>}
+     */
+    public function exchangeCode(string $code, string $verifier, ?string $redirect = null): array
     {
         $tokenApi = config('trypost.media_sources.google_oauth.token_api');
 
@@ -62,7 +84,7 @@ class GoogleMediaOAuth
                 'code_verifier' => $verifier,
                 'client_id' => (string) config('services.google_media.client_id'),
                 'client_secret' => (string) config('services.google_media.client_secret'),
-                'redirect_uri' => (string) config('services.google_media.redirect'),
+                'redirect_uri' => $redirect ?? (string) config('services.google_media.redirect'),
             ]);
 
         $accessToken = (string) $response->json('access_token', '');
@@ -73,6 +95,7 @@ class GoogleMediaOAuth
 
         return [
             'access_token' => $accessToken,
+            'refresh_token' => $response->json('refresh_token'),
             'expires_in' => (int) $response->json('expires_in', 0),
             'scopes' => array_values(array_filter(explode(' ', (string) $response->json('scope', '')))),
         ];

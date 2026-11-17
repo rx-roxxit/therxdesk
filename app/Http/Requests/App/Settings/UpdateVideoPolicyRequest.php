@@ -32,7 +32,7 @@ class UpdateVideoPolicyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'video_policy' => ['required', Rule::enum(VideoPolicy::class)->only(VideoPolicy::selectable())],
+            'video_policy' => ['required', Rule::enum(VideoPolicy::class)->only(VideoPolicy::selectable($this->user()->account->driveConnection()))],
         ];
     }
 }

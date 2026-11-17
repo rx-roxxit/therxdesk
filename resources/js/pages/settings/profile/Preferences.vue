@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import {
-    IconDeviceDesktop,
-    IconMoon,
-    IconSun,
-} from '@tabler/icons-vue';
+import { IconDeviceDesktop, IconMoon, IconSun } from '@tabler/icons-vue';
 import { computed, ref } from 'vue';
 
+import DriveBackupController from '@/actions/App/Http/Controllers/App/Settings/DriveBackupController';
 import PreferencesController from '@/actions/App/Http/Controllers/App/Settings/PreferencesController';
 import { updateLanguage } from '@/actions/App/Http/Controllers/App/Settings/ProfileController';
 import VideoPolicyController from '@/actions/App/Http/Controllers/App/Settings/VideoPolicyController';
@@ -16,6 +13,7 @@ import SettingsSelect, {
     type SettingsSelectOption,
 } from '@/components/settings/SettingsSelect.vue';
 import TimezoneSelect from '@/components/TimezoneSelect.vue';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import dayjs from '@/dayjs';
 import { activeLocale } from '@/language';
@@ -30,12 +28,14 @@ import {
 } from '@/preferences';
 import type { Language, User } from '@/types';
 import type { TimezoneOption } from '@/types/posting-schedule';
-import type { VideoPolicy } from '@/types/video-policy';
+import type { DriveConnection, VideoPolicy } from '@/types/video-policy';
 
 const props = defineProps<{
     timezones: TimezoneOption[];
     /** Null for a Member: only the account's Owner sees the Video policy. */
     videoPolicy: VideoPolicy | null;
+    /** Null for a Member: only the account's Owner sees the Drive connection. */
+    driveConnection: DriveConnection | null;
 }>();
 
 type PreferenceField =
@@ -66,14 +66,17 @@ const themeOptions: SettingsSelectOption[] = [
         labelKey: 'settings.preferences.theme.light',
         icon: IconSun,
     },
-    { value: 'dark', labelKey: 'settings.preferences.theme.dark', icon: IconMoon },
+    {
+        value: 'dark',
+        labelKey: 'settings.preferences.theme.dark',
+        icon: IconMoon,
+    },
     {
         value: 'system',
         labelKey: 'settings.preferences.theme.system',
         icon: IconDeviceDesktop,
     },
 ];
-
 
 const languages = computed<Language[]>(
     () => (page.props.languages as Language[] | undefined) ?? [],
@@ -173,10 +176,46 @@ const videoPolicy = ref<string>(props.videoPolicy ?? 'keep');
 
 const showsVideoPolicy = computed(() => filled(props.videoPolicy));
 
-const videoPolicyOptions: SettingsSelectOption[] = [
+const keepAndDeleteOptions: SettingsSelectOption[] = [
     { value: 'keep', labelKey: 'rxdesk.video_policy.options.keep' },
     { value: 'delete', labelKey: 'rxdesk.video_policy.options.delete' },
 ];
+
+const backupOption: SettingsSelectOption = {
+    value: 'backup',
+    labelKey: 'rxdesk.video_policy.options.backup',
+};
+
+/** Backup is offered with a working Drive, and kept visible while it is the saved choice. */
+const videoPolicyOptions = computed<SettingsSelectOption[]>(() => {
+    if (props.driveConnection === 'connected') {
+        return [...keepAndDeleteOptions, backupOption];
+    }
+
+    if (videoPolicy.value === 'backup') {
+        return [...keepAndDeleteOptions, backupOption];
+    }
+
+    return keepAndDeleteOptions;
+});
+
+const driveStatusKey = computed(
+    () => `rxdesk.drive_backup.status.${props.driveConnection ?? 'none'}`,
+);
+
+const isDriveConnected = computed(() => props.driveConnection === 'connected');
+
+const needsDriveReconnect = computed(
+    () => props.driveConnection === 'needs_reconnect',
+);
+
+const hasDriveConnection = computed(() => props.driveConnection !== 'none');
+
+const disconnectDrive = (): void => {
+    router.delete(DriveBackupController.destroy.url(), {
+        preserveScroll: true,
+    });
+};
 
 const changeVideoPolicy = (value: string): void => {
     videoPolicy.value = value;
@@ -310,6 +349,49 @@ const changeVideoPolicy = (value: string): void => {
                         testid="preferences-video-policy"
                         @update:model-value="changeVideoPolicy"
                     />
+                </SettingsRow>
+
+                <Separator />
+
+                <SettingsRow
+                    id="drive-backup"
+                    :title="$t('rxdesk.drive_backup.heading')"
+                    :description="$t('rxdesk.drive_backup.description')"
+                >
+                    <div class="flex flex-col items-end gap-2">
+                        <p
+                            class="text-sm text-muted-foreground"
+                            data-testid="preferences-drive-status"
+                        >
+                            {{ $t(driveStatusKey) }}
+                        </p>
+                        <div class="flex gap-2">
+                            <Button
+                                v-if="hasDriveConnection"
+                                variant="outline"
+                                data-testid="preferences-drive-disconnect"
+                                @click="disconnectDrive"
+                            >
+                                {{ $t('rxdesk.drive_backup.disconnect') }}
+                            </Button>
+                            <Button
+                                v-if="!isDriveConnected"
+                                as-child
+                                data-testid="preferences-drive-connect"
+                            >
+                                <a :href="DriveBackupController.connect.url()">
+                                    <template v-if="needsDriveReconnect">
+                                        {{
+                                            $t('rxdesk.drive_backup.reconnect')
+                                        }}
+                                    </template>
+                                    <template v-else>
+                                        {{ $t('rxdesk.drive_backup.connect') }}
+                                    </template>
+                                </a>
+                            </Button>
+                        </div>
+                    </div>
                 </SettingsRow>
             </template>
 

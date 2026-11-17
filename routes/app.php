@@ -49,6 +49,7 @@ use App\Http\Controllers\App\RssFeedCollectionController;
 use App\Http\Controllers\App\RssFeedController;
 use App\Http\Controllers\App\RssFeedItemController;
 use App\Http\Controllers\App\Settings\ConnectedAccountController;
+use App\Http\Controllers\App\Settings\DriveBackupController;
 use App\Http\Controllers\App\Settings\NotificationPreferenceController;
 use App\Http\Controllers\App\Settings\PasswordController;
 use App\Http\Controllers\App\Settings\PreferencesController;
@@ -442,6 +443,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/preferences', [PreferencesController::class, 'edit'])->name('app.settings.preferences');
     Route::patch('settings/preferences', [PreferencesController::class, 'update'])->name('app.settings.preferences.update');
     Route::patch('settings/preferences/video-policy', [VideoPolicyController::class, 'update'])->name('app.settings.video-policy.update');
+    Route::get('settings/preferences/drive/connect', [DriveBackupController::class, 'connect'])
+        ->middleware('throttle:media-imports')
+        ->name('app.settings.drive-backup.connect');
+    Route::get('settings/preferences/drive/callback', [DriveBackupController::class, 'callback'])
+        ->middleware('throttle:media-imports')
+        ->name('app.settings.drive-backup.callback');
+    Route::delete('settings/preferences/drive', [DriveBackupController::class, 'destroy'])->name('app.settings.drive-backup.destroy');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -27,9 +27,28 @@ return [
         'options' => [
             'keep' => 'Keep',
             'delete' => 'Delete',
+            'backup' => 'Backup to Drive',
         ],
         'record' => [
             'deleted' => 'Video deleted',
+        ],
+    ],
+    'drive_backup' => [
+        'heading' => 'Google Drive',
+        'description' => 'Connect your Google Drive to back up videos before they are deleted. The desk only reaches files it creates.',
+        'status' => [
+            'none' => 'Not connected',
+            'connected' => 'Connected',
+            'needs_reconnect' => 'Google rejected the connection. Reconnect to keep backing up.',
+        ],
+        'connect' => 'Connect Google Drive',
+        'reconnect' => 'Reconnect',
+        'disconnect' => 'Disconnect',
+        'connected' => 'Google Drive is connected.',
+        'errors' => [
+            'not_configured' => 'Google Drive is not set up on this server yet. Ask the admin to add the Google keys.',
+            'connect_failed' => "Couldn't connect Google Drive. Try again.",
+            'scope_not_granted' => 'Google Drive was not connected because access was not granted. Try again and allow access.',
         ],
     ],
 ];
