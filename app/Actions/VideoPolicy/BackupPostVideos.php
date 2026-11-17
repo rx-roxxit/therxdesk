@@ -9,39 +9,38 @@ use App\Enums\Post\Status as PostStatus;
 use App\Enums\VideoRecord\Outcome;
 use App\Exceptions\Media\GoogleTokenRejected;
 use App\Exceptions\VideoPolicy\DriveBackupUnavailable;
-use App\Exceptions\VideoPolicy\GroupBackupFailed;
 use App\Jobs\VideoPolicy\ApplyVideoPolicy;
 use App\Models\Media;
 use App\Models\Post;
 use App\Models\VideoRecord;
 use App\Services\VideoPolicy\GoogleDriveBackup;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
  * The Backup policy for one published post. Posts created together
  * (`post_group_id`) hold copies of the same file, so each file goes to the
- * Owner's Drive once: the first published post of the group holding it
- * uploads its copy into "The RX Desk/<workspace>/<year-month>", and every
- * other post reuses that Drive file once it is recorded. A video leaves the
- * server only after its Drive copy is confirmed (`DeletePostVideos`).
+ * Owner's Drive once: whichever published post of the group runs first
+ * uploads its copy into "The RX Desk/<workspace>/<year-month>" under the
+ * file's lock, and every other post reuses that Drive file once it is
+ * recorded. A video leaves the server only after its Drive copy is confirmed
+ * (`DeletePostVideos`).
  */
 class BackupPostVideos
 {
     /**
-     * How long one upload may hold its lock, so a run that dies mid-upload
-     * does not block the file for longer than the job's own retries.
+     * How long one upload may hold its lock: longer than the job may run
+     * (`ApplyVideoPolicy::TIMEOUT_SECONDS`), so a run killed mid-upload frees
+     * the file soon after, and a live one never loses it. A run that ends,
+     * failed or not, releases it at once.
      */
-    private const int UPLOAD_LOCK_SECONDS = 3600;
+    public const int UPLOAD_LOCK_SECONDS = ApplyVideoPolicy::TIMEOUT_SECONDS + 300;
 
     /**
-     * Returns false while a video waits for its group's upload (another post
-     * of the group does it, or another run of this one is under way): the
-     * caller tries again later. A waiting post whose uploader gave up throws
-     * `GroupBackupFailed`.
+     * Returns false while another run holds the upload lock of one of the
+     * post's files (another post of the group, or another run of this one,
+     * is uploading it): the caller looks again later.
      */
     public static function execute(Post $post): bool
     {
@@ -51,49 +50,23 @@ class BackupPostVideos
 
         /** @var Collection<int, Media> $videos */
         $videos = $post->ownedMedia()->where('type', MediaType::Video)->get();
-        $waiting = false;
-        $woken = [];
 
-        foreach ($videos as $video) {
-            $sourceMediaId = self::sourceMediaId($video);
+        return $videos
+            ->map(fn (Media $video): bool => self::backUp($post, $video))
+            ->every(fn (bool $done): bool => $done);
+    }
 
-            if (self::reuse($post, $video, $sourceMediaId)) {
-                continue;
-            }
-
-            if (! self::uploads($post, $sourceMediaId)) {
-                self::assertGroupNotFailed($post, $sourceMediaId);
-                $waiting = true;
-
-                continue;
-            }
-
-            $lock = Cache::lock(self::lockName($post, $sourceMediaId), self::UPLOAD_LOCK_SECONDS);
-
-            if (! $lock->get()) {
-                $waiting = true;
-
-                continue;
-            }
-
-            try {
-                if (self::reuse($post, $video, $sourceMediaId)) {
-                    continue;
-                }
-
-                $file = self::upload($post, $video);
-                DeletePostVideos::afterBackup($post, $video, $sourceMediaId, $file['id'], $file['link']);
-                $woken = [...$woken, ...self::otherHolderIds($post, $sourceMediaId)];
-            } finally {
-                $lock->release();
-            }
-        }
-
-        foreach (array_unique($woken) as $postId) {
-            ApplyVideoPolicy::dispatch($postId);
-        }
-
-        return ! $waiting;
+    /**
+     * Whether another post of the group already recorded a failed backup, so
+     * the Owner was already told about this group.
+     */
+    public static function groupHasFailed(Post $post): bool
+    {
+        return VideoRecord::query()
+            ->whereIn('post_id', $post->groupPostIds())
+            ->where('post_id', '!=', $post->id)
+            ->where('outcome', Outcome::BackupFailed)
+            ->exists();
     }
 
     /**
@@ -129,38 +102,51 @@ class BackupPostVideos
     }
 
     /**
+     * Backs up one video, or reuses the group's Drive copy of its file.
+     * False while another run holds the file's upload lock.
+     */
+    private static function backUp(Post $post, Media $video): bool
+    {
+        $sourceMediaId = self::sourceMediaId($video);
+
+        if (self::reuse($post, $video, $sourceMediaId)) {
+            return true;
+        }
+
+        $lock = Cache::lock(self::lockName($post, $sourceMediaId), self::UPLOAD_LOCK_SECONDS);
+
+        if (! $lock->get()) {
+            return false;
+        }
+
+        try {
+            if (self::reuse($post, $video, $sourceMediaId)) {
+                return true;
+            }
+
+            $file = self::upload($post, $video);
+            DeletePostVideos::afterBackup($post, $video, $sourceMediaId, (string) data_get($file, 'id'), data_get($file, 'link'));
+
+            return true;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
      * Removes the video when the group already has its Drive copy.
      */
     private static function reuse(Post $post, Media $video, string $sourceMediaId): bool
     {
         $backup = self::groupBackup($post, $sourceMediaId);
 
-        if ($backup === null) {
+        if (blank($backup)) {
             return false;
         }
 
         DeletePostVideos::afterBackup($post, $video, $sourceMediaId, (string) $backup->drive_file_id, $backup->drive_link);
 
         return true;
-    }
-
-    /**
-     * A post waiting on its group's upload stops waiting once the uploader
-     * recorded that it gave up.
-     */
-    private static function assertGroupNotFailed(Post $post, string $sourceMediaId): void
-    {
-        $failure = VideoRecord::query()
-            ->whereIn('post_id', self::groupPostIds($post))
-            ->where('post_id', '!=', $post->id)
-            ->where('outcome', Outcome::BackupFailed)
-            ->where('source_media_id', $sourceMediaId)
-            ->oldest()
-            ->first();
-
-        if ($failure !== null) {
-            throw new GroupBackupFailed((string) $failure->last_error);
-        }
     }
 
     private static function lockName(Post $post, string $sourceMediaId): string
@@ -185,68 +171,12 @@ class BackupPostVideos
     private static function groupBackup(Post $post, string $sourceMediaId): ?VideoRecord
     {
         return VideoRecord::query()
-            ->whereIn('post_id', self::groupPostIds($post))
+            ->whereIn('post_id', $post->groupPostIds())
             ->where('outcome', Outcome::BackedUp)
             ->where('source_media_id', $sourceMediaId)
             ->whereNotNull('drive_file_id')
             ->oldest()
             ->first();
-    }
-
-    /**
-     * Whether this post is the one that uploads the file: the first published
-     * post of its group still holding a copy of it.
-     */
-    private static function uploads(Post $post, string $sourceMediaId): bool
-    {
-        return self::holders($post, $sourceMediaId)->first()?->is($post) === true;
-    }
-
-    /**
-     * The ids of the other published posts of the group still holding a copy
-     * of the file, which a finished upload lets finish at once.
-     *
-     * @return list<string>
-     */
-    private static function otherHolderIds(Post $post, string $sourceMediaId): array
-    {
-        return self::holders($post, $sourceMediaId)
-            ->reject(fn (Post $holder): bool => $holder->is($post))
-            ->pluck('id')
-            ->all();
-    }
-
-    /**
-     * The published posts of the group still holding a copy of the file,
-     * the uploader first.
-     *
-     * @return SupportCollection<int, Post>
-     */
-    private static function holders(Post $post, string $sourceMediaId): SupportCollection
-    {
-        return Post::query()
-            ->whereKey(self::groupPostIds($post))
-            ->published()
-            ->with(['ownedMedia' => fn (HasMany $query) => $query->where('type', MediaType::Video)])
-            ->orderBy('published_at')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (Post $candidate): bool => $candidate->ownedMedia->contains(
-                fn (Media $video): bool => self::sourceMediaId($video) === $sourceMediaId,
-            ))
-            ->values();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function groupPostIds(Post $post): array
-    {
-        if (blank($post->post_group_id)) {
-            return [$post->id];
-        }
-
-        return Post::query()->where('post_group_id', $post->post_group_id)->pluck('id')->all();
     }
 
     /**
@@ -257,7 +187,7 @@ class BackupPostVideos
         $account = $post->workspace->account;
         $connection = $account->driveBackupConnection();
 
-        if ($connection === null || $connection->needsReconnect()) {
+        if (blank($connection) || $connection->needsReconnect()) {
             throw new DriveBackupUnavailable("The account {$account->id} has no working Google Drive connection.");
         }
 
@@ -287,7 +217,8 @@ class BackupPostVideos
      */
     private static function fileName(Post $post, Media $video, string $date): string
     {
-        $channel = Str::slug("{$post->platform?->value} ".($post->display_username ?? $post->display_name));
+        $handle = $post->display_username ?? $post->display_name;
+        $channel = Str::slug("{$post->platform?->value} {$handle}");
         $extension = pathinfo($video->path, PATHINFO_EXTENSION);
 
         if ($extension === '') {

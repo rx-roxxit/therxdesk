@@ -18,32 +18,26 @@ use App\Models\VideoRecord;
  */
 class RetryVideoBackup
 {
-    public static function execute(Post $post): void
+    /**
+     * Returns false, and queues nothing, when neither the post nor its group
+     * has a failed backup to retry.
+     */
+    public static function execute(Post $post): bool
     {
-        $groupPostIds = self::groupPostIds($post);
-
         $failed = VideoRecord::query()
-            ->whereIn('post_id', $groupPostIds)
+            ->whereIn('post_id', $post->groupPostIds())
             ->where('outcome', Outcome::BackupFailed);
 
-        $postIds = [$post->id, ...$failed->clone()->pluck('post_id')->all()];
+        $failedPostIds = $failed->clone()->pluck('post_id');
+
+        if ($failedPostIds->isEmpty()) {
+            return false;
+        }
 
         $failed->delete();
 
-        foreach (array_unique($postIds) as $postId) {
-            ApplyVideoPolicy::dispatch($postId);
-        }
-    }
+        $failedPostIds->push($post->id)->unique()->each(fn (string $postId) => ApplyVideoPolicy::dispatch($postId));
 
-    /**
-     * @return list<string>
-     */
-    private static function groupPostIds(Post $post): array
-    {
-        if (blank($post->post_group_id)) {
-            return [$post->id];
-        }
-
-        return Post::query()->where('post_group_id', $post->post_group_id)->pluck('id')->all();
+        return true;
     }
 }

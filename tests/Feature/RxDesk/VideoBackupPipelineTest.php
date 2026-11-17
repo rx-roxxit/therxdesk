@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\VideoPolicy\BackupPostVideos;
 use App\Enums\Account\VideoPolicy;
 use App\Enums\Media\Source;
 use App\Enums\Post\PublishStatus;
@@ -14,12 +15,12 @@ use App\Models\Media;
 use App\Models\MediaSourceConnection;
 use App\Models\Post;
 use App\Models\SocialAccount;
+use App\Models\User;
 use App\Models\VideoRecord;
 use App\Models\Workspace;
 use Illuminate\Http\Client\Request;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -104,14 +105,22 @@ function markBackupPostPublished(Post $post): void
 }
 
 /**
- * Runs every job due on the default queue: the policy jobs, then the file
- * deletions they queue.
+ * Runs every job that is due: the policy jobs on their own queue, then the
+ * file deletions they queue on the default one.
  */
 function runDueBackupJobs(): void
 {
-    while (test()->queue->pendingSize('default') > 0) {
-        test()->worker->runNextJob('database', 'default', test()->workerOptions);
+    while (test()->queue->pendingSize(ApplyVideoPolicy::QUEUE) + test()->queue->pendingSize('default') > 0) {
+        test()->worker->runNextJob('database', ApplyVideoPolicy::QUEUE.',default', test()->workerOptions);
     }
+}
+
+/**
+ * How many policy jobs are queued, due or not.
+ */
+function queuedPolicyJobs(): int
+{
+    return test()->queue->size(ApplyVideoPolicy::QUEUE);
 }
 
 /**
@@ -279,7 +288,7 @@ test('an expired drive token is refreshed with the stored refresh token before t
         ->and($this->connection->expires_at->isFuture())->toBeTrue();
 });
 
-test('a post whose group upload is not done yet waits, then reuses the drive file', function () {
+test('every post of a group tries the upload while it fails, and the group still ends with one drive copy', function () {
     $drive = fakeDrive();
     $drive->failUploads = true;
     ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
@@ -294,7 +303,9 @@ test('a post whose group upload is not done yet waits, then reuses the drive fil
     $this->travel(2)->minutes();
     runDueBackupJobs();
 
-    expect($drive->sessions)->toHaveCount(1)
+    expect($drive->sessions)->toHaveCount(2)
+        ->and($drive->sessions['session-1']['metadata']['name'])->toEndWith("_{$first->id}.mp4")
+        ->and($drive->sessions['session-2']['metadata']['name'])->toEndWith("_{$second->id}.mp4")
         ->and(VideoRecord::query()->count())->toBe(0)
         ->and(Media::query()->whereKey([$original->id, $copy->id])->count())->toBe(2);
     Storage::assertExists([$original->path, $copy->path]);
@@ -302,14 +313,38 @@ test('a post whose group upload is not done yet waits, then reuses the drive fil
     $drive->failUploads = false;
     $this->travel(5)->minutes();
     runDueBackupJobs();
-    $this->travel(2)->minutes();
+
+    expect($drive->sessions)->toHaveCount(3)
+        ->and(VideoRecord::query()->pluck('drive_file_id')->all())->toBe(['drive-file-session-3', 'drive-file-session-3'])
+        ->and(Media::query()->whereKey([$original->id, $copy->id])->count())->toBe(0)
+        ->and(queuedPolicyJobs())->toBe(0);
+    Storage::assertMissing([$original->path, $copy->path]);
+    $this->assertDatabaseCount('failed_jobs', 0);
+});
+
+test('a group whose first post published under keep is backed up by the next one, and the first keeps its file', function () {
+    $drive = fakeDrive();
+    $this->account->forceFill(['video_policy' => VideoPolicy::Keep])->save();
+    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
+    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
+
+    markBackupPostPublished($first);
+    $this->travel(1)->hours();
     runDueBackupJobs();
 
-    expect($drive->sessions)->toHaveCount(2)
-        ->and($drive->sessions['session-2']['metadata']['name'])->toEndWith("_{$first->id}.mp4")
-        ->and(VideoRecord::query()->pluck('drive_file_id')->all())->toBe(['drive-file-session-2', 'drive-file-session-2'])
-        ->and(Media::query()->whereKey([$original->id, $copy->id])->count())->toBe(0);
-    Storage::assertMissing([$original->path, $copy->path]);
+    $this->account->forceFill(['video_policy' => VideoPolicy::Backup])->save();
+    markBackupPostPublished($second);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    expect($drive->sessions)->toHaveCount(1)
+        ->and($drive->sessions['session-1']['metadata']['name'])->toEndWith("_{$second->id}.mp4")
+        ->and(VideoRecord::query()->sole()->post_id)->toBe($second->id)
+        ->and(Media::query()->whereKey($copy->id)->exists())->toBeFalse()
+        ->and(data_get($first->refresh()->media, '0.id'))->toBe($original->id)
+        ->and(queuedPolicyJobs())->toBe(0);
+    Storage::assertExists($original->path);
+    Storage::assertMissing($copy->path);
     $this->assertDatabaseCount('failed_jobs', 0);
 });
 
@@ -341,7 +376,7 @@ test('a backup that keeps failing is recorded as failed after the last try, keep
         ->and(data_get($post->refresh()->media, '0.id'))->toBe($video->id);
     Storage::assertExists($video->path);
     expect(Media::query()->whereKey($video->id)->exists())->toBeTrue()
-        ->and($this->queue->size('default'))->toBe(0);
+        ->and(queuedPolicyJobs())->toBe(0);
     $this->assertDatabaseCount('failed_jobs', 0);
 
     Mail::assertQueuedCount(1);
@@ -362,7 +397,7 @@ test('a token Google rejects marks the connection as needing reconnect and fails
 
     expect($this->connection->refresh()->needsReconnect())->toBeTrue()
         ->and($drive->sessions)->toHaveCount(0)
-        ->and($this->queue->size('default'))->toBe(0);
+        ->and(queuedPolicyJobs())->toBe(0);
 
     $record = VideoRecord::query()->sole();
     expect($record->outcome)->toBe(Outcome::BackupFailed)
@@ -384,7 +419,7 @@ test('a second run of the same upload does not upload the file twice at once', f
     $second = null;
     $drive->onChunk = function () use ($drive, $post, &$second): void {
         $drive->onChunk = null;
-        $second = \App\Actions\VideoPolicy\BackupPostVideos::execute($post->fresh());
+        $second = BackupPostVideos::execute($post->fresh());
     };
 
     $this->travel(1)->hours();
@@ -416,69 +451,38 @@ test('a file whose upload lock is held is not uploaded until the lock is release
         ->and(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackedUp);
 });
 
-test('when the uploader succeeds the posts waiting on it finish at once', function () {
+test('a post waiting on another run\'s long upload does not use up its tries', function () {
     $drive = fakeDrive();
-    $drive->failUploads = true;
-    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
-    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
-    markBackupPostPublished($first);
-    $this->travel(2)->minutes();
-    markBackupPostPublished($second);
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $lock = Cache::lock("video-backup:{$this->groupId}:{$video->id}", 86400);
+    $lock->get();
 
     $this->travel(1)->hours();
     runDueBackupJobs();
-    expect(Media::query()->whereKey($copy->id)->exists())->toBeTrue();
 
-    $drive->failUploads = false;
-    DB::table('jobs')->delete();
-    ApplyVideoPolicy::dispatch($first->id);
-    $this->worker->runNextJob('database', 'default', $this->workerOptions);
-
-    expect(VideoRecord::query()->count())->toBe(1);
-    expect($this->queue->pendingSize('default'))->toBeGreaterThan(0);
-
-    runDueBackupJobs();
-
-    expect(VideoRecord::query()->pluck('outcome')->all())->toBe([Outcome::BackedUp, Outcome::BackedUp])
-        ->and(Media::query()->whereKey($copy->id)->exists())->toBeFalse()
-        ->and($drive->sessions)->toHaveCount(2);
-});
-
-test('a waiting post that runs out of tries before its uploader has given up is not marked failed', function () {
-    $drive = fakeDrive();
-    $drive->failUploads = true;
-    ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
-    ['post' => $second, 'video' => $copy] = backupGroupPost('otherchannel', $original);
-    markBackupPostPublished($first);
-    $this->travel(2)->minutes();
-    markBackupPostPublished($second);
-    DB::table('jobs')->where('payload', 'like', '%ApplyVideoPolicy%')->where('payload', 'like', "%{$first->id}%")->delete();
-
-    $this->travel(1)->hours();
-    $this->travel(2)->minutes();
-    runDueBackupJobs();
-
-    foreach (ApplyVideoPolicy::BACKOFF_SECONDS as $seconds) {
-        $this->travel($seconds)->seconds();
+    foreach (range(1, 24) as $poll) {
+        $this->travel(ApplyVideoPolicy::WAIT_SECONDS)->seconds();
         runDueBackupJobs();
     }
 
-    expect(VideoRecord::query()->count())->toBe(0)
-        ->and($this->queue->size('default'))->toBe(1);
+    expect($drive->sessions)->toHaveCount(0)
+        ->and(VideoRecord::query()->count())->toBe(0)
+        ->and(queuedPolicyJobs())->toBe(1);
     Mail::assertNothingQueued();
-    Storage::assertExists([$original->path, $copy->path]);
+    Storage::assertExists($video->path);
 
-    $drive->failUploads = false;
-    ApplyVideoPolicy::dispatch($first->id);
-    runDueBackupJobs();
-    $this->travel(20)->minutes();
+    $lock->release();
+    $this->travel(ApplyVideoPolicy::WAIT_SECONDS)->seconds();
     runDueBackupJobs();
 
-    expect(VideoRecord::query()->pluck('outcome')->all())->toBe([Outcome::BackedUp, Outcome::BackedUp])
-        ->and($this->queue->size('default'))->toBe(0);
+    expect($drive->sessions)->toHaveCount(1)
+        ->and(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackedUp)
+        ->and(queuedPolicyJobs())->toBe(0);
+    Storage::assertMissing($video->path);
 });
 
-test('a waiting post is marked failed, without a second email, once its uploader gave up', function () {
+test('every post of a group whose upload keeps failing is marked failed, and the Owner gets one email', function () {
     $drive = fakeDrive();
     $drive->failUploads = true;
     ['post' => $first, 'video' => $original] = backupGroupPost('deskchannel');
@@ -490,7 +494,7 @@ test('a waiting post is marked failed, without a second email, once its uploader
     $this->travel(1)->hours();
     runDueBackupJobs();
 
-    foreach ([...ApplyVideoPolicy::BACKOFF_SECONDS, 300] as $seconds) {
+    foreach (ApplyVideoPolicy::BACKOFF_SECONDS as $seconds) {
         $this->travel($seconds)->seconds();
         runDueBackupJobs();
     }
@@ -499,10 +503,51 @@ test('a waiting post is marked failed, without a second email, once its uploader
     expect($records)->toHaveCount(2)
         ->and($records[$first->id]->outcome)->toBe(Outcome::BackupFailed)
         ->and($records[$second->id]->outcome)->toBe(Outcome::BackupFailed)
-        ->and($records[$second->id]->last_error)->toBe($records[$first->id]->last_error)
-        ->and($this->queue->size('default'))->toBe(0);
+        ->and(queuedPolicyJobs())->toBe(0);
     Storage::assertExists([$original->path, $copy->path]);
     Mail::assertQueuedCount(1);
+});
+
+test('the backup runs on its own queue, whose worker and redis connection outlast a large upload', function () {
+    config()->set('queue.default', 'redis');
+    $job = new ApplyVideoPolicy('post-id');
+    $supervisor = config('horizon.defaults.video-policy');
+    $others = collect(config('horizon.defaults'))
+        ->except('video-policy')
+        ->flatMap(fn (array $other): array => (array) data_get($other, 'queue', []))
+        ->all();
+
+    expect($job->queue)->toBe(ApplyVideoPolicy::QUEUE)
+        ->and($job->connection)->toBe('video-policy')
+        ->and(config('queue.connections.video-policy.driver'))->toBe('redis')
+        ->and(data_get($supervisor, 'connection'))->toBe('video-policy')
+        ->and(data_get($supervisor, 'queue'))->toBe([ApplyVideoPolicy::QUEUE])
+        ->and($others)->not->toContain(ApplyVideoPolicy::QUEUE)
+        ->and(config('horizon.environments.production.video-policy'))->toBeArray()
+        ->and(config('horizon.environments.local.video-policy'))->toBeArray()
+        ->and($job->timeout)->toBeGreaterThanOrEqual(2 * 3600)
+        ->and($job->timeout)->toBeLessThan(data_get($supervisor, 'timeout'))
+        ->and(data_get($supervisor, 'timeout'))->toBeLessThan(config('queue.connections.video-policy.retry_after'))
+        ->and(BackupPostVideos::UPLOAD_LOCK_SECONDS)->toBeGreaterThan($job->timeout);
+});
+
+test('a backup job queued without redis stays on the default connection', function () {
+    config()->set('queue.default', 'database');
+
+    expect((new ApplyVideoPolicy('post-id'))->connection)->toBeNull();
+});
+
+test('an upload that throws releases its lock at once', function () {
+    $drive = fakeDrive();
+    $drive->failUploads = true;
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+
+    expect(fn () => BackupPostVideos::execute($post->fresh()))->toThrow(Exception::class);
+
+    $lock = Cache::lock("video-backup:{$this->groupId}:{$video->id}", 10);
+    expect($lock->get())->toBeTrue();
+    $lock->release();
 });
 
 test('retry runs the backup again right away and uploads when the policy is still backup', function () {
@@ -562,20 +607,38 @@ test('only the Owner can retry a backup', function () {
     $record = VideoRecord::factory()->create(['post_id' => $post->id, 'outcome' => Outcome::BackupFailed]);
 
     $member = workspaceMember($this->workspace, 'admin');
-    $queued = $this->queue->size('default');
+    $queued = queuedPolicyJobs();
 
     $this->actingAs($member)->post(route('app.posts.video-backup.retry', $post))->assertForbidden();
-    expect($this->queue->size('default'))->toBe($queued)
+    expect(queuedPolicyJobs())->toBe($queued)
         ->and($record->fresh())->not->toBeNull();
 
     $this->actingAs(retryOwner())->post(route('app.posts.video-backup.retry', $post))->assertRedirect();
     expect($record->fresh())->toBeNull();
 });
 
-function retryOwner(): \App\Models\User
+function retryOwner(): User
 {
     $owner = test()->account->owner;
     $owner->update(['current_workspace_id' => test()->workspace->id]);
 
     return $owner->fresh();
 }
+
+test('retry is refused for a post whose backup has not failed', function () {
+    $drive = fakeDrive();
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    markBackupPostPublished($post);
+    $queued = queuedPolicyJobs();
+
+    $this->actingAs(retryOwner())
+        ->postJson(route('app.posts.video-backup.retry', $post))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['post' => "This post has no failed backup to retry."]);
+
+    expect(queuedPolicyJobs())->toBe($queued);
+    runDueBackupJobs();
+
+    expect($drive->sessions)->toHaveCount(0)
+        ->and(Media::query()->whereKey($video->id)->exists())->toBeTrue();
+});

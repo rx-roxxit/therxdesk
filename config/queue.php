@@ -75,6 +75,22 @@ return [
             'after_commit' => false,
         ],
 
+        /*
+        | The RX Desk: the Video policy's own connection (`ApplyVideoPolicy`).
+        | A Drive backup of a large video runs for hours, longer than the
+        | `redis` connection's `retry_after`, which would hand the running job
+        | to a second worker. Keep this above the `video-policy` supervisor's
+        | timeout in `config/horizon.php`.
+        */
+        'video-policy' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'video-policy',
+            'retry_after' => 11_400,
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],
