@@ -45,7 +45,7 @@ class AttachMediaFromUrlTool extends Tool
 
         $validated = $request->validate([
             ...PostMediaRequestRules::attachFromUrl(),
-            'urls.*.meta' => PostMediaRules::metaRules(referenced: true),
+            'urls.*.meta' => PostMediaRules::referencedMetaRules(),
         ]);
 
         try {

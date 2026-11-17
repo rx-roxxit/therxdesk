@@ -4,6 +4,7 @@ import {
     toMediaRules,
     type MediaRules,
 } from '@/lib/contentTypeMediaRules';
+import { coverImageChanged, coverImageOf } from '@/lib/coverImage';
 import {
     fullSelection,
     resolveOutputFileName,
@@ -133,8 +134,8 @@ export const presetValuesFor = (
 
 export type EditorTab = 'edit' | 'thumbnail' | 'alt' | 'tags';
 
-/** A video gets the Thumbnail tab where it takes a picked frame or a Cover image. */
-const hasThumbnailTab = (rule: MediaRules): boolean => {
+/** Whether a video's networks take a picked frame or a Cover image: the video then gets the Thumbnail tab. */
+const takesCover = (rule: MediaRules): boolean => {
     if (rule.supportsVideoCover) {
         return true;
     }
@@ -148,7 +149,7 @@ export const editorTabsFor = (
     rules: MediaRules[],
 ): EditorTab[] => {
     if (isVideo(item)) {
-        return rules.some(hasThumbnailTab) ? ['thumbnail'] : [];
+        return rules.some(takesCover) ? ['thumbnail'] : [];
     }
 
     if (!isImage(item) || isGif(item)) {
@@ -190,7 +191,7 @@ export const createMediaEdit = (item: MediaItem): MediaEdit => ({
     altText: item.meta?.alt_text ?? '',
     userTags: [...(item.meta?.user_tags ?? [])],
     coverOffsetMs: item.meta?.cover_offset_ms ?? null,
-    coverImage: item.meta?.cover_image ?? null,
+    coverImage: coverImageOf(item) ?? null,
 });
 
 export const hasPixelChanges = (edit: MediaEdit): boolean =>
@@ -208,7 +209,7 @@ export const hasMetaChanges = (edit: MediaEdit, item: MediaItem): boolean =>
     JSON.stringify(edit.userTags) !==
         JSON.stringify(item.meta?.user_tags ?? []) ||
     (edit.coverOffsetMs ?? 0) !== (item.meta?.cover_offset_ms ?? 0) ||
-    edit.coverImage?.id !== item.meta?.cover_image?.id;
+    coverImageChanged(edit.coverImage, item);
 
 /** A cover offset in milliseconds as `m:ss.s`. */
 export const formatCoverOffset = (milliseconds: number): string => {

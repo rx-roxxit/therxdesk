@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Dto\MediaItem;
 use App\Enums\PostPlatform\ContentType;
+use App\Jobs\Cover\SetPostCover;
+use App\Jobs\VideoPolicy\ApplyVideoPolicy;
 use App\Models\Account;
 use App\Models\Media;
 use App\Models\Post;
@@ -78,4 +80,10 @@ test('a copy of the Cover image under the Disk guard refuses the whole save', fu
     postReelWithCoverToBothChannels($this)->assertSessionHasErrors('media');
 
     expect(Post::query()->count())->toBe(0);
+});
+
+test('the Cover job gives up before the Video policy can delete the Cover image', function () {
+    $coverWindow = SetPostCover::FIRST_DELAY_SECONDS + array_sum(SetPostCover::BACKOFF_SECONDS);
+
+    expect($coverWindow)->toBeLessThan(ApplyVideoPolicy::DELAY_MINUTES * 60);
 });

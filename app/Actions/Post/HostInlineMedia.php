@@ -134,17 +134,9 @@ class HostInlineMedia
                     return self::item($row, $item, $workspace, $key, $fetched);
                 }
 
-                $url = (string) data_get($item, 'url');
+                $upload = self::fetchUpload($workspace, $allowedTypes, (string) data_get($item, 'url'), $key, $fetched);
 
-                if (! array_key_exists($url, $fetched)) {
-                    $imported = app(MediaAttacher::class)->importUpload($workspace, $allowedTypes, $url);
-                    $upload = $imported->media
-                        ?? throw ValidationException::withMessages(["{$key}.url" => MediaAttacher::failureMessage($imported, $url)]);
-
-                    $fetched[$url] = $upload->id;
-                }
-
-                return self::item(Media::query()->findOrFail($fetched[$url]), $item, $workspace, $key, $fetched);
+                return self::item($upload, $item, $workspace, $key, $fetched);
             })->all();
         } catch (ValidationException $exception) {
             if ($fetched !== []) {
@@ -208,8 +200,9 @@ class HostInlineMedia
         }
 
         if (is_array($cover)) {
-            $prefix = filled($errorKey) ? "{$errorKey}." : '';
-            $edits[SyncOwnedMedia::COVER_IMAGE] = self::coverImage($workspace, $cover, $prefix.'meta.'.SyncOwnedMedia::COVER_IMAGE, $fetched);
+            $path = SyncOwnedMedia::COVER_IMAGE_PATH;
+            $coverKey = blank($errorKey) ? $path : "{$errorKey}.{$path}";
+            $edits[SyncOwnedMedia::COVER_IMAGE] = self::coverImage($workspace, $cover, $coverKey, $fetched);
         }
 
         $item['meta'] = [...(array) data_get($item, 'meta', []), ...$edits];
@@ -245,17 +238,31 @@ class HostInlineMedia
             return MediaItem::fromMedia($row ?? throw ValidationException::withMessages(["{$key}.id" => __('rxdesk.cover.errors.not_found')]))->toArray();
         }
 
-        $url = (string) data_get($cover, 'url');
+        $upload = self::fetchUpload($workspace, [MediaType::Image], (string) data_get($cover, 'url'), $key, $fetched);
 
+        return MediaItem::fromMedia($upload)->toArray();
+    }
+
+    /**
+     * The temporary upload of a downloaded `url`, downloaded once per request
+     * (`$fetched` maps each url to its upload).
+     *
+     * @param  array<MediaType>  $allowedTypes
+     * @param  array<string, string>  $fetched
+     *
+     * @throws ValidationException
+     */
+    private static function fetchUpload(Workspace $workspace, array $allowedTypes, string $url, string $key, array &$fetched): Media
+    {
         if (! array_key_exists($url, $fetched)) {
-            $imported = app(MediaAttacher::class)->importUpload($workspace, [MediaType::Image], $url);
+            $imported = app(MediaAttacher::class)->importUpload($workspace, $allowedTypes, $url);
             $upload = $imported->media
                 ?? throw ValidationException::withMessages(["{$key}.url" => MediaAttacher::failureMessage($imported, $url)]);
 
             $fetched[$url] = $upload->id;
         }
 
-        return MediaItem::fromMedia(Media::query()->findOrFail($fetched[$url]))->toArray();
+        return Media::query()->findOrFail($fetched[$url]);
     }
 
     /**

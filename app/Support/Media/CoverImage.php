@@ -34,14 +34,22 @@ class CoverImage
     public const array MIME_TYPES = ['image/jpeg', 'image/png'];
 
     /**
+     * The size limit as the whole megabytes every message and description names.
+     */
+    public static function maxMegabytes(): int
+    {
+        return intdiv(self::MAX_BYTES, 1024 * 1024);
+    }
+
+    /**
      * What an MCP tool or API client reads about `meta.cover_image`, one text
      * for every description that mentions it.
      */
     public static function documentation(): string
     {
-        $max = self::MAX_BYTES / 1024 / 1024;
+        $max = self::maxMegabytes();
 
-        return "cover_image (the Cover of a video: an image the network shows before the video plays, only for content types with supports_cover_image in list-content-types-tool, and only on the single video of a post; exactly one of upload_token, url or id, as for a media item; JPEG or PNG up to {$max} MB, ideally the clip's aspect ratio, 9:16 for a vertical video; the same image goes to every channel the video is posted to, and it replaces cover_offset_ms; leave it out to remove it)";
+        return "cover_image (the Cover of a video: an image the network shows before the video plays, only for content types with supports_cover_image in list-content-types-tool, and only on the single video of a post; exactly one of upload_token, url or id, as for a media item (an id is a Cover image already on the post: send the post's media back with its cover_image to keep it); JPEG or PNG up to {$max} MB, ideally the clip's aspect ratio, 9:16 for a vertical video; the same image goes to every channel the video is posted to, and it replaces cover_offset_ms; leave it out to remove it)";
     }
 
     /**
@@ -83,17 +91,18 @@ class CoverImage
      */
     public static function violations(Workspace $workspace, ?ContentType $contentType, array $media): array
     {
+        $path = SyncOwnedMedia::COVER_IMAGE_PATH;
         $covers = collect($media)
-            ->filter(fn (mixed $item): bool => is_array(data_get($item, 'meta.'.SyncOwnedMedia::COVER_IMAGE)));
+            ->filter(fn (mixed $item): bool => is_array(data_get($item, $path)));
 
         if ($covers->isEmpty()) {
             return [];
         }
 
-        $rows = self::rows($workspace, [...$media, ...$covers->map(fn (array $item): array => data_get($item, 'meta.'.SyncOwnedMedia::COVER_IMAGE))->all()]);
+        $rows = self::rows($workspace, [...$media, ...$covers->map(fn (array $item): array => data_get($item, $path))->all()]);
 
         return $covers
-            ->map(function (array $item) use ($contentType, $media, $rows): ?string {
+            ->map(function (array $item) use ($contentType, $media, $rows, $path): ?string {
                 $video = self::row($rows, $item);
                 $isVideo = $video === null ? MediaItem::fromArray($item)->isVideo() : $video->type === MediaType::Video;
 
@@ -101,10 +110,10 @@ class CoverImage
                     return __('rxdesk.cover.errors.not_supported');
                 }
 
-                return self::fileViolation(self::row($rows, data_get($item, 'meta.'.SyncOwnedMedia::COVER_IMAGE)));
+                return self::fileViolation(self::row($rows, data_get($item, $path)));
             })
             ->filter()
-            ->mapWithKeys(fn (string $message, int $index): array => ["{$index}.meta.".SyncOwnedMedia::COVER_IMAGE => $message])
+            ->mapWithKeys(fn (string $message, int $index): array => ["{$index}.{$path}" => $message])
             ->all();
     }
 
@@ -122,7 +131,7 @@ class CoverImage
         }
 
         if ($file->size > self::MAX_BYTES) {
-            return __('rxdesk.cover.errors.too_large', ['max' => self::MAX_BYTES / 1024 / 1024]);
+            return __('rxdesk.cover.errors.too_large', ['max' => self::maxMegabytes()]);
         }
 
         return null;

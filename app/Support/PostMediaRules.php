@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Actions\Media\SyncOwnedMedia;
 use App\Enums\Media\Source;
 use Closure;
 use Illuminate\Support\Facades\Validator;
@@ -59,7 +60,7 @@ class PostMediaRules
             "{$key}.*.url" => ['sometimes', 'nullable', 'string', 'max:2048', 'url:http,https'],
             "{$key}.*.id" => ['sometimes', 'nullable', 'string'],
             "{$key}.*.alt" => ['sometimes', 'nullable', 'string', 'max:'.self::ALT_TEXT_MAX_LENGTH],
-            "{$key}.*.meta" => self::metaRules(referenced: true),
+            "{$key}.*.meta" => self::referencedMetaRules(),
         ];
     }
 
@@ -87,48 +88,49 @@ class PostMediaRules
     }
 
     /**
-     * `$referenced` is the public API and MCP shape, where the Cover image is
-     * one reference to a file; the web composer sends the whole hosted item.
+     * The web composer's shape: a video's Cover image is a whole hosted media
+     * item.
      *
      * @return array<int, mixed>
      */
-    public static function metaRules(bool $referenced = false): array
+    public static function metaRules(): array
     {
-        return ['sometimes', 'nullable', 'array', static function (string $attribute, mixed $value, Closure $fail) use ($referenced): void {
+        return self::metaRulesWith(self::validateHostedCoverImage(...));
+    }
+
+    /**
+     * The public API and MCP shape: a video's Cover image is one reference to
+     * a file (an `upload_token`, a `url` or an `id`).
+     *
+     * @return array<int, mixed>
+     */
+    public static function referencedMetaRules(): array
+    {
+        return self::metaRulesWith(self::validateReferencedCoverImage(...));
+    }
+
+    /**
+     * @param  Closure(mixed, Closure): void  $validateCoverImage
+     * @return array<int, mixed>
+     */
+    private static function metaRulesWith(Closure $validateCoverImage): array
+    {
+        return ['sometimes', 'nullable', 'array', static function (string $attribute, mixed $value, Closure $fail) use ($validateCoverImage): void {
             self::validateAltText(data_get($value, 'alt_text'), $fail);
             self::validateUserTags(data_get($value, 'user_tags'), $fail);
             self::validateCoverOffset(data_get($value, 'cover_offset_ms'), data_get($value, 'duration'), $fail);
-            self::validateCoverImage(data_get($value, 'cover_image'), $referenced, $fail);
+            $validateCoverImage(data_get($value, SyncOwnedMedia::COVER_IMAGE), $fail);
         }];
     }
 
     /**
-     * A video's Cover image is a media item of its own (an `id` or an
-     * `upload_token`; a reference may also be a `url`; it gives exactly one of them,
-     * well formed); which
-     * files and posts may have one is checked by `CoverImage` once the media
-     * is resolved.
+     * A hosted Cover image is a media item of its own, with an `id` or an
+     * `upload_token`. Which files and posts may have one is checked by
+     * `CoverImage` once the media is resolved.
      */
-    private static function validateCoverImage(mixed $cover, bool $referenced, Closure $fail): void
+    private static function validateHostedCoverImage(mixed $cover, Closure $fail): void
     {
         if ($cover === null) {
-            return;
-        }
-
-        if ($referenced && is_array($cover)) {
-            $given = array_filter([filled(data_get($cover, 'upload_token')), filled(data_get($cover, 'url')), filled(data_get($cover, 'id'))]);
-            $wellFormed = Validator::make($cover, [
-                'upload_token' => ['nullable', 'uuid'],
-                'url' => ['nullable', 'string', 'max:2048', 'url:http,https'],
-                'id' => ['nullable', 'string'],
-            ])->passes();
-
-            if (count($given) === 1 && $wellFormed) {
-                return;
-            }
-
-            $fail('rxdesk.cover.errors.reference')->translate();
-
             return;
         }
 
@@ -137,6 +139,37 @@ class PostMediaRules
         }
 
         $fail('rxdesk.cover.errors.not_found')->translate();
+    }
+
+    /**
+     * A referenced Cover image gives exactly one of `upload_token`, `url` or
+     * `id`, well formed. Which files and posts may have one is checked by
+     * `CoverImage` once the media is resolved.
+     */
+    private static function validateReferencedCoverImage(mixed $cover, Closure $fail): void
+    {
+        if ($cover === null) {
+            return;
+        }
+
+        if (! is_array($cover)) {
+            $fail('rxdesk.cover.errors.not_found')->translate();
+
+            return;
+        }
+
+        $given = array_filter([filled(data_get($cover, 'upload_token')), filled(data_get($cover, 'url')), filled(data_get($cover, 'id'))]);
+        $wellFormed = Validator::make($cover, [
+            'upload_token' => ['nullable', 'uuid'],
+            'url' => ['nullable', 'string', 'max:2048', 'url:http,https'],
+            'id' => ['nullable', 'string'],
+        ])->passes();
+
+        if (count($given) === 1 && $wellFormed) {
+            return;
+        }
+
+        $fail('rxdesk.cover.errors.reference')->translate();
     }
 
     /**

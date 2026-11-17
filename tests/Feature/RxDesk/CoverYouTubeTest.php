@@ -354,3 +354,102 @@ test('a YouTube Short takes a Cover image', function () {
     expect(ContentType::YouTubeShort->supportsCoverImage())->toBeTrue()
         ->and(ContentType::YouTubeShort->mediaRules()['supports_cover_image'])->toBeTrue();
 });
+
+/**
+ * Fakes a YouTube whose first call to `$expiredAt` ("videos" or "thumbnails")
+ * answers 401, with the token endpoint answering `$refresh`; everything else
+ * succeeds, and the Cover is accepted only with the refreshed token.
+ *
+ * @param  array<string, mixed>|null  $refreshBody
+ */
+function fakeYouTubeWithExpiredToken(string $expiredAt, int $refreshStatus = 200, ?array $refreshBody = null, bool $stillExpired = false): void
+{
+    $data = config('trypost.platforms.youtube.data_api');
+    $upload = config('trypost.platforms.youtube.upload_api');
+    $oauth = config('trypost.platforms.youtube.oauth_api');
+    $refreshBody ??= ['access_token' => 'fresh-token', 'expires_in' => 3600];
+
+    Http::fake(function (Request $request) use ($expiredAt, $refreshStatus, $refreshBody, $stillExpired, $data, $upload, $oauth) {
+        $url = $request->url();
+        $fresh = $request->hasHeader('Authorization', 'Bearer fresh-token');
+
+        if ($url === "{$oauth}/token") {
+            return Http::response($refreshBody, $refreshStatus);
+        }
+
+        if (str_starts_with($url, "{$data}/videos")) {
+            if ($expiredAt === 'videos' && (! $fresh || $stillExpired)) {
+                return Http::response(['error' => ['code' => 401, 'errors' => [['reason' => 'authError']]]], 401);
+            }
+
+            return Http::response(['items' => [['processingDetails' => ['processingStatus' => 'succeeded']]]]);
+        }
+
+        if (str_starts_with($url, "{$upload}/thumbnails/set")) {
+            if ($expiredAt === 'thumbnails' && (! $fresh || $stillExpired)) {
+                return Http::response(['error' => ['code' => 401, 'errors' => [['reason' => 'authError']]]], 401);
+            }
+
+            return Http::response(['items' => []]);
+        }
+
+        return Http::response('', 500);
+    });
+}
+
+test('an access token that expired early is refreshed once and the Cover is sent with the new one', function (string $expiredAt) {
+    youtubeShortDueNow($this->channel);
+    $this->channel->update(['refresh_token' => 'refresh-me']);
+    fakeYouTubeWithExpiredToken($expiredAt);
+    $post = Post::query()->sole()->forceFill(['status' => PostStatus::Published, 'platform_post_id' => 'short-id']);
+    $post->saveQuietly();
+
+    (new SetPostCover($post->id))->handle();
+
+    $oauth = config('trypost.platforms.youtube.oauth_api');
+    $sent = sentTo("{$this->upload}/thumbnails/set");
+
+    expect(sentTo("{$oauth}/token"))->toHaveCount(1)
+        ->and(CoverOutcome::query()->sole()->outcome)->toBe(Outcome::Set)
+        ->and(end($sent)->hasHeader('Authorization', 'Bearer fresh-token'))->toBeTrue()
+        ->and($this->channel->refresh()->access_token)->toBe('fresh-token');
+})->with(['the processing read' => 'videos', 'the thumbnail upload' => 'thumbnails']);
+
+test('a token that is still refused after one refresh is not a refusal: the job looks again later', function () {
+    youtubeShortDueNow($this->channel);
+    $this->channel->update(['refresh_token' => 'refresh-me']);
+    fakeYouTubeWithExpiredToken('thumbnails', stillExpired: true);
+    $post = Post::query()->sole()->forceFill(['status' => PostStatus::Published, 'platform_post_id' => 'short-id']);
+    $post->saveQuietly();
+
+    $job = new SetPostCover($post->id);
+    $job->withFakeQueueInteractions();
+    $job->handle();
+
+    $oauth = config('trypost.platforms.youtube.oauth_api');
+
+    $job->assertReleased(SetPostCover::BACKOFF_SECONDS[0]);
+    expect(sentTo("{$oauth}/token"))->toHaveCount(1)
+        ->and(CoverOutcome::query()->count())->toBe(0);
+});
+
+test('a refresh that fails for now is tried again, one Google rejects as revoked is final', function (int $status, ?array $body, ?Outcome $outcome) {
+    youtubeShortDueNow($this->channel);
+    $this->channel->update(['refresh_token' => 'refresh-me']);
+    fakeYouTubeWithExpiredToken('thumbnails', refreshStatus: $status, refreshBody: $body);
+    $post = Post::query()->sole()->forceFill(['status' => PostStatus::Published, 'platform_post_id' => 'short-id']);
+    $post->saveQuietly();
+
+    $job = new SetPostCover($post->id);
+    $job->withFakeQueueInteractions();
+    $job->handle();
+
+    expect(CoverOutcome::query()->first()?->outcome)->toBe($outcome);
+
+    if ($outcome === null) {
+        $job->assertReleased(SetPostCover::BACKOFF_SECONDS[0]);
+    }
+})->with([
+    'Google is busy' => [503, ['error' => 'backend_error'], null],
+    'the grant was revoked' => [400, ['error' => 'invalid_grant', 'error_description' => 'Token has been expired or revoked.'], Outcome::Failed],
+]);

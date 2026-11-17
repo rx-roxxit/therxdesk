@@ -29,7 +29,9 @@ class CoverImageJpeg
         }
 
         $image = (new ImageManager(Driver::class))->decodeBinary((string) Storage::get($cover->path));
-        $path = InstagramPublisher::CROP_DIRECTORY.'/'.Str::uuid()->toString().'.jpg';
+        $directory = InstagramPublisher::CROP_DIRECTORY;
+        $name = Str::uuid()->toString();
+        $path = "{$directory}/{$name}.jpg";
         Storage::put($path, (string) $image->encodeUsingMediaType('image/jpeg', quality: self::QUALITY));
 
         return Storage::url($path);

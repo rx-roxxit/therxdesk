@@ -29,7 +29,7 @@ class AttachMediaFromUploadRequest extends FormRequest
     {
         return [
             ...PostMediaRequestRules::attachFromUpload(),
-            'meta' => PostMediaRules::metaRules(referenced: true),
+            'meta' => PostMediaRules::referencedMetaRules(),
         ];
     }
 
