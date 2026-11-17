@@ -56,11 +56,21 @@ class DriveBackupController extends Controller
         $this->authorize('update', $user->account);
 
         $pending = $request->session()->pull(self::OAUTH_SESSION_KEY);
-        $state = (string) $request->query('state', '');
-        $code = (string) $request->query('code', '');
-        $expectedState = (string) data_get($pending, 'state', '');
+        $state = $request->string('state')->toString();
+        $code = $request->string('code')->toString();
+        $expectedState = (string) data_get($pending, 'state');
 
-        if ($expectedState === '' || $state === '' || ! hash_equals($expectedState, $state) || data_get($pending, 'user_id') !== $user->id) {
+        if (blank($expectedState)) {
+            return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
+        }
+
+        if (blank($state) || ! hash_equals($expectedState, $state)) {
+            Cache::forget($this->verifierKey($user, $expectedState));
+
+            return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
+        }
+
+        if (data_get($pending, 'user_id') !== $user->id) {
             Cache::forget($this->verifierKey($user, $expectedState));
 
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
@@ -72,7 +82,11 @@ class DriveBackupController extends Controller
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.scope_not_granted'));
         }
 
-        if ($code === '' || $verifier === null) {
+        if (blank($code)) {
+            return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
+        }
+
+        if ($verifier === null) {
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
         }
 
@@ -88,7 +102,7 @@ class DriveBackupController extends Controller
 
         $refreshToken = data_get($token, 'refresh_token');
 
-        if (! is_string($refreshToken) || $refreshToken === '') {
+        if (blank($refreshToken)) {
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
         }
 
