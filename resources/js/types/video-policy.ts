@@ -20,3 +20,18 @@ export interface VideoRecord {
     drive_link: string | null;
     created_at: string;
 }
+
+/** Whether a network took a post's video Cover (`App\Enums\Cover\Outcome`). */
+export const CoverOutcomeState = {
+    Set: 'set',
+    Failed: 'failed',
+} as const;
+
+export type CoverOutcomeStateValue =
+    (typeof CoverOutcomeState)[keyof typeof CoverOutcomeState];
+
+/** What became of a post's Cover on a network that sets it after publishing (`App\Models\CoverOutcome`). */
+export interface CoverOutcome {
+    id: string;
+    outcome: CoverOutcomeStateValue;
+}

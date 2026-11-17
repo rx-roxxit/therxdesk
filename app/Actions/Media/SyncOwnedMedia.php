@@ -10,7 +10,9 @@ use App\Models\Media;
 use App\Models\Post;
 use App\Support\Media\MediaCopyBatch;
 use App\Support\ThreadReplies;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +29,18 @@ class SyncOwnedMedia
     /**
      * Per-owner edits an item may carry over the row's measured `meta`.
      */
-    public const array EDITABLE_META = ['alt_text', 'user_tags', 'cover_offset_ms'];
+    public const array EDITABLE_META = ['alt_text', 'user_tags', 'cover_offset_ms', self::COVER_IMAGE];
+
+    /**
+     * The per-item key of a video's Cover image: a media item of its own, owned
+     * by the same post, synced like the video (kept, adopted or copied).
+     */
+    public const string COVER_IMAGE = 'cover_image';
+
+    /**
+     * Where an item keeps its Cover image, as `data_get()` reads it.
+     */
+    public const string COVER_IMAGE_PATH = 'meta.'.self::COVER_IMAGE;
 
     /**
      * Row `meta` keys that only describe the row's history and stay off the item.
@@ -55,6 +68,12 @@ class SyncOwnedMedia
      * are keyed under `$metaErrorKey` (`meta`, or `destinations.{n}.meta` in a
      * batch), whichever list the root media came from.
      *
+     * A video's Cover image (`meta.cover_image`) is owned media too, nested
+     * under its item: it is synced with the item, so a removed or swapped
+     * video releases it, and a per-channel copy or a recurrence copies it.
+     * It replaces a picked frame (`cover_offset_ms`), and an item submitted
+     * without one drops it.
+     *
      * @param  list<array<string, mixed>>  $items
      * @param  list<array<string, mixed>>  $legacyItems
      * @return list<array<string, mixed>>
@@ -68,6 +87,7 @@ class SyncOwnedMedia
         $items = self::withoutRepeats(array_values($items));
         $replies = $locked instanceof Post ? ThreadReplies::of($locked->meta) : [];
         $submitted = [...$items, ...self::replyMedia($replies)];
+        $submitted = [...$submitted, ...self::coverImages($submitted)];
         $ids = self::column($submitted, 'id');
         $uploadTokens = self::column($submitted, 'upload_token');
         self::lockRows($workspace->id, $ownerColumn, $owner->getKey(), $ids, $uploadTokens);
@@ -79,37 +99,38 @@ class SyncOwnedMedia
             ->keyBy(fn (array $item): string => (string) data_get($item, 'id'));
 
         $position = 0;
-        $sync = function (array $items, string $errorKey) use ($owner, $ownerColumn, $batch, $rows, $tokens, $passThrough, &$position): array {
+        $syncItem = function (array $item, string $key) use ($owner, $ownerColumn, $batch, $rows, $tokens, $passThrough, &$position, &$syncItem): array {
+            $token = data_get($item, 'upload_token');
+            $source = filled($token)
+                ? ($tokens->get($token) ?? self::spentTokenSource($rows->get(data_get($item, 'id')), $ownerColumn, $owner, $batch))
+                : $rows->get(data_get($item, 'id'));
+
+            if ($source === null && ! filled($token) && $passThrough->has((string) data_get($item, 'id'))) {
+                $position++;
+
+                return self::withCoverImage(self::withEdits($passThrough->get((string) data_get($item, 'id')), $item), $item, $key, $syncItem);
+            }
+
+            if ($source === null) {
+                throw ValidationException::withMessages([$key => filled($token)
+                    ? __('posts.errors.media_expired')
+                    : __('validation.exists', ['attribute' => 'media'])]);
+            }
+
+            $owned = match (true) {
+                $source->{$ownerColumn} === $owner->getKey() => self::ordered($source, $position),
+                $batch->canMove($source) => self::adopt($source, $ownerColumn, $owner, $batch, $position),
+                default => self::copy($source, $ownerColumn, $owner, $batch, $position, $key),
+            };
+            $position++;
+
+            return self::withCoverImage(self::withEdits(self::item($owned), $item), $item, $key, $syncItem);
+        };
+        $sync = function (array $items, string $errorKey) use ($syncItem): array {
             $final = [];
 
             foreach ($items as $index => $item) {
-                $token = data_get($item, 'upload_token');
-                $source = filled($token)
-                    ? ($tokens->get($token) ?? self::spentTokenSource($rows->get(data_get($item, 'id')), $ownerColumn, $owner, $batch))
-                    : $rows->get(data_get($item, 'id'));
-                $key = "{$errorKey}.{$index}";
-
-                if ($source === null && ! filled($token) && $passThrough->has((string) data_get($item, 'id'))) {
-                    $final[] = self::withEdits($passThrough->get((string) data_get($item, 'id')), $item);
-                    $position++;
-
-                    continue;
-                }
-
-                if ($source === null) {
-                    throw ValidationException::withMessages([$key => filled($token)
-                        ? __('posts.errors.media_expired')
-                        : __('validation.exists', ['attribute' => 'media'])]);
-                }
-
-                $owned = match (true) {
-                    $source->{$ownerColumn} === $owner->getKey() => self::ordered($source, $position),
-                    $batch->canMove($source) => self::adopt($source, $ownerColumn, $owner, $batch, $position),
-                    default => self::copy($source, $ownerColumn, $owner, $batch, $position, $key),
-                };
-                $position++;
-
-                $final[] = self::withEdits(self::item($owned), $item);
+                $final[] = $syncItem($item, "{$errorKey}.{$index}");
             }
 
             return $final;
@@ -122,7 +143,8 @@ class SyncOwnedMedia
                 'media' => $sync(self::withoutRepeats($reply['media']), "{$metaErrorKey}.thread_replies.{$index}.media"),
             ])
             ->all();
-        $kept = self::column([...$final, ...self::replyMedia($replies)], 'id');
+        $kept = [...$final, ...self::replyMedia($replies)];
+        $kept = self::column([...$kept, ...self::coverImages($kept)], 'id');
 
         DeleteOwnedMedia::forRows($owner->ownedMedia()->whereNotIn('id', $kept)->pluck('id')->all());
         $owner->update($replies === [] ? ['media' => $final] : [
@@ -282,6 +304,44 @@ class SyncOwnedMedia
         }
 
         return $owned;
+    }
+
+    /**
+     * The submitted item's Cover image, synced as owned media under the item's
+     * key, replaces any picked frame; without one the item has no Cover image.
+     * A Cover image never carries a Cover image of its own.
+     *
+     * @param  array<string, mixed>  $owned
+     * @param  array<string, mixed>  $submitted
+     * @param  Closure(array<string, mixed>, string): array<string, mixed>  $syncItem
+     * @return array<string, mixed>
+     */
+    private static function withCoverImage(array $owned, array $submitted, string $key, Closure $syncItem): array
+    {
+        $cover = data_get($submitted, self::COVER_IMAGE_PATH);
+        $meta = Arr::except((array) data_get($owned, 'meta', []), [self::COVER_IMAGE]);
+
+        if (is_array($cover)) {
+            $meta = Arr::except($meta, ['cover_offset_ms']);
+            $coverKey = self::COVER_IMAGE_PATH;
+            $meta[self::COVER_IMAGE] = $syncItem(Arr::except($cover, [self::COVER_IMAGE_PATH]), "{$key}.{$coverKey}");
+        }
+
+        return Arr::except([...$owned, 'meta' => $meta], $meta === [] ? ['meta'] : []);
+    }
+
+    /**
+     * The Cover images nested under these items.
+     *
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    private static function coverImages(array $items): array
+    {
+        return array_values(array_filter(
+            array_map(fn (array $item): mixed => data_get($item, self::COVER_IMAGE_PATH), $items),
+            fn (mixed $cover): bool => is_array($cover),
+        ));
     }
 
     /**
