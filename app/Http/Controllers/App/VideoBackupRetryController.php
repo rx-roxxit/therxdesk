@@ -9,16 +9,26 @@ use App\Models\Post;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Validation\ValidationException;
 
 class VideoBackupRetryController extends Controller
 {
+    /**
+     * @throws ValidationException when the post has no failed backup to retry
+     */
     public function store(Request $request, Post $post): RedirectResponse|HttpResponse
     {
         $this->authorize('view', $post);
         $this->authorize('update', $post->workspace->account);
 
-        RetryVideoBackup::execute($post);
+        if (! RetryVideoBackup::execute($post)) {
+            throw ValidationException::withMessages(['post' => __('rxdesk.video_backup.errors.nothing_to_retry')]);
+        }
 
-        return $request->wantsJson() ? response()->noContent() : back();
+        if ($request->wantsJson()) {
+            return response()->noContent();
+        }
+
+        return back();
     }
 }

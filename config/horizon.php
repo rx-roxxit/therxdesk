@@ -315,6 +315,26 @@ return [
             'tries' => 1,
             'nice' => 0,
         ],
+
+        /*
+        | The RX Desk: Drive backups of large videos (`ApplyVideoPolicy`), on
+        | their own connection. The timeout outlasts the job's and stays under
+        | the connection's `retry_after` (`config/queue.php`).
+        */
+        'video-policy' => [
+            'connection' => 'video-policy',
+            'queue' => ['video-policy'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'minProcesses' => 1,
+            'maxProcesses' => 2,
+            'timeout' => 10_800,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -360,6 +380,12 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+
+            'video-policy' => [
+                'maxProcesses' => 2,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
@@ -388,6 +414,10 @@ return [
             ],
 
             'rss-feeds' => [
+                'maxProcesses' => 1,
+            ],
+
+            'video-policy' => [
                 'maxProcesses' => 1,
             ],
         ],

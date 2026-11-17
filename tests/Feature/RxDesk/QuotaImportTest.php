@@ -12,7 +12,9 @@ use App\Models\Workspace;
 use App\Services\Http\HostResolver;
 use App\Services\Media\RemoteMediaImporter;
 use App\Services\Media\Sources\CanvaClient;
+use App\Services\Media\Sources\GoogleDriveFiles;
 use App\Support\MediaImportStatus;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -117,6 +119,84 @@ test('a Canva design that passes the Quota fails its export and stores nothing',
         ->handle(app(CanvaClient::class), app(RemoteMediaImporter::class));
 
     expect(data_get(MediaImportStatus::find($importId, $this->owner->id, $this->workspace->id), 'reason'))->toBe('storage_full')
+        ->and(Media::query()->count())->toBe(1)
+        ->and(Storage::allFiles())->toBe([]);
+});
+
+test('a Drive pick whose declared size is over the remaining Quota is refused before anything downloads', function () {
+    Media::factory()->temporaryUpload($this->workspace)->create(['size' => $this->limit - 100]);
+
+    $this->actingAs($this->owner)
+        ->postJson(route('app.media.imports.store'), [...quotaDrivePick(), 'file' => [...quotaDrivePick()['file'], 'size' => 101]])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['source' => "You're out of storage: you've used 10 MB of your 10 MB. Delete posts or media you no longer need, then try again."]);
+
+    Http::assertNothingSent();
+    expect(Media::query()->count())->toBe(1)
+        ->and(Storage::allFiles())->toBe([]);
+});
+
+test('a Drive pick whose declared size fits starts its import', function () {
+    Queue::fake();
+    Media::factory()->temporaryUpload($this->workspace)->create(['size' => $this->limit - 100]);
+
+    $this->actingAs($this->owner)
+        ->postJson(route('app.media.imports.store'), [...quotaDrivePick(), 'file' => [...quotaDrivePick()['file'], 'size' => 100]])
+        ->assertAccepted();
+
+    Queue::assertPushed(ImportRemoteMedia::class, fn (ImportRemoteMedia $job): bool => $job->file->size === 100);
+});
+
+test('a queued import whose declared size no longer fits is refused without downloading', function () {
+    Media::factory()->temporaryUpload($this->workspace)->create(['size' => $this->limit - 100]);
+    $file = GoogleDriveFiles::toRemoteFile('ya29.drive-file-only-token', ['id' => '1AbC_dE-fGh', 'name' => 'beach.png', 'size' => 101]);
+    $importId = (string) Str::uuid();
+    MediaImportStatus::pending($importId, $this->owner->id, $this->workspace->id);
+
+    (new ImportRemoteMedia($importId, $this->workspace->id, $this->owner->id, $file))
+        ->handle(app(RemoteMediaImporter::class));
+
+    expect(data_get(MediaImportStatus::find($importId, $this->owner->id, $this->workspace->id), 'reason'))->toBe('storage_full')
+        ->and(Media::query()->count())->toBe(1)
+        ->and(Storage::allFiles())->toBe([]);
+    Http::assertNothingSent();
+});
+
+test('a Canva export whose download announces more bytes than the Quota has left stops before the body lands', function () {
+    Sleep::fake();
+    config()->set([
+        'services.canva.client_id' => 'canva-client-id',
+        'services.canva.client_secret' => 'canva-client-secret',
+        'trypost.media_sources.canva.enabled' => true,
+        'trypost.media_sources.canva.api' => 'https://api.canva.test/rest/v1',
+        'trypost.media_sources.canva.download_hosts' => 'export-download.canva.test',
+    ]);
+    $download = 'https://export-download.canva.test/export/design.png';
+    $bodyStreamed = false;
+    Http::fake(function (Request $request, array $options) use ($download, &$bodyStreamed) {
+        if ($request->url() === 'https://api.canva.test/rest/v1/exports') {
+            return Http::response(['job' => ['id' => 'export-job-1', 'status' => 'in_progress']]);
+        }
+
+        if ($request->url() === 'https://api.canva.test/rest/v1/exports/export-job-1') {
+            return Http::response(['job' => ['id' => 'export-job-1', 'status' => 'success', 'urls' => [$download]]]);
+        }
+
+        $options['progress'](1024, 0);
+        $bodyStreamed = true;
+
+        return Http::response(str_repeat('x', 1024));
+    });
+    Media::factory()->temporaryUpload($this->workspace)->create(['size' => $this->limit - 100]);
+    $connection = MediaSourceConnection::factory()->for($this->owner)->create(['access_token' => 'canva-access-token']);
+    $importId = (string) Str::uuid();
+    MediaImportStatus::pending($importId, $this->owner->id, $this->workspace->id);
+
+    (new ExportCanvaDesign($importId, $connection->id, 'DAF-design-1', $this->workspace->id, $this->owner->id))
+        ->handle(app(CanvaClient::class), app(RemoteMediaImporter::class));
+
+    expect($bodyStreamed)->toBeFalse()
+        ->and(data_get(MediaImportStatus::find($importId, $this->owner->id, $this->workspace->id), 'reason'))->toBe('storage_full')
         ->and(Media::query()->count())->toBe(1)
         ->and(Storage::allFiles())->toBe([]);
 });

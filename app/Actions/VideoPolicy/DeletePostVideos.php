@@ -58,13 +58,13 @@ class DeletePostVideos
         MediaCopyBatch::run(function (MediaCopyBatch $batch) use ($post, $videoIds, $record): void {
             $locked = Post::query()->whereKey($post->id)->lockForUpdate()->first();
 
-            if ($locked === null || $locked->status !== PostStatus::Published) {
+            if (blank($locked) || $locked->status !== PostStatus::Published) {
                 return;
             }
 
             $query = $locked->ownedMedia()->where('type', MediaType::Video);
 
-            if ($videoIds !== null) {
+            if (is_array($videoIds)) {
                 $query->whereKey($videoIds);
             }
 
@@ -83,7 +83,7 @@ class DeletePostVideos
                     ...$locked->meta,
                     'thread_replies' => array_map(fn (array $reply): array => [
                         ...$reply,
-                        'media' => self::without($reply['media'], $videoIds),
+                        'media' => self::without((array) data_get($reply, 'media', []), $videoIds),
                     ], $replies),
                 ]]);
             }
@@ -115,9 +115,9 @@ class DeletePostVideos
      */
     private static function without(array $items, array $videoIds): array
     {
-        return array_values(array_filter(
-            $items,
-            fn (mixed $item): bool => is_array($item) && ! in_array(data_get($item, 'id'), $videoIds, true),
-        ));
+        return collect($items)
+            ->filter(fn (mixed $item): bool => is_array($item) && ! in_array(data_get($item, 'id'), $videoIds, true))
+            ->values()
+            ->all();
     }
 }

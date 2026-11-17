@@ -35,12 +35,7 @@ class UsageCommand extends Command
 
         $this->table(
             ['Owner', 'Storage used', 'Quota', 'Used'],
-            $accounts->map(fn (Account $account, int $index): array => [
-                $this->ownerLabel($account),
-                ByteSize::format($usages[$index]->used),
-                $this->quotaLabel($account, $usages[$index]->limit),
-                $this->share($usages[$index]),
-            ])->all(),
+            $accounts->map(fn (Account $account, int $index): array => $this->row($account, $usages->get($index)))->all(),
         );
 
         $used = ByteSize::format((int) $usages->sum('used'));
@@ -58,15 +53,32 @@ class UsageCommand extends Command
         $state = $disk->isGuarding() ? 'ACTIVE: uploads and imports are refused' : 'inactive';
 
         $this->newLine();
-        $this->line('Disk total: '.ByteSize::format($disk->total));
-        $this->line('Disk free: '.ByteSize::format($disk->free));
-        $this->line('Disk guard threshold: '.ByteSize::format($disk->threshold));
+        $total = ByteSize::format($disk->total);
+        $free = ByteSize::format($disk->free);
+        $threshold = ByteSize::format($disk->threshold);
+
+        $this->line("Disk total: {$total}");
+        $this->line("Disk free: {$free}");
+        $this->line("Disk guard threshold: {$threshold}");
         $this->line("Disk guard: {$state}");
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function row(Account $account, StorageUsage $usage): array
+    {
+        return [
+            $this->ownerLabel($account),
+            ByteSize::format($usage->used),
+            $this->quotaLabel($account, $usage->limit),
+            $this->share($usage),
+        ];
     }
 
     private function ownerLabel(Account $account): string
     {
-        if ($account->owner === null) {
+        if (blank($account->owner)) {
             return "{$account->name} (no owner)";
         }
 
@@ -75,11 +87,13 @@ class UsageCommand extends Command
 
     private function quotaLabel(Account $account, int $limit): string
     {
-        if ($account->quota_bytes === null) {
-            return ByteSize::format($limit).' (default)';
+        $formatted = ByteSize::format($limit);
+
+        if (blank($account->quota_bytes)) {
+            return "{$formatted} (default)";
         }
 
-        return ByteSize::format($limit);
+        return $formatted;
     }
 
     private function share(StorageUsage $usage): string

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Account\VideoPolicy;
+use App\Enums\Media\Source;
 use App\Enums\Post\PublishStatus;
 use App\Enums\Post\Status as PostStatus;
 use App\Enums\SocialAccount\Platform;
@@ -12,14 +13,17 @@ use App\Jobs\PublishPost;
 use App\Jobs\PublishToSocialPlatform;
 use App\Jobs\VideoPolicy\ApplyVideoPolicy;
 use App\Models\Media;
+use App\Models\MediaSourceConnection;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\VideoRecord;
+use Illuminate\Http\Client\Request;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->freezeTime();
@@ -86,13 +90,13 @@ function publishThroughPipeline(): void
 }
 
 /**
- * Runs every job that is due on the default queue (the policy job, then the
- * file deletion it queues).
+ * Runs every job that is due: the policy job on its own queue, then the file
+ * deletion it queues on the default one.
  */
 function runDueDefaultJobs(): void
 {
-    while (test()->queue->pendingSize('default') > 0) {
-        test()->worker->runNextJob('database', 'default', test()->workerOptions);
+    while (test()->queue->pendingSize(ApplyVideoPolicy::QUEUE) + test()->queue->pendingSize('default') > 0) {
+        test()->worker->runNextJob('database', ApplyVideoPolicy::QUEUE.',default', test()->workerOptions);
     }
 
     test()->assertDatabaseCount('failed_jobs', 0);
@@ -222,7 +226,7 @@ test('only a move into published starts the clock', function () {
     $post->forceFill(['status' => PostStatus::Publishing, 'publish_status' => PublishStatus::Retrying])->save();
     $post->forceFill(['status' => PostStatus::Failed, 'publish_status' => PublishStatus::Failed])->save();
 
-    expect($this->queue->size('default'))->toBe(0);
+    expect($this->queue->size(ApplyVideoPolicy::QUEUE))->toBe(0);
 
     $this->travel(1)->hours();
     runDueDefaultJobs();
@@ -255,4 +259,55 @@ test('delete also removes a video from a thread reply', function () {
         ->and(VideoRecord::query()->sole()->media_id)->toBe($replyVideo->id);
     Storage::assertMissing($replyVideo->path);
     Storage::assertExists($image->path);
+});
+
+test('backup uploads the video to drive one hour after publishing, then deletes it from the server', function () {
+    config()->set([
+        'trypost.media_sources.google_drive.api' => 'https://drive.google.test/drive/v3',
+        'trypost.media_sources.google_drive.upload_api' => 'https://drive.google.test/upload/drive/v3',
+    ]);
+    ['post' => $post, 'video' => $video, 'image' => $image] = videoPolicyPost(VideoPolicy::Backup);
+    MediaSourceConnection::factory()->create([
+        'user_id' => $post->workspace->account->owner_id,
+        'source' => Source::GoogleDriveBackup,
+        'access_token' => 'drive-access',
+    ]);
+    Http::fake(function (Request $request) {
+        if (Str::startsWith($request->url(), config('trypost.platforms.telegram.api'))) {
+            return Http::response(['ok' => true, 'result' => [['message_id' => 42]]]);
+        }
+
+        if (Str::startsWith($request->url(), 'https://drive.google.test/drive/v3/files')) {
+            return Http::response($request->method() === 'GET' ? ['files' => []] : ['id' => 'folder-id']);
+        }
+
+        if ($request->method() === 'POST') {
+            return Http::response('', 200, ['Location' => 'https://drive.google.test/upload/drive/v3/files?uploadType=resumable&upload_id=session']);
+        }
+
+        return Http::response(['id' => 'drive-file', 'webViewLink' => 'https://drive.google.test/file/d/drive-file/view']);
+    });
+
+    publishThroughPipeline();
+    expect($post->refresh()->status)->toBe(PostStatus::Published);
+
+    $this->travel(59)->minutes();
+    runDueDefaultJobs();
+    expect(Media::query()->whereKey($video->id)->exists())->toBeTrue();
+    Http::assertNotSent(fn (Request $request): bool => Str::contains($request->url(), 'upload_id=session'));
+
+    $this->travel(1)->minutes();
+    runDueDefaultJobs();
+
+    Http::assertSent(fn (Request $request): bool => $request->method() === 'PUT' && Str::contains($request->url(), 'upload_id=session'));
+    expect(Media::query()->whereKey($video->id)->exists())->toBeFalse()
+        ->and(postMediaIds($post))->toBe([$image->id])
+        ->and($post->status)->toBe(PostStatus::Published);
+    Storage::assertMissing($video->path);
+    Storage::assertExists($image->path);
+
+    $record = VideoRecord::query()->sole();
+    expect($record->outcome)->toBe(Outcome::BackedUp)
+        ->and($record->drive_file_id)->toBe('drive-file')
+        ->and($record->drive_link)->toBe('https://drive.google.test/file/d/drive-file/view');
 });
