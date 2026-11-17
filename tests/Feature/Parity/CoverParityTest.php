@@ -280,6 +280,29 @@ test('reading a post shows its Cover through api and mcp', function () {
     }
 });
 
+test('reading a post shows the outcome of its Cover through api and mcp', function () {
+    $post = coverParityReelPost($this);
+    App\Models\CoverOutcome::factory()->create(['post_id' => $post->id, 'outcome' => App\Enums\Cover\Outcome::Failed]);
+
+    $api = $this->withHeaders(parityApi($this->token))->getJson(route('api.posts.show', $post))->assertOk()->json();
+    $mcp = null;
+    TryPostServer::actingAs($this->user)->tool(GetPostTool::class, ['post_id' => $post->id])
+        ->assertOk()
+        ->assertStructuredContent(function ($json) use (&$mcp) {
+            $mcp = $json->toArray();
+            $json->etc();
+        });
+
+    expect(data_get($api, 'cover_outcome'))->toBe(['outcome' => 'failed'])
+        ->and(data_get($mcp, 'cover_outcome'))->toBe(['outcome' => 'failed']);
+});
+
+test('a post without a recorded Cover outcome leaves cover_outcome out', function () {
+    $post = coverParityReelPost($this);
+
+    $this->withHeaders(parityApi($this->token))->getJson(route('api.posts.show', $post))->assertOk()->assertJsonMissingPath('cover_outcome');
+});
+
 test('the content type listing says which types take a Cover image through api and mcp', function () {
     $api = $this->withHeaders(parityApi($this->token))->getJson(route('api.content-types'))->assertOk()->json('platforms');
     $mcp = null;

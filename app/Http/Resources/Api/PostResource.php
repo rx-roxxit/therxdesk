@@ -16,7 +16,7 @@ class PostResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['user', 'approvalRequestedBy', 'approver']);
+        $this->resource->loadMissing(['user', 'approvalRequestedBy', 'approver', 'coverOutcome']);
 
         $requester = $this->approval_requested_by !== null
             ? $this->approvalRequestedBy
@@ -60,17 +60,22 @@ class PostResource extends JsonResource
     }
 
     /**
-     * What happened when a network was given the video's Cover after it was
-     * published (YouTube and Facebook), for a post read to show. A video's Cover
-     * itself is `media.*.meta.cover_image`. The record of the outcome is
-     * written by the post-publish Cover job (ticket #18), which fills this in;
-     * until it does, no outcome exists and the `cover_outcome` key is left out.
+     * Whether a network took the video's Cover after the post published
+     * (YouTube and Facebook): `{outcome: set|failed}`. A video's Cover itself
+     * is `media.*.meta.cover_image`. The key is left out while no outcome is
+     * recorded (a post without a Cover, or one still trying).
      *
-     * @return array<string, mixed>|null
+     * @return array{outcome: string}|null
      */
     private function coverOutcome(): ?array
     {
-        return null;
+        $record = $this->resource->coverOutcome;
+
+        if ($record === null) {
+            return null;
+        }
+
+        return ['outcome' => $record->outcome->value];
     }
 
     /**
