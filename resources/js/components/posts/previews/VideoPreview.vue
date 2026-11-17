@@ -8,9 +8,12 @@ const props = withDefaults(
     defineProps<{
         src: string;
         videoClass?: string;
+        /** The video's Cover image, shown before it plays. */
+        poster?: string;
     }>(),
     {
         videoClass: 'w-full h-full object-cover',
+        poster: undefined,
     },
 );
 
@@ -46,6 +49,7 @@ const toggle = () => {
             ref="videoRef"
             :src="props.src"
             :class="props.videoClass"
+            :poster="props.poster"
             playsinline
             preload="metadata"
             @play="markPlaying"

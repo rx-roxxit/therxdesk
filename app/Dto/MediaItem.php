@@ -149,6 +149,20 @@ class MediaItem
     }
 
     /**
+     * The image the user uploaded as this video's Cover, when set.
+     */
+    public function coverImage(): ?self
+    {
+        $cover = data_get($this->meta, 'cover_image');
+
+        if (! is_array($cover) || blank(data_get($cover, 'id'))) {
+            return null;
+        }
+
+        return self::fromArray($cover);
+    }
+
+    /**
      * People tagged on this image, as Instagram's `user_tags` entries: a public
      * username plus x/y offsets from the top-left corner, each between 0 and 1.
      *

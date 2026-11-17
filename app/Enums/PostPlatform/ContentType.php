@@ -9,6 +9,7 @@ use App\Enums\Analytics\PublicationContentType;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\SocialAccount\Platform as SocialPlatform;
 use App\Models\SocialAccount;
+use App\Support\Media\CoverImage;
 use App\Support\Social\XPoll;
 use App\Support\ThreadReplies;
 use Illuminate\Support\Str;
@@ -531,6 +532,16 @@ enum ContentType: string
     }
 
     /**
+     * Whether a single video of this type takes a Cover image the user uploads
+     * (The RX Desk; rules in `App\Support\Media\CoverImage`). An Instagram feed
+     * post with a single video publishes as a Reel.
+     */
+    public function supportsCoverImage(): bool
+    {
+        return in_array($this, [self::InstagramFeed, self::InstagramReel], true);
+    }
+
+    /**
      * Whether the editor should auto-fit still images into the story frame.
      */
     public function autoFitsImage(): bool
@@ -565,6 +576,9 @@ enum ContentType: string
      *     supports_alt_text: bool,
      *     supports_user_tags: bool,
      *     supports_video_cover: bool,
+     *     supports_cover_image: bool,
+     *     cover_image_max_bytes: int|null,
+     *     cover_image_mime_types: list<string>,
      *     platform_label: string,
      *     image_min_width: int|null,
      *     image_min_height: int|null,
@@ -602,6 +616,9 @@ enum ContentType: string
             'supports_alt_text' => $this->supportsAltText(),
             'supports_user_tags' => $this->supportsUserTags(),
             'supports_video_cover' => $this->supportsVideoCover(),
+            'supports_cover_image' => $this->supportsCoverImage(),
+            'cover_image_max_bytes' => $this->supportsCoverImage() ? CoverImage::MAX_BYTES : null,
+            'cover_image_mime_types' => $this->supportsCoverImage() ? CoverImage::MIME_TYPES : [],
             'platform_label' => $this->platform()->label(),
             'image_min_width' => $dimensions['min_width'] ?? null,
             'image_min_height' => $dimensions['min_height'] ?? null,
@@ -643,6 +660,9 @@ enum ContentType: string
      *     supports_alt_text: bool,
      *     supports_user_tags: bool,
      *     supports_video_cover: bool,
+     *     supports_cover_image: bool,
+     *     cover_image_max_bytes: int|null,
+     *     cover_image_mime_types: list<string>,
      *     captionless: bool,
      *     document_must_be_alone: bool,
      *     supports_thread_replies: bool,
@@ -683,6 +703,9 @@ enum ContentType: string
                 'supports_alt_text',
                 'supports_user_tags',
                 'supports_video_cover',
+                'supports_cover_image',
+                'cover_image_max_bytes',
+                'cover_image_mime_types',
             ])),
             'captionless' => $this->isCaptionless(),
             'document_must_be_alone' => $this->supportsDocument(),

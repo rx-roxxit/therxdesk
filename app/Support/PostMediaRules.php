@@ -94,7 +94,26 @@ class PostMediaRules
             self::validateAltText(data_get($value, 'alt_text'), $fail);
             self::validateUserTags(data_get($value, 'user_tags'), $fail);
             self::validateCoverOffset(data_get($value, 'cover_offset_ms'), data_get($value, 'duration'), $fail);
+            self::validateCoverImage(data_get($value, 'cover_image'), $fail);
         }];
+    }
+
+    /**
+     * A video's Cover image is a media item of its own (an `id` or an
+     * `upload_token`); which files and posts may have one is checked by
+     * `CoverImage` once the media is resolved.
+     */
+    private static function validateCoverImage(mixed $cover, Closure $fail): void
+    {
+        if ($cover === null) {
+            return;
+        }
+
+        if (is_array($cover) && (is_string(data_get($cover, 'id')) || is_string(data_get($cover, 'upload_token')))) {
+            return;
+        }
+
+        $fail('rxdesk.cover.errors.not_found')->translate();
     }
 
     /**

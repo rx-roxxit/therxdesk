@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 
 import { getContentTypeOptions } from '@/composables/usePlatformLogo';
+import { mediaForContentType } from '@/lib/coverImage';
 import { derivedContentTypeFor } from '@/lib/derivedContentType';
 import type { MediaItem } from '@/types/media';
 import { Platform } from '@/types/platform';
@@ -132,8 +133,7 @@ export const usePostComposition = (
         const resolvedMedia = owns(override, 'media')
             ? (override.media ?? [])
             : media.value;
-
-        return {
+        const destination = {
             social_account_id: account.id,
             content_type:
                 derivedContentTypeFor(account.platform, resolvedMedia) ??
@@ -144,7 +144,11 @@ export const usePostComposition = (
             content: owns(override, 'content')
                 ? (override.content ?? '')
                 : content.value,
-            media: resolvedMedia,
+        };
+
+        return {
+            ...destination,
+            media: mediaForContentType(destination.content_type, resolvedMedia),
         };
     };
 
