@@ -86,13 +86,13 @@ function publishThroughPipeline(): void
 }
 
 /**
- * Runs every job that is due on the default queue (the policy job, then the
- * file deletion it queues).
+ * Runs every job that is due: the policy job on its own queue, then the file
+ * deletion it queues on the default one.
  */
 function runDueDefaultJobs(): void
 {
-    while (test()->queue->pendingSize('default') > 0) {
-        test()->worker->runNextJob('database', 'default', test()->workerOptions);
+    while (test()->queue->pendingSize(ApplyVideoPolicy::QUEUE) + test()->queue->pendingSize('default') > 0) {
+        test()->worker->runNextJob('database', ApplyVideoPolicy::QUEUE.',default', test()->workerOptions);
     }
 
     test()->assertDatabaseCount('failed_jobs', 0);
@@ -222,7 +222,7 @@ test('only a move into published starts the clock', function () {
     $post->forceFill(['status' => PostStatus::Publishing, 'publish_status' => PublishStatus::Retrying])->save();
     $post->forceFill(['status' => PostStatus::Failed, 'publish_status' => PublishStatus::Failed])->save();
 
-    expect($this->queue->size('default'))->toBe(0);
+    expect($this->queue->size(ApplyVideoPolicy::QUEUE))->toBe(0);
 
     $this->travel(1)->hours();
     runDueDefaultJobs();

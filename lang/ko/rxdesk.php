@@ -69,6 +69,9 @@ return [
         'failed' => 'Backup failed',
         'retry' => 'Retry',
         'retrying' => 'Retrying the backup.',
+        'errors' => [
+            'nothing_to_retry' => 'This post has no failed backup to retry.',
+        ],
     ],
     'invite' => [
         'owner_has_workspaces' => "You own workspaces with this email, so you can't join another account with it. Join as a Member with a different email instead.",
