@@ -74,6 +74,17 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - The System admin uses `$R php artisan rxdesk:quota show|set <email> [20GB|default]` and `$R php artisan rxdesk:usage`.
 - The Owner's storage bar (account menu, `StorageBar.vue`, links to Preferences `#video-policy`) reads the shared `storage` prop (`HandleInertiaRequests::storage()`, a closure, null for anyone who is not an account Owner), which gets its numbers from `AccountStorage::usage()`.
 
+### Production (`compose.rxdesk.yaml`)
+
+Upstream's `compose.prod.yaml` and `Caddyfile` stay untouched (it pulls TryPost's image and publishes the app's ports); The RX Desk runs `compose.rxdesk.yaml` + `docker/Caddyfile.rxdesk`, so upstream merges never conflict. Settings come from `.env.production` (git-ignored), started from `docker/.env.production.example`. Every command takes `-f compose.rxdesk.yaml --env-file .env.production`; the project name is `therxdesk-prod`, so it never shares a container or volume with the dev stack.
+
+- The image is built on the VPS (target `production`) with `VITE_APP_NAME`, `VITE_REVERB_HOST=<APP_DOMAIN>`, port 443, `https` and PostHog off. Vite bakes them in: rebuild after changing `APP_NAME`, `REVERB_APP_KEY` or `APP_DOMAIN`. The server reaches Reverb inside the container (`REVERB_HOST=127.0.0.1`).
+- Only Caddy publishes host ports (80, 443). The app, Postgres and Redis publish none. `APP_URL` and every OAuth redirect URI are built from `APP_DOMAIN`.
+- Caddy has a fixed address (`CADDY_IP`) on the `edge` network, whose subnet is fixed (`EDGE_SUBNET`, a private range); `TRUSTED_PROXIES` is that one address, so a request that skips Caddy cannot fake its IP. Change `CADDY_IP`, `EDGE_SUBNET`, `EDGE_DYNAMIC_RANGE` and `EDGE_GATEWAY` together.
+- Set explicitly: `SELF_HOSTED=true`, `RXDESK_DEFAULT_QUOTA`, `RXDESK_DISK_GUARD_THRESHOLD`; off: `POSTHOG_ENABLED`, `NIGHTWATCH_ENABLED`, `CHANGELOG_ENABLED`, `TELESCOPE_ENABLED`, `GOOGLE_AUTH_ENABLED`, `GITHUB_AUTH_ENABLED`, Google Photos and Canva. No `STRIPE_*`.
+- `docker/Caddyfile.rxdesk` answers 404 for `/stripe` and `/stripe/*` (Cashier's webhook accepts unsigned events without `STRIPE_WEBHOOK_SECRET`). A new env variable the app needs goes into the compose file's `environment:` and the example file together.
+- Check without starting anything: `docker compose -f compose.rxdesk.yaml --env-file docker/.env.production.example config`.
+
 ## Agent skills
 
 ### Issue tracker

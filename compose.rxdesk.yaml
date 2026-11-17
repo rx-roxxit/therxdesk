@@ -1,0 +1,231 @@
+# The RX Desk — production stack for the VPS (a fork of compose.prod.yaml).
+#
+#   cp docker/.env.production.example .env.production      # then fill it in
+#   docker compose -f compose.rxdesk.yaml --env-file .env.production build
+#   docker compose -f compose.rxdesk.yaml --env-file .env.production up -d
+#
+# What differs from upstream's compose.prod.yaml:
+# - The image is built here with The RX Desk's build args, never pulled.
+# - Only Caddy publishes host ports (80 and 443). The app, Postgres and Redis
+#   publish nothing. Docker-published ports skip ufw, so none are left open.
+# - Caddy has a fixed address on a named network with a fixed private subnet,
+#   and TRUSTED_PROXIES is exactly that address, so $request->ip() is the
+#   client's and a request that bypasses Caddy cannot fake it.
+# - Telemetry, billing and the extra signup paths are off, explicitly.
+# - Every setting comes from the env file; nothing here is a secret.
+
+name: therxdesk-prod
+
+x-caddy-ip: &caddy-ip ${CADDY_IP:-172.30.0.10}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+      args:
+        VITE_APP_NAME: ${APP_NAME:-The RX Desk}
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY:?set REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${APP_DOMAIN:?set APP_DOMAIN}
+        VITE_REVERB_PORT: "443"
+        VITE_REVERB_SCHEME: https
+        VITE_POSTHOG_ENABLED: "false"
+    image: therxdesk:production
+    restart: unless-stopped
+    environment:
+      # ===== Required =====
+      APP_NAME: ${APP_NAME:-The RX Desk}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?set APP_KEY}
+      APP_URL: https://${APP_DOMAIN:?set APP_DOMAIN}
+      TRYPOST_TARGET: production
+      TRUSTED_PROXIES: *caddy-ip
+
+      # ===== The RX Desk =====
+      SELF_HOSTED: "true"
+      RXDESK_DEFAULT_QUOTA: ${RXDESK_DEFAULT_QUOTA:-5GB}
+      RXDESK_DISK_GUARD_THRESHOLD: ${RXDESK_DISK_GUARD_THRESHOLD:-10GB}
+      LEGAL_TERMS_URL: ${LEGAL_TERMS_URL:-https://github.com/rx-roxxit/therxdesk#readme}
+      LEGAL_PRIVACY_URL: ${LEGAL_PRIVACY_URL:-https://github.com/rx-roxxit/therxdesk#readme}
+
+      # ===== Off on purpose =====
+      POSTHOG_ENABLED: "false"
+      NIGHTWATCH_ENABLED: "false"
+      CHANGELOG_ENABLED: "false"
+      TELESCOPE_ENABLED: "false"
+      GOOGLE_AUTH_ENABLED: "false"
+      GITHUB_AUTH_ENABLED: "false"
+
+      # ===== Database =====
+      DB_CONNECTION: pgsql
+      DB_HOST: pgsql
+      DB_PORT: "5432"
+      DB_DATABASE: ${DB_DATABASE:-therxdesk}
+      DB_USERNAME: ${DB_USERNAME:-therxdesk}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+
+      # ===== Redis / queue / cache / session / broadcasting =====
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      SESSION_DRIVER: database
+      BROADCAST_CONNECTION: reverb
+
+      # ===== WebSockets (Reverb) =====
+      # The server talks to Reverb inside the container; the browser's host,
+      # port and scheme are the VITE_REVERB_* build args above.
+      REVERB_APP_ID: ${REVERB_APP_ID:-1001}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:?set REVERB_APP_KEY}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:?set REVERB_APP_SECRET}
+      REVERB_HOST: 127.0.0.1
+      REVERB_PORT: "8080"
+      REVERB_SCHEME: http
+
+      # ===== Passport (API keys / MCP) =====
+      PASSPORT_PRIVATE_KEY: ${PASSPORT_PRIVATE_KEY:?set PASSPORT_PRIVATE_KEY}
+      PASSPORT_PUBLIC_KEY: ${PASSPORT_PUBLIC_KEY:?set PASSPORT_PUBLIC_KEY}
+
+      # ===== Storage (local disk, in the "storage" volume) =====
+      FILESYSTEM_DISK: public
+
+      # ===== Mail =====
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SCHEME: ${MAIL_SCHEME:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
+      MAIL_FROM_NAME: ${APP_NAME:-The RX Desk}
+
+      # ===== Social platforms =====
+      # Redirect URIs are built from the domain; register the same ones in
+      # each developer portal.
+      FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID:-}
+      FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET:-}
+      FACEBOOK_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/facebook/callback
+      INSTAGRAM_CLIENT_ID: ${INSTAGRAM_CLIENT_ID:-}
+      INSTAGRAM_CLIENT_SECRET: ${INSTAGRAM_CLIENT_SECRET:-}
+      INSTAGRAM_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/instagram/callback
+      THREADS_CLIENT_ID: ${THREADS_CLIENT_ID:-}
+      THREADS_CLIENT_SECRET: ${THREADS_CLIENT_SECRET:-}
+      THREADS_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/threads/callback
+      TIKTOK_CLIENT_ID: ${TIKTOK_CLIENT_ID:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      TIKTOK_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/tiktok/callback
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/youtube/callback
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID:-}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET:-}
+      LINKEDIN_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/linkedin/callback
+      LINKEDIN_PAGE_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/linkedin-page/callback
+      X_CLIENT_ID: ${X_CLIENT_ID:-}
+      X_CLIENT_SECRET: ${X_CLIENT_SECRET:-}
+      X_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/x/callback
+      PINTEREST_CLIENT_ID: ${PINTEREST_CLIENT_ID:-}
+      PINTEREST_CLIENT_SECRET: ${PINTEREST_CLIENT_SECRET:-}
+      PINTEREST_CLIENT_REDIRECT: https://${APP_DOMAIN}/accounts/pinterest/callback
+
+      # ===== Composer media sources and the Drive backup (its own Google project) =====
+      GOOGLE_MEDIA_CLIENT_ID: ${GOOGLE_MEDIA_CLIENT_ID:-}
+      GOOGLE_MEDIA_CLIENT_SECRET: ${GOOGLE_MEDIA_CLIENT_SECRET:-}
+      GOOGLE_MEDIA_CLIENT_REDIRECT: https://${APP_DOMAIN}/integrations/google/callback
+      GOOGLE_MEDIA_BACKUP_REDIRECT: https://${APP_DOMAIN}/settings/preferences/drive/callback
+      GOOGLE_MEDIA_API_KEY: ${GOOGLE_MEDIA_API_KEY:-}
+      GOOGLE_MEDIA_APP_ID: ${GOOGLE_MEDIA_APP_ID:-}
+      GOOGLE_DRIVE_ENABLED: ${GOOGLE_DRIVE_ENABLED:-true}
+      GOOGLE_PHOTOS_ENABLED: "false"
+      CANVA_ENABLED: "false"
+
+      # ===== AI (optional: leave blank to disable) =====
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - storage:/var/www/html/storage/app
+    networks:
+      - edge
+      - internal
+    depends_on:
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  pgsql:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-therxdesk}
+      POSTGRES_USER: ${DB_USERNAME:-therxdesk}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-therxdesk} -d ${DB_DATABASE:-therxdesk}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile.rxdesk:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: *caddy-ip
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  # Caddy and the app. The subnet is fixed so Caddy's address is known before
+  # anything starts; Docker hands the other containers addresses from the upper
+  # half only, so they can never take Caddy's.
+  edge:
+    ipam:
+      config:
+        - subnet: ${EDGE_SUBNET:-172.30.0.0/24}
+          ip_range: ${EDGE_DYNAMIC_RANGE:-172.30.0.128/25}
+          gateway: ${EDGE_GATEWAY:-172.30.0.1}
+  # Postgres and Redis (and the app, which also sits on edge). Postgres and
+  # Redis have no route out and publish nothing.
+  internal:
+    internal: true
+
+volumes:
+  pgdata:
+  redisdata:
+  storage:
+  caddy-data:
+  caddy-config:
