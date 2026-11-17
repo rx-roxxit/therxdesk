@@ -33,7 +33,7 @@ class StoreMediaImportRequest extends FormRequest
         $arm = data_get($this->arms(), (string) $this->input('source'));
 
         return [
-            'source' => ['bail', 'required', 'string', Rule::in(array_map(fn (Source $source): string => $source->value, $this->importableSources())), new FitsStorage($this->user()->currentWorkspace, $this->user(), bytes: 1)],
+            'source' => ['bail', 'required', 'string', Rule::in(array_map(fn (Source $source): string => $source->value, $this->importableSources())), FitsStorage::forImport($this->user()->currentWorkspace, $this->user(), $this->input('file.size'))],
             'files' => ['prohibited'],
             ...($arm === null ? [] : data_get($arm, 'rules')()),
         ];
@@ -73,9 +73,10 @@ class StoreMediaImportRequest extends FormRequest
             Source::GoogleDrive->value => [
                 'rules' => fn (): array => [
                     'access_token' => ['required', 'string', 'max:4096'],
-                    'file' => ['required', 'array:id,name'],
+                    'file' => ['required', 'array:id,name,size'],
                     'file.id' => ['required', 'string', 'max:255', 'regex:'.GoogleDriveFiles::FILE_ID_PATTERN],
                     'file.name' => ['required', 'string', 'max:255'],
+                    'file.size' => ['sometimes', 'nullable', 'integer', 'min:0'],
                 ],
                 'payload' => fn (): RemoteFile => GoogleDriveFiles::toRemoteFile(
                     (string) $this->validated('access_token'),

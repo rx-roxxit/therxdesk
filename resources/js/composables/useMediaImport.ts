@@ -10,7 +10,10 @@ import type { MediaItem } from '@/types/media';
 
 export type MediaImportPayload = {
     source: string;
-} & Record<string, string | number | null | Record<string, string>>;
+} & Record<
+    string,
+    string | number | null | Record<string, string | number | undefined>
+>;
 
 export interface MediaImportStarted {
     importId: string;
@@ -85,7 +88,9 @@ export const useMediaImport = () => {
 
     const failed = (): null => {
         if (!disposed) {
-            toast.error(trans('posts.composer.media_sources.errors.import_failed'));
+            toast.error(
+                trans('posts.composer.media_sources.errors.import_failed'),
+            );
         }
 
         return null;

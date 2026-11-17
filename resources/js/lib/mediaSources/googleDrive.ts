@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-
+import { isNumber } from '@/lib/helpers';
 import { signInWithGoogle } from '@/lib/mediaSources/googleSignIn';
 import { loadScript } from '@/lib/mediaSources/loadScript';
 import { ALLOWED_MIME_TYPES, HEIC_MIME_TYPES } from '@/lib/mediaType';
@@ -11,9 +11,16 @@ export const isGooglePickerOpen = ref(false);
 /** `api_key`, `app_id` and `picker_sdk` from `Source::publicConfig()`. */
 export type GoogleDriveConfig = Record<string, string>;
 
+/** `size` is the byte size the Picker declares, so a file that cannot fit the storage is refused before it downloads. */
+export type GoogleDrivePickedFile = {
+    id: string;
+    name: string;
+    size?: number;
+};
+
 export interface GoogleDrivePick {
     accessToken: string;
-    file: { id: string; name: string };
+    file: GoogleDrivePickedFile;
 }
 
 interface PickerDocument {
@@ -151,12 +158,25 @@ const shieldPickerFocus = (): (() => void) => {
     };
 };
 
+/** The byte size the Picker gives for a picked file, when it gives one. */
+const declaredSize = (
+    document: PickerDocument | undefined,
+): number | undefined => {
+    const size = document?.sizeBytes;
+
+    if (isNumber(size)) {
+        return size;
+    }
+
+    return undefined;
+};
+
 const openPicker = (
     config: GoogleDriveConfig,
     accessToken: string,
     locale: string,
     heic: boolean,
-): Promise<{ id: string; name: string } | null> =>
+): Promise<GoogleDrivePickedFile | null> =>
     new Promise((resolve, reject) => {
         const picker = window.google?.picker;
         if (!picker) {
@@ -205,6 +225,7 @@ const openPicker = (
                                   name: String(
                                       picked?.[picker.Document.NAME] ?? '',
                                   ),
+                                  size: declaredSize(picked),
                               }
                             : null,
                     );

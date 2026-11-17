@@ -23,6 +23,7 @@ use App\Services\Storage\AccountStorage;
 use App\Services\Storage\DiskSpace;
 use App\Services\Storage\LocalDiskSpace;
 use App\Support\MediaImportStatus;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -253,3 +254,23 @@ test('the container reads the real disk when no fake is bound', function () {
         ->and($disk->total())->toBeGreaterThan(0)
         ->and($disk->free())->toBeLessThanOrEqual($disk->total());
 });
+
+test('an avatar or a workspace logo is refused under the Disk guard before the old one is cleared', function (string $route, string $collection) {
+    $owner = $collection === 'avatar' ? $this->owner : $this->workspace;
+    $old = Media::factory()->{$collection}()->create([
+        'mediable_type' => $owner->getMorphClass(),
+        'mediable_id' => $owner->id,
+    ]);
+    Storage::put($old->path, 'old picture');
+    FakeDiskSpace::bind(free: 1 * $this->gb);
+
+    $this->actingAs($this->owner)
+        ->post(route($route), ['photo' => UploadedFile::fake()->image('photo.jpg', 200, 200)])
+        ->assertSessionHasErrors(['photo' => DISK_GUARD_MESSAGE]);
+
+    expect(Media::query()->pluck('id')->all())->toBe([$old->id])
+        ->and(Storage::allFiles())->toBe([$old->path]);
+})->with([
+    'avatar' => ['app.profile.upload-photo', 'avatar'],
+    'logo' => ['app.workspace.upload-logo', 'logo'],
+]);

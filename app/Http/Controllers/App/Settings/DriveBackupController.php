@@ -86,7 +86,7 @@ class DriveBackupController extends Controller
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
         }
 
-        if ($verifier === null) {
+        if (blank($verifier)) {
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
         }
 
@@ -96,7 +96,7 @@ class DriveBackupController extends Controller
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.connect_failed'));
         }
 
-        if (! in_array(GoogleMediaOAuth::scope(Source::GoogleDrive), data_get($token, 'scopes'), true)) {
+        if (! collect(data_get($token, 'scopes'))->contains(GoogleMediaOAuth::scope(Source::GoogleDrive))) {
             return $this->back('flash.error', __('rxdesk.drive_backup.errors.scope_not_granted'));
         }
 

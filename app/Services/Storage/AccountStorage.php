@@ -13,6 +13,7 @@ use App\Models\Workspace;
 use App\Support\ByteSize;
 use Closure;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use InvalidArgumentException;
 
 /**
@@ -42,7 +43,7 @@ class AccountStorage
 
     public function canStore(Account $account, int $bytes): bool
     {
-        return $this->refusal($account, $bytes) === null;
+        return blank($this->refusal($account, $bytes));
     }
 
     /**
@@ -55,12 +56,47 @@ class AccountStorage
             return null;
         }
 
-        if ($this->diskStatus()->isGuarding()) {
-            return StorageRefusal::DiskGuard;
+        $diskRefusal = $this->diskRefusal();
+
+        if (filled($diskRefusal)) {
+            return $diskRefusal;
         }
 
         if (! $this->usage($account)->fits($bytes)) {
             return StorageRefusal::Quota;
+        }
+
+        return null;
+    }
+
+    /**
+     * How many more bytes the account may store before a refusal: none under
+     * the Disk guard, no limit while `unguarded()`.
+     */
+    public function room(Account $account): int
+    {
+        if (self::$unguardedDepth > 0) {
+            return PHP_INT_MAX;
+        }
+
+        if (filled($this->diskRefusal())) {
+            return 0;
+        }
+
+        return $this->usage($account)->remaining();
+    }
+
+    /**
+     * The Disk guard alone, which refuses every new file, counted or not.
+     */
+    public function diskRefusal(): ?StorageRefusal
+    {
+        if (self::$unguardedDepth > 0) {
+            return null;
+        }
+
+        if ($this->diskStatus()->isGuarding()) {
+            return StorageRefusal::DiskGuard;
         }
 
         return null;
@@ -75,35 +111,32 @@ class AccountStorage
     public function ensureCanStore(Workspace $workspace, int $bytes, ?User $actor, string $key = 'media'): void
     {
         $account = $workspace->account;
-        $refusal = $this->refusal($account, $bytes);
 
-        if ($refusal === null) {
-            return;
-        }
-
-        throw StorageRefused::because($refusal, $account, $key, $this->messageFor($refusal, $account, $actor));
+        $this->ensureNotRefused($this->refusal($account, $bytes), $account, $actor, $key);
     }
 
     /**
-     * Throws a validation error when a new media row would take its account
-     * past what it may store. A row that does not count (an avatar, a logo)
-     * always passes.
+     * Throws a validation error when a new media row may not be stored: the
+     * Disk guard refuses every row, the Quota only a row that counts (an
+     * avatar or a logo never does).
      *
      * @throws StorageRefused
      */
     public function ensureCanAdd(Media $media, ?User $actor): void
     {
+        $account = $this->accountOf($media);
+
+        if (blank($account)) {
+            return;
+        }
+
         if (! $this->counts($media)) {
+            $this->ensureNotRefused($this->diskRefusal(), $account, $actor);
+
             return;
         }
 
-        $workspace = Workspace::query()->with('account')->find($media->workspace_id);
-
-        if ($workspace === null) {
-            return;
-        }
-
-        $this->ensureCanStore($workspace, (int) $media->size, $actor);
+        $this->ensureNotRefused($this->refusal($account, (int) $media->size), $account, $actor);
     }
 
     /**
@@ -111,7 +144,7 @@ class AccountStorage
      */
     public function counts(Media $media): bool
     {
-        return $media->workspace_id !== null && ! in_array($media->collection, self::UNCOUNTED_COLLECTIONS, true);
+        return filled($media->workspace_id) && ! in_array($media->collection, self::UNCOUNTED_COLLECTIONS, true);
     }
 
     /**
@@ -123,7 +156,7 @@ class AccountStorage
         $account = $workspace->account;
         $refusal = $this->refusal($account, $bytes);
 
-        if ($refusal === null) {
+        if (blank($refusal)) {
             return null;
         }
 
@@ -150,6 +183,35 @@ class AccountStorage
         }
     }
 
+    /**
+     * @throws StorageRefused
+     */
+    private function ensureNotRefused(?StorageRefusal $refusal, Account $account, ?User $actor, string $key = 'media'): void
+    {
+        if (blank($refusal)) {
+            return;
+        }
+
+        throw StorageRefused::because($refusal, $account, $key, $this->messageFor($refusal, $account, $actor));
+    }
+
+    /**
+     * The account a media row is stored for: its workspace's, or for an
+     * avatar (no workspace) its user's.
+     */
+    private function accountOf(Media $media): ?Account
+    {
+        if (filled($media->workspace_id)) {
+            return Workspace::query()->with('account')->find($media->workspace_id)?->account;
+        }
+
+        if ($media->mediable_type !== Relation::getMorphAlias(User::class)) {
+            return null;
+        }
+
+        return User::query()->with('account')->find($media->mediable_id)?->account;
+    }
+
     private function messageFor(StorageRefusal $refusal, Account $account, ?User $actor): string
     {
         return $refusal->message($this->usage($account), self::speaksToOwner($account, $actor));
@@ -161,7 +223,11 @@ class AccountStorage
      */
     public static function speaksToOwner(?Account $account, ?User $actor): bool
     {
-        return $account !== null && $actor !== null && $account->owner_id === $actor->id;
+        if (blank($account) || blank($actor)) {
+            return false;
+        }
+
+        return $account->owner_id === $actor->id;
     }
 
     public function used(Account $account): int
@@ -174,7 +240,7 @@ class AccountStorage
 
     public function limit(Account $account): int
     {
-        if ($account->quota_bytes !== null) {
+        if (filled($account->quota_bytes)) {
             return (int) $account->quota_bytes;
         }
 

@@ -8,6 +8,7 @@ use App\Enums\Account\DriveConnection;
 use App\Enums\Account\VideoPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Settings\UpdatePreferencesRequest;
+use App\Models\Account;
 use App\Models\User;
 use App\Support\Timezone;
 use Illuminate\Http\RedirectResponse;
@@ -32,13 +33,7 @@ class PreferencesController extends Controller
      */
     private function videoPolicyFor(User $user): ?VideoPolicy
     {
-        $account = $user->account;
-
-        if ($account === null || $user->cannot('update', $account)) {
-            return null;
-        }
-
-        return $account->video_policy;
+        return $this->ownedAccount($user)?->video_policy;
     }
 
     /**
@@ -46,13 +41,21 @@ class PreferencesController extends Controller
      */
     private function driveConnectionFor(User $user): ?DriveConnection
     {
+        return $this->ownedAccount($user)?->driveConnection();
+    }
+
+    /**
+     * The user's account when they are its Owner, else null.
+     */
+    private function ownedAccount(User $user): ?Account
+    {
         $account = $user->account;
 
-        if ($account === null || $user->cannot('update', $account)) {
+        if (blank($account) || $user->cannot('update', $account)) {
             return null;
         }
 
-        return $account->driveConnection();
+        return $account;
     }
 
     public function update(UpdatePreferencesRequest $request): RedirectResponse|HttpResponse

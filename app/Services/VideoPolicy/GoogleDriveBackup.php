@@ -46,12 +46,14 @@ class GoogleDriveBackup
 
         $token = $this->oauth->refreshAccessToken((string) $connection->refresh_token);
 
+        $accessToken = (string) data_get($token, 'access_token');
+
         $connection->forceFill([
-            'access_token' => $token['access_token'],
-            'expires_at' => now()->addSeconds($token['expires_in']),
+            'access_token' => $accessToken,
+            'expires_at' => now()->addSeconds((int) data_get($token, 'expires_in')),
         ])->save();
 
-        return $token['access_token'];
+        return $accessToken;
     }
 
     /**
@@ -84,7 +86,7 @@ class GoogleDriveBackup
         $session = $this->startSession($accessToken, $folderId, $name, $mimeType, $size);
         $stream = Storage::readStream($video->path);
 
-        if ($stream === null) {
+        if (blank($stream)) {
             throw new RuntimeException("The video file {$video->id} could not be read.");
         }
 
@@ -124,7 +126,7 @@ class GoogleDriveBackup
             ->throw()
             ->json('id', '');
 
-        if ($created === '') {
+        if (blank($created)) {
             throw new RuntimeException('Google Drive created a folder without an id.');
         }
 

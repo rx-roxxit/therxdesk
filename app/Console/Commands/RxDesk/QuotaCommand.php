@@ -19,6 +19,11 @@ class QuotaCommand extends Command
 {
     private const string DEFAULT_SIZE = 'default';
 
+    /**
+     * @var list<string>
+     */
+    private const array ACTIONS = ['show', 'set'];
+
     protected $signature = 'rxdesk:quota
         {action : show or set}
         {email : The Owner\'s email}
@@ -30,7 +35,7 @@ class QuotaCommand extends Command
     {
         $action = (string) $this->argument('action');
 
-        if (! in_array($action, ['show', 'set'], true)) {
+        if (! collect(self::ACTIONS)->contains($action)) {
             $this->error("Unknown action \"{$action}\". Use show or set.");
 
             return self::FAILURE;
@@ -38,7 +43,7 @@ class QuotaCommand extends Command
 
         $account = $this->ownerAccount($storage);
 
-        if ($account === null) {
+        if (blank($account)) {
             return self::FAILURE;
         }
 
@@ -52,7 +57,7 @@ class QuotaCommand extends Command
     private function show(AccountStorage $storage, Account $account): int
     {
         $usage = $storage->usage($account);
-        $source = $account->quota_bytes === null ? ' (default Quota)' : '';
+        $source = blank($account->quota_bytes) ? ' (default Quota)' : '';
 
         $this->info("{$this->email()} uses {$this->size($usage->used)} of {$this->size($usage->limit)}{$source}.");
         $this->reportCommitment($storage);
@@ -80,7 +85,7 @@ class QuotaCommand extends Command
 
         $bytes = ByteSize::parse($size);
 
-        if ($bytes === null) {
+        if (blank($bytes)) {
             $this->error("\"{$size}\" is not a size. Write it like 20GB, 500MB or 1.5TB.");
 
             return self::FAILURE;
@@ -97,7 +102,7 @@ class QuotaCommand extends Command
     {
         $user = User::query()->where('email', $this->email())->first();
 
-        if ($user === null) {
+        if (blank($user)) {
             $this->error("No user with the email {$this->email()}.");
 
             return null;
@@ -105,7 +110,7 @@ class QuotaCommand extends Command
 
         $account = $storage->ownerAccountOf($user);
 
-        if ($account === null) {
+        if (blank($account)) {
             $this->error("{$this->email()} owns no workspaces, so they have no Quota.");
         }
 

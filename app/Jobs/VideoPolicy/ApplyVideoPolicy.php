@@ -8,13 +8,11 @@ use App\Actions\VideoPolicy\BackupPostVideos;
 use App\Actions\VideoPolicy\DeletePostVideos;
 use App\Enums\Account\VideoPolicy;
 use App\Exceptions\VideoPolicy\DriveBackupUnavailable;
-use App\Exceptions\VideoPolicy\GroupBackupFailed;
 use App\Mail\VideoBackupFailed;
 use App\Models\Post;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -24,17 +22,30 @@ use Throwable;
  * policy switched to Keep meanwhile, or a post no longer published, leaves the
  * videos alone.
  *
+ * A large video can take hours to reach Drive, so the job runs on its own
+ * queue (`QUEUE`): with Redis, on its own connection (`CONNECTION`, whose
+ * `retry_after` outlasts the job) and Horizon supervisor (whose timeout
+ * outlasts `TIMEOUT_SECONDS`), so a long upload is never cut short by the
+ * default worker nor reserved twice.
+ *
  * A Backup that fails (Google unreachable, a refused upload) is tried again on
  * the backoff below, about an hour in all, keeping the file meanwhile. After
- * the last try the post records `backup_failed` and the Owner is emailed. A
- * rejected Google token fails at once (retrying cannot help). A post whose
- * group upload is not done yet waits on the same schedule; when its tries run
- * out while the uploader has not given up, it queues itself again rather than
- * failing, up to `MAX_WAIT_ROUNDS` times.
+ * the last try the post records `backup_failed` and the Owner is emailed once
+ * per group. A rejected Google token fails at once (retrying cannot help). A
+ * post whose file another run is uploading (the file's lock is held) looks
+ * again every `WAIT_SECONDS` in a fresh job that carries the tries already
+ * used, so waiting never uses one up.
  */
 class ApplyVideoPolicy implements ShouldQueue
 {
     use Queueable;
+
+    public const string QUEUE = 'video-policy';
+
+    /**
+     * The Redis connection of that queue (`config/queue.php`).
+     */
+    public const string CONNECTION = 'video-policy';
 
     public const int DELAY_MINUTES = 60;
 
@@ -46,14 +57,41 @@ class ApplyVideoPolicy implements ShouldQueue
     public const array BACKOFF_SECONDS = [300, 600, 900, 900, 900];
 
     /**
-     * How many more times a waiting post queues itself after running out of
-     * tries (each round is another hour of waiting).
+     * Seconds between two looks at a file another run is uploading.
      */
-    public const int MAX_WAIT_ROUNDS = 3;
+    public const int WAIT_SECONDS = 300;
+
+    /**
+     * How long one run may take (a whole upload restarts from its first
+     * byte), under the `video-policy` supervisor's timeout.
+     */
+    public const int TIMEOUT_SECONDS = 10_500;
 
     public int $tries = 6;
 
-    public function __construct(public string $postId, public int $round = 0) {}
+    public int $timeout = self::TIMEOUT_SECONDS;
+
+    /**
+     * @param  int  $earlierAttempts  tries used by the earlier jobs of this post's wait
+     */
+    public function __construct(public string $postId, public int $earlierAttempts = 0)
+    {
+        $this->onQueue(self::QUEUE);
+        $this->onConnection(self::connectionName());
+    }
+
+    /**
+     * The long-running connection when the app queues on Redis, the default
+     * connection otherwise (sync or database, which have no Horizon).
+     */
+    public static function connectionName(): ?string
+    {
+        if (config('queue.default') !== 'redis') {
+            return null;
+        }
+
+        return self::CONNECTION;
+    }
 
     /**
      * @return list<int>
@@ -67,13 +105,13 @@ class ApplyVideoPolicy implements ShouldQueue
     {
         $post = Post::query()->find($this->postId);
 
-        if ($post === null) {
+        if (blank($post)) {
             return;
         }
 
         $policy = $post->workspace?->account?->video_policy;
 
-        if ($policy === null) {
+        if (blank($policy)) {
             return;
         }
 
@@ -90,10 +128,6 @@ class ApplyVideoPolicy implements ShouldQueue
             if (BackupPostVideos::execute($post)) {
                 return;
             }
-        } catch (GroupBackupFailed $exception) {
-            BackupPostVideos::fail($post, $exception->getMessage(), $this->attempts());
-
-            return;
         } catch (DriveBackupUnavailable $exception) {
             $this->giveUp($post, $exception, needsReconnect: true);
 
@@ -110,52 +144,54 @@ class ApplyVideoPolicy implements ShouldQueue
             return;
         }
 
-        $this->wait($post);
+        $this->waitForUpload();
     }
 
     /**
-     * The post waits on its group's upload.
+     * Another run is uploading one of the post's files: look again later, in
+     * a fresh job, without using up this try.
      */
-    private function wait(Post $post): void
+    private function waitForUpload(): void
     {
-        if (! $this->isLastAttempt()) {
-            $this->release($this->backoffSeconds());
-
-            return;
-        }
-
-        if ($this->round < self::MAX_WAIT_ROUNDS) {
-            self::dispatch($this->postId, $this->round + 1)->delay(now()->addSeconds($this->backoffSeconds()));
-
-            return;
-        }
-
-        $this->giveUp($post, new RuntimeException('The group upload this post waited for did not finish.'));
+        self::dispatch($this->postId, $this->attemptsMade() - 1)->delay(now()->addSeconds(self::WAIT_SECONDS));
     }
 
     /**
-     * Records the failure, keeps the files, and tells the Owner once.
+     * Records the failure, keeps the files, and tells the Owner once for the
+     * whole group.
      */
     private function giveUp(Post $post, Throwable $exception, bool $needsReconnect = false): void
     {
         report($exception);
 
-        if (BackupPostVideos::fail($post, $exception->getMessage(), $this->attempts()) === 0) {
+        $alreadyTold = BackupPostVideos::groupHasFailed($post);
+
+        if (BackupPostVideos::fail($post, $exception->getMessage(), $this->attemptsMade()) === 0) {
             return;
         }
 
-        $owner = $post->workspace->account->owner;
+        if ($alreadyTold) {
+            return;
+        }
 
-        Mail::to($owner)->send(new VideoBackupFailed($post, $needsReconnect));
+        Mail::to($post->workspace->account->owner)->send(new VideoBackupFailed($post, $needsReconnect));
+    }
+
+    /**
+     * The tries used so far, this one included, across the jobs of a wait.
+     */
+    private function attemptsMade(): int
+    {
+        return $this->earlierAttempts + $this->attempts();
     }
 
     private function isLastAttempt(): bool
     {
-        return $this->attempts() >= $this->tries;
+        return $this->attemptsMade() >= $this->tries;
     }
 
     private function backoffSeconds(): int
     {
-        return self::BACKOFF_SECONDS[min($this->attempts(), count(self::BACKOFF_SECONDS)) - 1];
+        return self::BACKOFF_SECONDS[min($this->attemptsMade(), count(self::BACKOFF_SECONDS)) - 1];
     }
 }
