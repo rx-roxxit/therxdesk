@@ -125,7 +125,7 @@ test('an Unsplash import over the Quota is refused and stores nothing', function
         ->and(Storage::allFiles())->toBe([]);
 });
 
-test('an API upload over the Quota is refused and stores nothing', function () {
+test('an API upload by the Owner over the Quota is refused in the Owner\'s words and stores nothing', function () {
     Media::factory()->temporaryUpload($this->workspace)->create(['size' => 10 * $this->mb]);
     $token = data_get(createApiTestToken(['workspace' => $this->workspace]), 'plain_token');
 
