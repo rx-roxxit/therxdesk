@@ -52,6 +52,7 @@ use App\Http\Controllers\App\Settings\ConnectedAccountController;
 use App\Http\Controllers\App\Settings\NotificationPreferenceController;
 use App\Http\Controllers\App\Settings\PasswordController;
 use App\Http\Controllers\App\Settings\PreferencesController;
+use App\Http\Controllers\App\Settings\VideoPolicyController;
 use App\Http\Controllers\App\Settings\ProfileController;
 use App\Http\Controllers\App\Settings\SessionController;
 use App\Http\Controllers\App\TourController;
@@ -440,6 +441,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('settings/language', [ProfileController::class, 'updateLanguage'])->name('app.profile.language');
     Route::get('settings/preferences', [PreferencesController::class, 'edit'])->name('app.settings.preferences');
     Route::patch('settings/preferences', [PreferencesController::class, 'update'])->name('app.settings.preferences.update');
+    Route::patch('settings/preferences/video-policy', [VideoPolicyController::class, 'update'])->name('app.settings.video-policy.update');
 });
 
 Route::middleware(['auth'])->group(function () {

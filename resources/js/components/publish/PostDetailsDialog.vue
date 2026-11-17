@@ -21,6 +21,7 @@ import PostMetricsBand from '@/components/publish/PostMetricsBand.vue';
 import PostPollResults from '@/components/publish/PostPollResults.vue';
 import PostPollResultsList from '@/components/publish/PostPollResultsList.vue';
 import PostStatusBadge from '@/components/publish/PostStatusBadge.vue';
+import PostVideoRecords from '@/components/publish/PostVideoRecords.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -467,6 +468,8 @@ const siblingMoment = (sibling: PostCard): string | null => {
                         @open="openMediaPreview(media, $event)"
                     />
                     </template>
+
+                    <PostVideoRecords :post="current" :test-key="currentKey" />
 
 
                     <PostCardLabels
