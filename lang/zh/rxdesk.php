@@ -29,6 +29,7 @@ return [
             'delete' => 'Delete',
             'backup' => 'Backup to Drive',
         ],
+        'save_failed' => "Couldn't save the video policy. Try again.",
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',
@@ -47,6 +48,12 @@ return [
         'connect' => 'Connect Google Drive',
         'reconnect' => 'Reconnect',
         'disconnect' => 'Disconnect',
+        'disconnect_modal' => [
+            'title' => 'Disconnect Google Drive?',
+            'description' => 'The desk will stop reaching your Google Drive. Videos already backed up stay in your Drive.',
+            'description_backup' => 'Your Video policy goes back to Keep, so new videos stay on the server. Videos already backed up stay in your Drive.',
+            'cancel' => 'Cancel',
+        ],
         'connected' => 'Google Drive is connected.',
         'errors' => [
             'not_configured' => 'Google Drive is not set up on this server yet. Ask the admin to add the Google keys.',
@@ -71,6 +78,7 @@ return [
         'retrying' => 'Retrying the backup.',
         'errors' => [
             'nothing_to_retry' => 'This post has no failed backup to retry.',
+            'retry_failed' => "Couldn't retry the backup. Try again.",
         ],
     ],
     'invite' => [

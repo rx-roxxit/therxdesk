@@ -10,6 +10,8 @@ import type { StorageSummary } from '@/types';
 
 const FULL_PERCENT = 100;
 const VIDEO_POLICY_ANCHOR = '#video-policy';
+const PROGRESS_CLASS = 'h-1.5';
+const FULL_PROGRESS_CLASS = `${PROGRESS_CLASS} bg-destructive/20 [&>[data-slot=progress-indicator]]:bg-destructive`;
 
 const page = usePage();
 const storage = computed<StorageSummary | null>(() => {
@@ -25,15 +27,15 @@ const preferencesUrl = computed<string>(
     () => `${preferences.url()}${VIDEO_POLICY_ANCHOR}`,
 );
 const progressClass = computed<string>(() => {
-    if (storage.value === null) {
-        return 'h-1.5';
+    if (!filled(storage.value)) {
+        return PROGRESS_CLASS;
     }
 
     if (storage.value.percent >= FULL_PERCENT) {
-        return 'h-1.5 bg-destructive/20 [&>[data-slot=progress-indicator]]:bg-destructive';
+        return FULL_PROGRESS_CLASS;
     }
 
-    return 'h-1.5';
+    return PROGRESS_CLASS;
 });
 </script>
 

@@ -21,13 +21,32 @@ import type { VideoRecord, VideoRecordOutcome } from '@/types/video-policy';
  * the server (deleted, or backed up with a link to its Drive copy), or kept
  * because its backup failed, which the Owner can retry.
  */
-const SHOWN_OUTCOMES: VideoRecordOutcome[] = [
+type ShownOutcome = Exclude<VideoRecordOutcome, 'pending'>;
+
+const SHOWN_OUTCOMES: ShownOutcome[] = [
     'deleted',
     'backed_up',
     'backup_failed',
 ];
 
-type Translate = (key: string) => string;
+/** What each shown outcome reads as, and its icon. */
+const OUTCOME_DISPLAY: Record<
+    ShownOutcome,
+    { labelKey: string; icon: Component }
+> = {
+    deleted: {
+        labelKey: 'rxdesk.video_policy.record.deleted',
+        icon: IconVideoOff,
+    },
+    backed_up: {
+        labelKey: 'rxdesk.video_policy.record.backed_up',
+        icon: IconCloudCheck,
+    },
+    backup_failed: {
+        labelKey: 'rxdesk.video_backup.failed',
+        icon: IconAlertTriangle,
+    },
+};
 
 const props = defineProps<{
     post: PostCard;
@@ -42,6 +61,19 @@ const retrying = ref(false);
 
 const wasRetried = computed(() => retriedPostIds.value.includes(props.post.id));
 
+/** A failed backup the Owner just retried no longer shows; every other shown outcome does. */
+const isShown = (record: VideoRecord): boolean => {
+    if (!SHOWN_OUTCOMES.includes(record.outcome as ShownOutcome)) {
+        return false;
+    }
+
+    if (record.outcome !== 'backup_failed') {
+        return true;
+    }
+
+    return !wasRetried.value;
+};
+
 const removedVideos = computed<VideoRecord[]>(() => {
     const records = props.post.video_records;
 
@@ -49,13 +81,7 @@ const removedVideos = computed<VideoRecord[]>(() => {
         return [];
     }
 
-    return records.filter((record) => {
-        if (!SHOWN_OUTCOMES.includes(record.outcome)) {
-            return false;
-        }
-
-        return !(record.outcome === 'backup_failed' && wasRetried.value);
-    });
+    return records.filter(isShown);
 });
 
 const hasRemovedVideos = computed(() => filled(removedVideos.value));
@@ -64,7 +90,21 @@ const hasFailedBackup = computed(() =>
     removedVideos.value.some((record) => record.outcome === 'backup_failed'),
 );
 
-const canRetry = computed(() => isOwner.value && hasFailedBackup.value);
+const canRetry = computed(() => {
+    if (!isOwner.value) {
+        return false;
+    }
+
+    return hasFailedBackup.value;
+});
+
+const retryFailedMessage = (errors: Record<string, string>): string => {
+    if (filled(errors.post)) {
+        return errors.post;
+    }
+
+    return trans('rxdesk.video_backup.errors.retry_failed');
+};
 
 const retryBackup = (): void => {
     router.post(
@@ -80,6 +120,9 @@ const retryBackup = (): void => {
                 retriedPostIds.value = [...retriedPostIds.value, props.post.id];
                 toast.success(trans('rxdesk.video_backup.retrying'));
             },
+            onError: (errors) => {
+                toast.error(retryFailedMessage(errors));
+            },
             onFinish: () => {
                 retrying.value = false;
             },
@@ -87,29 +130,10 @@ const retryBackup = (): void => {
     );
 };
 
-const recordLabel = (record: VideoRecord, translate: Translate): string => {
-    if (record.outcome === 'backed_up') {
-        return translate('rxdesk.video_policy.record.backed_up');
-    }
-
-    if (record.outcome === 'backup_failed') {
-        return translate('rxdesk.video_backup.failed');
-    }
-
-    return translate('rxdesk.video_policy.record.deleted');
-};
-
-const recordIcon = (record: VideoRecord): Component => {
-    if (record.outcome === 'backed_up') {
-        return IconCloudCheck;
-    }
-
-    if (record.outcome === 'backup_failed') {
-        return IconAlertTriangle;
-    }
-
-    return IconVideoOff;
-};
+const recordDisplay = (
+    record: VideoRecord,
+): { labelKey: string; icon: Component } =>
+    OUTCOME_DISPLAY[record.outcome as ShownOutcome];
 </script>
 
 <template>
@@ -125,11 +149,13 @@ const recordIcon = (record: VideoRecord): Component => {
                 class="flex min-w-0 items-center gap-2 text-sm text-muted-foreground"
             >
                 <component
-                    :is="recordIcon(record)"
+                    :is="recordDisplay(record).icon"
                     aria-hidden="true"
                     class="size-4 shrink-0"
                 />
-                <span class="shrink-0">{{ recordLabel(record, $t) }}</span>
+                <span class="shrink-0">{{
+                    $t(recordDisplay(record).labelKey)
+                }}</span>
                 <span
                     v-if="filled(record.original_filename)"
                     class="truncate"
