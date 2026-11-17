@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Account\LifecycleStage;
+use App\Enums\Account\VideoPolicy;
 use App\Models\Traits\BillsOwnerAsStripeCustomer;
 use App\Models\Traits\HasUsage;
 use Carbon\Carbon;
@@ -47,6 +48,7 @@ class Account extends Model
         'lifecycle_stage_changed_at' => 'datetime',
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
+        'video_policy' => VideoPolicy::class,
     ];
 
     public function owner(): BelongsTo

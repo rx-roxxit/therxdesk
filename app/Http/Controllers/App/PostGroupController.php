@@ -28,6 +28,7 @@ class PostGroupController extends Controller
                 'socialAccount',
                 'user.avatarMedia',
                 'labels',
+                'videoRecords',
             ])
             ->withCount('notes')
             ->get()

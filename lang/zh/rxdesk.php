@@ -21,4 +21,15 @@ return [
             'revoked' => 'This signup code was revoked. Ask the admin for a new one.',
         ],
     ],
+    'video_policy' => [
+        'heading' => 'Video policy',
+        'description' => 'One hour after a post publishes, keep its videos on the server or delete them. Images are always kept.',
+        'options' => [
+            'keep' => 'Keep',
+            'delete' => 'Delete',
+        ],
+        'record' => [
+            'deleted' => 'Video deleted',
+        ],
+    ],
 ];
