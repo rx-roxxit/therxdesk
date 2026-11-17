@@ -96,4 +96,6 @@ TryPost (AGPL-3.0) แบบ self-host หนึ่งชุดบน VPS ที
 ## ขั้นต่อไป
 1. ~~/research~~ เสร็จแล้ว (2026-11-16)
 2. ~~/grill-with-docs~~ เสร็จแล้ว (2026-11-17)
-3. /to-spec → /to-tickets → /implement ทีละ ticket
+3. ~~/to-spec~~ เสร็จแล้ว: spec อยู่ที่ issue #1 (github.com/rx-roxxit/therxdesk/issues/1)
+4. ~~/to-tickets~~ เสร็จแล้ว: ticket #2–#14 เป็น sub-issue ของ #1
+5. /implement ทีละ ticket ตามลำดับที่ไม่ถูกบล็อก (เริ่มจาก #2 ซึ่งคนต้องทำเอง)
