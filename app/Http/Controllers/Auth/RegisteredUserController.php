@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\SignupCode\CreateOwnerWithSignupCode;
 use App\Actions\User\CreateUser;
 use App\Http\Controllers\Auth\Concerns\PreservesAttributionParameters;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Auth\RegisterRequest;
+use App\Models\Invite;
+use App\Models\SignupCode;
+use App\Models\User;
 use App\Support\Auth\PasswordRequirements;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -28,6 +32,7 @@ class RegisteredUserController extends Controller
             'email' => $request->query('email'),
             'invite' => $request->query('invite'),
             'passwordRequirements' => PasswordRequirements::checklist(),
+            'signupCodeRequired' => SignupCode::isRequiredFor(Invite::fromId($request->string('invite')->toString())),
         ]);
     }
 
@@ -36,7 +41,7 @@ class RegisteredUserController extends Controller
         $attributionParameters = $this->retrieveAttributionParameters();
         $invite = $request->invite();
 
-        $user = CreateUser::execute([
+        $user = $this->createUser($request, [
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
@@ -59,5 +64,20 @@ class RegisteredUserController extends Controller
         }
 
         return redirect()->route('app.welcome');
+    }
+
+    /**
+     * The RX Desk: a signup without an invite uses up a Signup code.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, string>  $attributionParameters
+     */
+    private function createUser(RegisterRequest $request, array $data, array $attributionParameters): User
+    {
+        if ($request->requiresSignupCode()) {
+            return CreateOwnerWithSignupCode::execute($request->validated('signup_code'), $data, $attributionParameters);
+        }
+
+        return CreateUser::execute($data, $attributionParameters);
     }
 }
