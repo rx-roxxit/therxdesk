@@ -10,6 +10,7 @@ use App\Dto\MediaItem;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\PostPlatform\ContentType;
 use App\Models\Media;
+use App\Models\Post;
 use App\Models\Workspace;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -56,6 +57,21 @@ class CoverImage
         }
 
         return count($media) === 1 && $itemIsVideo;
+    }
+
+    /**
+     * The Cover image row of a post's video, when it has one.
+     */
+    public static function forPost(Post $post): ?Media
+    {
+        $item = collect($post->media)->first(fn (mixed $item): bool => is_array($item));
+        $id = transform($item, fn (array $item): ?string => MediaItem::fromArray($item)->coverImage()?->id);
+
+        if (blank($id)) {
+            return null;
+        }
+
+        return Media::query()->where('post_id', $post->id)->whereKey($id)->first();
     }
 
     /**

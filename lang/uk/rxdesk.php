@@ -115,5 +115,8 @@ return [
             'upload_failed' => "Couldn't upload the Cover image. Try again.",
             'reference' => 'Give the Cover image as exactly one of upload_token, url or id.',
         ],
+        'outcome' => [
+            'failed' => "Cover couldn't be set",
+        ],
     ],
 ];
