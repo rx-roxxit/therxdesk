@@ -23,7 +23,7 @@ return [
     ],
     'video_policy' => [
         'heading' => 'Video policy',
-        'description' => 'One hour after a post publishes, keep its videos on the server or delete them. Images are always kept.',
+        'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
         'options' => [
             'keep' => 'Keep',
             'delete' => 'Delete',
@@ -31,10 +31,13 @@ return [
         ],
         'record' => [
             'deleted' => 'Video deleted',
+            'backed_up' => 'Video backed up',
+            'open_in_drive' => 'Open in Drive',
         ],
     ],
     'drive_backup' => [
         'heading' => 'Google Drive',
+        'folder' => 'The RX Desk',
         'description' => 'Connect your Google Drive to back up videos before they are deleted. The desk only reaches files it creates.',
         'status' => [
             'none' => 'Not connected',

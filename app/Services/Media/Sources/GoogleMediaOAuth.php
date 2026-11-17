@@ -69,6 +69,37 @@ class GoogleMediaOAuth
     }
 
     /**
+     * A new access token for the Owner's stored Drive backup sign-in.
+     *
+     * @return array{access_token: string, expires_in: int}
+     */
+    public function refreshAccessToken(string $refreshToken): array
+    {
+        $tokenApi = config('trypost.media_sources.google_oauth.token_api');
+
+        $response = Http::asForm()
+            ->acceptJson()
+            ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+            ->post("{$tokenApi}/token", [
+                'grant_type' => 'refresh_token',
+                'refresh_token' => $refreshToken,
+                'client_id' => (string) config('services.google_media.client_id'),
+                'client_secret' => (string) config('services.google_media.client_secret'),
+            ]);
+
+        $accessToken = (string) $response->json('access_token', '');
+
+        if (! $response->successful() || $accessToken === '') {
+            throw new RuntimeException("Google token refresh failed ({$response->status()}).");
+        }
+
+        return [
+            'access_token' => $accessToken,
+            'expires_in' => (int) $response->json('expires_in', 0),
+        ];
+    }
+
+    /**
      * @return array{access_token: string, refresh_token: ?string, expires_in: int, scopes: list<string>}
      */
     public function exchangeCode(string $code, string $verifier, ?string $redirect = null): array
