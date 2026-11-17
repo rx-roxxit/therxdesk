@@ -96,4 +96,27 @@ return [
         'label' => 'Storage',
         'usage' => ':used of :limit used',
     ],
+    'cover' => [
+        'mode_label' => 'Cover',
+        'mode' => [
+            'frame' => 'Pick a frame',
+            'image' => 'Upload an image',
+        ],
+        'hint' => 'JPEG or PNG, up to :max MB. Use the same aspect ratio as the clip (9:16 for a vertical video) so the network doesn\'t crop it.',
+        'image_alt' => 'Cover image',
+        'upload' => 'Upload image',
+        'replace' => 'Replace',
+        'remove' => 'Remove',
+        'errors' => [
+            'not_supported' => "This post type can't use a Cover image. Remove the Cover image, then try again.",
+            'not_found' => "The Cover image couldn't be found. Upload it again.",
+            'type' => 'The Cover image must be a JPEG or PNG. Export it in one of those formats, then upload it again.',
+            'too_large' => 'The Cover image must be :max MB or smaller. Export a smaller file, then upload it again.',
+            'upload_failed' => "Couldn't upload the Cover image. Try again.",
+            'reference' => 'Give the Cover image as exactly one of upload_token, url or id.',
+        ],
+        'outcome' => [
+            'failed' => "Cover couldn't be set. Add it in the network's app.",
+        ],
+    ],
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Actions\Media\SyncOwnedMedia;
 use App\Enums\Media\Source;
 use App\Enums\Media\Type;
 use App\Enums\SocialAccount\Platform;
@@ -146,6 +147,20 @@ class MediaItem
         $offset = data_get($this->meta, 'cover_offset_ms');
 
         return is_numeric($offset) && $offset >= 0 ? (int) $offset : null;
+    }
+
+    /**
+     * The image the user uploaded as this video's Cover, when set.
+     */
+    public function coverImage(): ?self
+    {
+        $cover = data_get($this->meta, SyncOwnedMedia::COVER_IMAGE);
+
+        if (! is_array($cover) || blank(data_get($cover, 'id'))) {
+            return null;
+        }
+
+        return self::fromArray($cover);
     }
 
     /**

@@ -199,6 +199,15 @@ class Post extends Model
     }
 
     /**
+     * Whether a network took this post's video Cover (The RX Desk), recorded
+     * for the networks that set it after publishing.
+     */
+    public function coverOutcome(): HasOne
+    {
+        return $this->hasOne(CoverOutcome::class);
+    }
+
+    /**
      * The ids of the posts created together with this one (`post_group_id`),
      * this one included.
      *

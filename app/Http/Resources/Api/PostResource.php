@@ -16,11 +16,13 @@ class PostResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing(['user', 'approvalRequestedBy', 'approver']);
+        $this->resource->loadMissing(['user', 'approvalRequestedBy', 'approver', 'coverOutcome']);
 
         $requester = $this->approval_requested_by !== null
             ? $this->approvalRequestedBy
             : ($this->status === Status::PendingApproval ? $this->user : null);
+
+        $coverOutcome = $this->coverOutcomePayload();
 
         return [
             'id' => $this->id,
@@ -28,6 +30,7 @@ class PostResource extends JsonResource
             'author' => $this->person($this->user),
             'content' => $this->content,
             'media' => $this->media,
+            'cover_outcome' => $this->when($coverOutcome !== null, $coverOutcome),
             'status' => $this->status?->value,
             'schedule_mode' => $this->schedule_mode?->value,
             'scheduled_at' => $this->scheduled_at?->format('Y-m-d H:i:s'),
@@ -56,6 +59,25 @@ class PostResource extends JsonResource
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];
+    }
+
+    /**
+     * Whether a network took the video's Cover after the post published
+     * (YouTube and Facebook): `{outcome: set|failed}`. A video's Cover itself
+     * is `media.*.meta.cover_image`. The key is left out while no outcome is
+     * recorded (a post without a Cover, or one still trying).
+     *
+     * @return array{outcome: string}|null
+     */
+    private function coverOutcomePayload(): ?array
+    {
+        $record = $this->resource->coverOutcome;
+
+        if ($record === null) {
+            return null;
+        }
+
+        return ['outcome' => $record->outcome->value];
     }
 
     /**

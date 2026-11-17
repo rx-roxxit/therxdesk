@@ -29,6 +29,8 @@ export interface MediaItem {
         alt_text?: string;
         user_tags?: MediaUserTag[];
         cover_offset_ms?: number;
+        /** The image the user uploaded as this video's Cover. */
+        cover_image?: MediaItem;
         source?: MediaSource;
         source_meta?: Record<string, SourceMetaValue>;
     };

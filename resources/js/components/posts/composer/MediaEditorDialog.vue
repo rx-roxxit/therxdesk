@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type ImageSize, useImageCrop } from '@/composables/useImageCrop';
 import { defaultCropPresets } from '@/lib/contentTypeMediaRules';
+import { type CoverImageLimits, coverImageLimitsFor } from '@/lib/coverImage';
 import {
     createMediaEdit,
     cropPresetsFor,
@@ -48,6 +49,7 @@ export type MediaEditChange = {
     altText: string | null;
     userTags: MediaUserTag[];
     coverOffsetMs: number | null;
+    coverImage: MediaItem | null;
 };
 
 const props = withDefaults(
@@ -140,6 +142,20 @@ const activeVideoDuration = computed<number | null>(
         stageVideoDurations.value[activeIndex.value] ??
         null,
 );
+const offersFramePicker = computed(() =>
+    rules.value.some((rule) => rule.supportsVideoCover),
+);
+const coverImageLimits = computed<CoverImageLimits | null>(() => {
+    if (editingItems.value.length !== 1) {
+        return null;
+    }
+
+    if (!activeIsVideo.value) {
+        return null;
+    }
+
+    return coverImageLimitsFor(rules.value);
+});
 const tabs = computed<EditorTab[]>(() =>
     activeItem.value ? editorTabsFor(activeItem.value, rules.value) : [],
 );
@@ -276,6 +292,7 @@ const apply = async (): Promise<void> => {
                         altText: itemEdit.altText.trim() || null,
                         userTags: itemEdit.userTags,
                         coverOffsetMs: itemEdit.coverOffsetMs,
+                        coverImage: itemEdit.coverImage,
                     };
                 },
             ),
@@ -562,8 +579,11 @@ watch(tagging, (isTagging) => {
                     </template>
                     <MediaEditorThumbnailPanel
                         v-else-if="tab === 'thumbnail' && edit"
+                        :key="activeIndex"
                         v-model:edit="edit"
                         :duration="activeVideoDuration"
+                        :frame-picker="offersFramePicker"
+                        :cover-image-limits="coverImageLimits"
                     />
                     <MediaEditorAltTextPanel
                         v-else-if="tab === 'alt' && edit"

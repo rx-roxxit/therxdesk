@@ -15,6 +15,7 @@ use App\Models\Workspace;
 use App\Rules\ContentFitsPlatformLimits;
 use App\Rules\ContentTypeCompatibleWithMedia;
 use App\Rules\PostContentFitsMaxLength;
+use App\Support\Media\CoverImage;
 use App\Support\Social\XPoll;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -196,6 +197,10 @@ class PostCompositionValidator
                     if ($asset->url !== data_get($media, 'url')) {
                         $validator->errors()->add("{$key}.media.{$mediaIndex}.url", trans('validation.in', ['attribute' => 'media URL']));
                     }
+                }
+
+                foreach (CoverImage::violations($workspace, $contentType, $destination['media']) as $field => $message) {
+                    $validator->errors()->add("{$key}.media.{$field}", $message);
                 }
 
                 $formatViolation = PostPlatformMetaRules::formatViolation($account->platform, data_get($destination, 'meta', []), $contentType);

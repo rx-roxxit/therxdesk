@@ -14,6 +14,7 @@ use App\Exceptions\Social\ErrorCategory;
 use App\Exceptions\Social\InstagramPublishException;
 use App\Exceptions\Social\SocialPublishException;
 use App\Models\Post;
+use App\Services\Media\CoverImageJpeg;
 use App\Services\Social\Concerns\FitsImageToCanvas;
 use App\Services\Social\Concerns\HasSocialHttpClient;
 use App\Services\Social\Meta\GraphError;
@@ -23,6 +24,7 @@ use Closure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class InstagramPublisher
 {
@@ -131,7 +133,7 @@ class InstagramPublisher
             'caption' => $content,
             'media_type' => 'REELS',
             'access_token' => $accessToken,
-            ...$this->thumbOffsetParam($media),
+            ...$this->reelCoverParam($media),
             ...$this->sharedOptions(),
             ...$this->collaboratorsParam(),
             ...$this->reelOptions(),
@@ -336,6 +338,27 @@ class InstagramPublisher
         $offset = $media->coverOffsetMs();
 
         return $offset === null ? [] : ['thumb_offset' => $offset];
+    }
+
+    /**
+     * A Reel's Cover image (The RX Desk) goes as `cover_url`, a JPEG, in place
+     * of the picked frame.
+     *
+     * @return array{cover_url?: string, thumb_offset?: int}
+     */
+    private function reelCoverParam(MediaItem $media): array
+    {
+        $cover = $media->coverImage();
+
+        if ($cover === null) {
+            return $this->thumbOffsetParam($media);
+        }
+
+        try {
+            return ['cover_url' => app(CoverImageJpeg::class)->url($cover)];
+        } catch (Throwable) {
+            throw $this->cropFailureException('Failed to prepare the Cover image');
+        }
     }
 
     /**

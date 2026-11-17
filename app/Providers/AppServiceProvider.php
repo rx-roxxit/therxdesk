@@ -13,6 +13,7 @@ use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
 use App\Models\ChangelogEntry;
 use App\Models\ChangelogEntryView;
+use App\Models\CoverOutcome;
 use App\Models\Idea;
 use App\Models\IdeaStage;
 use App\Models\Invite;
@@ -156,6 +157,7 @@ class AppServiceProvider extends ServiceProvider
             'postTemplate' => PostTemplate::class,
             'signupCode' => SignupCode::class,
             'videoRecord' => VideoRecord::class,
+            'coverOutcome' => CoverOutcome::class,
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,
