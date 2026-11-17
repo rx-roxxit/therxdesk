@@ -255,16 +255,22 @@ test('the container reads the real disk when no fake is bound', function () {
         ->and($disk->free())->toBeLessThanOrEqual($disk->total());
 });
 
-test('an avatar or a workspace logo is refused under the Disk guard, though neither counts toward the Quota', function (string $route) {
+test('an avatar or a workspace logo is refused under the Disk guard before the old one is cleared', function (string $route, string $collection) {
+    $owner = $collection === 'avatar' ? $this->owner : $this->workspace;
+    $old = Media::factory()->{$collection}()->create([
+        'mediable_type' => $owner->getMorphClass(),
+        'mediable_id' => $owner->id,
+    ]);
+    Storage::put($old->path, 'old picture');
     FakeDiskSpace::bind(free: 1 * $this->gb);
 
     $this->actingAs($this->owner)
         ->post(route($route), ['photo' => UploadedFile::fake()->image('photo.jpg', 200, 200)])
-        ->assertSessionHasErrors(['media' => DISK_GUARD_MESSAGE]);
+        ->assertSessionHasErrors(['photo' => DISK_GUARD_MESSAGE]);
 
-    expect(Media::query()->count())->toBe(0)
-        ->and(Storage::allFiles())->toBe([]);
+    expect(Media::query()->pluck('id')->all())->toBe([$old->id])
+        ->and(Storage::allFiles())->toBe([$old->path]);
 })->with([
-    'avatar' => ['app.profile.upload-photo'],
-    'logo' => ['app.workspace.upload-logo'],
+    'avatar' => ['app.profile.upload-photo', 'avatar'],
+    'logo' => ['app.workspace.upload-logo', 'logo'],
 ]);
