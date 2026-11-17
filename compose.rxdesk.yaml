@@ -18,6 +18,13 @@ name: therxdesk-prod
 
 x-caddy-ip: &caddy-ip ${CADDY_IP:-172.30.0.10}
 
+# Container logs rotate: at most 5 files of 20 MB per service.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: "5"
+
 services:
   app:
     build:
@@ -33,6 +40,7 @@ services:
         VITE_POSTHOG_ENABLED: "false"
     image: therxdesk:production
     restart: unless-stopped
+    logging: *logging
     environment:
       # ===== Required =====
       APP_NAME: ${APP_NAME:-The RX Desk}
@@ -47,8 +55,8 @@ services:
       SELF_HOSTED: "true"
       RXDESK_DEFAULT_QUOTA: ${RXDESK_DEFAULT_QUOTA:-5GB}
       RXDESK_DISK_GUARD_THRESHOLD: ${RXDESK_DISK_GUARD_THRESHOLD:-10GB}
-      LEGAL_TERMS_URL: ${LEGAL_TERMS_URL:-https://github.com/rx-roxxit/therxdesk#readme}
-      LEGAL_PRIVACY_URL: ${LEGAL_PRIVACY_URL:-https://github.com/rx-roxxit/therxdesk#readme}
+      LEGAL_TERMS_URL: https://${APP_DOMAIN}/terms
+      LEGAL_PRIVACY_URL: https://${APP_DOMAIN}/privacy
 
       # ===== Off on purpose =====
       POSTHOG_ENABLED: "false"
@@ -97,7 +105,7 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_SCHEME: ${MAIL_SCHEME:-tls}
+      MAIL_SCHEME: ${MAIL_SCHEME:-smtp}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-hello@example.com}
       MAIL_FROM_NAME: ${APP_NAME:-The RX Desk}
 
@@ -160,6 +168,7 @@ services:
   pgsql:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_DB: ${DB_DATABASE:-therxdesk}
       POSTGRES_USER: ${DB_USERNAME:-therxdesk}
@@ -177,6 +186,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *logging
     command: redis-server --appendonly yes
     volumes:
       - redisdata:/data
@@ -191,6 +201,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
     ports:
