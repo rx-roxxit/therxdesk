@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Actions\Media\SyncOwnedMedia;
 use App\Enums\Media\Source;
 use App\Enums\Media\Type;
 use App\Enums\SocialAccount\Platform;
@@ -153,7 +154,7 @@ class MediaItem
      */
     public function coverImage(): ?self
     {
-        $cover = data_get($this->meta, 'cover_image');
+        $cover = data_get($this->meta, SyncOwnedMedia::COVER_IMAGE);
 
         if (! is_array($cover) || blank(data_get($cover, 'id'))) {
             return null;

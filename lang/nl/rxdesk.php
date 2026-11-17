@@ -116,7 +116,7 @@ return [
             'reference' => 'Give the Cover image as exactly one of upload_token, url or id.',
         ],
         'outcome' => [
-            'failed' => "Cover couldn't be set",
+            'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
     ],
 ];

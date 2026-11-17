@@ -38,6 +38,11 @@ class SyncOwnedMedia
     public const string COVER_IMAGE = 'cover_image';
 
     /**
+     * Where an item keeps its Cover image, as `data_get()` reads it.
+     */
+    public const string COVER_IMAGE_PATH = 'meta.'.self::COVER_IMAGE;
+
+    /**
      * Row `meta` keys that only describe the row's history and stay off the item.
      */
     private const array ROW_ONLY_META = ['copied_from'];
@@ -313,12 +318,13 @@ class SyncOwnedMedia
      */
     private static function withCoverImage(array $owned, array $submitted, string $key, Closure $syncItem): array
     {
-        $cover = data_get($submitted, 'meta.'.self::COVER_IMAGE);
+        $cover = data_get($submitted, self::COVER_IMAGE_PATH);
         $meta = Arr::except((array) data_get($owned, 'meta', []), [self::COVER_IMAGE]);
 
         if (is_array($cover)) {
             $meta = Arr::except($meta, ['cover_offset_ms']);
-            $meta[self::COVER_IMAGE] = $syncItem(Arr::except($cover, ['meta.'.self::COVER_IMAGE]), "{$key}.meta.".self::COVER_IMAGE);
+            $coverKey = self::COVER_IMAGE_PATH;
+            $meta[self::COVER_IMAGE] = $syncItem(Arr::except($cover, [self::COVER_IMAGE_PATH]), "{$key}.{$coverKey}");
         }
 
         return Arr::except([...$owned, 'meta' => $meta], $meta === [] ? ['meta'] : []);
@@ -333,7 +339,7 @@ class SyncOwnedMedia
     private static function coverImages(array $items): array
     {
         return array_values(array_filter(
-            array_map(fn (array $item): mixed => data_get($item, 'meta.'.self::COVER_IMAGE), $items),
+            array_map(fn (array $item): mixed => data_get($item, self::COVER_IMAGE_PATH), $items),
             fn (mixed $cover): bool => is_array($cover),
         ));
     }

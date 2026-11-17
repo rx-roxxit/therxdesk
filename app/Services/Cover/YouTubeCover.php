@@ -12,11 +12,9 @@ use App\Models\Media;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Services\Social\ConnectionVerifier;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Sets a published Short's Cover with `thumbnails.set`, which YouTube honours
@@ -26,7 +24,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * @see https://developers.google.com/youtube/v3/docs/thumbnails/set
  */
-class YouTubeCover implements NetworkCover
+class YouTubeCover extends AbstractNetworkCover
 {
     private const string PROCESSING_SUCCEEDED = 'succeeded';
 
@@ -57,6 +55,16 @@ class YouTubeCover implements NetworkCover
             return;
         }
 
+        $this->refreshToken($account);
+    }
+
+    /**
+     * Refreshes through the connection code the publisher uses. A refresh
+     * Google could not answer is tried again later; one it rejected (the grant
+     * is revoked, `invalid_grant`) is final.
+     */
+    private function refreshToken(SocialAccount $account): void
+    {
         try {
             app(ConnectionVerifier::class)->refreshToken($account);
         } catch (PlatformUnavailableException $exception) {
@@ -66,42 +74,50 @@ class YouTubeCover implements NetworkCover
         }
     }
 
+    /**
+     * Sends an authorized request. A 401 means the access token expired before
+     * its stored time: it is refreshed once and the request sent again; a
+     * second 401 is not a refusal of the Cover, so the job looks again later.
+     *
+     * @param  callable(): Response  $request
+     */
+    private function sendAuthorized(SocialAccount $account, callable $request): Response
+    {
+        $response = $this->send($request);
+
+        if ($response->status() !== 401) {
+            return $response;
+        }
+
+        $this->refreshToken($account);
+
+        $response = $this->send($request);
+
+        if ($response->status() === 401) {
+            throw new CoverNotReady('YouTube still refused the access token after a refresh.');
+        }
+
+        return $response;
+    }
+
     private function ensureProcessed(SocialAccount $account, string $videoId): void
     {
-        $response = $this->send(fn (): Response => $this->client($account)->get(config('trypost.platforms.youtube.data_api').'/videos', [
+        $response = $this->sendAuthorized($account, fn (): Response => $this->client($account)->get(config('trypost.platforms.youtube.data_api').'/videos', [
             'part' => 'processingDetails',
             'id' => $videoId,
         ]));
 
         $this->throwForStatus($response);
 
-        $status = data_get($response->json(), 'items.0.processingDetails.processingStatus');
-
-        if ($status === self::PROCESSING_SUCCEEDED) {
-            return;
-        }
-
-        if (in_array($status, self::PROCESSING_FAILED, true)) {
-            throw new CoverRefused("YouTube did not process the video ({$status}).");
-        }
-
-        throw new CoverNotReady('YouTube is still processing the video.');
+        $this->ensureVideoStatus(data_get($response->json(), 'items.0.processingDetails.processingStatus'), self::PROCESSING_SUCCEEDED, self::PROCESSING_FAILED);
     }
 
     private function upload(SocialAccount $account, string $videoId, Media $cover): void
     {
-        $bytes = Storage::get($cover->path);
-
-        if (blank($bytes)) {
-            throw new CoverRefused('The Cover image is no longer on the server.');
-        }
-
-        $response = $this->send(fn (): Response => $this->client($account)
-            ->withBody($bytes, (string) $cover->mime_type)
-            ->post(config('trypost.platforms.youtube.upload_api').'/thumbnails/set?'.http_build_query([
-                'videoId' => $videoId,
-                'uploadType' => 'media',
-            ])));
+        $response = $this->sendAuthorized($account, fn (): Response => $this->client($account)
+            ->withBody($this->coverBytes($cover), (string) $cover->mime_type)
+            ->withQueryParameters(['videoId' => $videoId, 'uploadType' => 'media'])
+            ->post(config('trypost.platforms.youtube.upload_api').'/thumbnails/set'));
 
         $this->throwForStatus($response);
     }
@@ -111,34 +127,18 @@ class YouTubeCover implements NetworkCover
         return Http::withToken((string) $account->access_token)->timeout(60);
     }
 
-    /**
-     * @param  callable(): Response  $request
-     */
-    private function send(callable $request): Response
+    protected function networkName(): string
     {
-        try {
-            return $request();
-        } catch (ConnectionException $exception) {
-            throw new CoverNotReady($exception->getMessage(), previous: $exception);
-        }
+        return 'YouTube';
     }
 
-    /**
-     * A busy YouTube (429, 5xx) is tried again; any other refusal is final.
-     */
-    private function throwForStatus(Response $response): void
+    protected function isBusy(Response $response): bool
     {
-        if ($response->successful()) {
-            return;
-        }
+        return $response->status() === 429 || $response->serverError();
+    }
 
-        $reason = data_get($response->json(), 'error.errors.0.reason', 'error');
-        $message = "YouTube answered {$response->status()} ({$reason}).";
-
-        if ($response->status() === 429 || $response->serverError()) {
-            throw new CoverNotReady($message);
-        }
-
-        throw new CoverRefused($message);
+    protected function failureDetail(Response $response): string
+    {
+        return (string) data_get($response->json(), 'error.errors.0.reason', 'error');
     }
 }

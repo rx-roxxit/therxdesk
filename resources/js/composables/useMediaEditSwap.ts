@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue';
 
 import type { MediaEditChange } from '@/components/posts/composer/MediaEditorDialog.vue';
+import { COVER_IMAGE_KEY, coverImageMeta } from '@/lib/coverImage';
 import { storeChunked as mediaStoreChunked } from '@/routes/app/media';
 import type { MediaItem } from '@/types/media';
 import { uploadChunked } from '@/utils/chunkedUpload';
@@ -13,7 +14,7 @@ const editedMeta = (
     delete next.alt_text;
     delete next.user_tags;
     delete next.cover_offset_ms;
-    delete next.cover_image;
+    delete next[COVER_IMAGE_KEY];
 
     return {
         ...next,
@@ -25,7 +26,7 @@ const editedMeta = (
         ...(change.coverOffsetMs !== null
             ? { cover_offset_ms: change.coverOffsetMs }
             : {}),
-        ...(change.coverImage ? { cover_image: change.coverImage } : {}),
+        ...coverImageMeta(change.coverImage),
     };
 };
 

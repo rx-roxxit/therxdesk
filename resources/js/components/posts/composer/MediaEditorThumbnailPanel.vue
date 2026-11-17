@@ -2,14 +2,20 @@
 import { computed, ref } from 'vue';
 
 import { Button } from '@/components/ui/button';
-import { coverImageFileError, type CoverImageLimits } from '@/lib/coverImage';
+import {
+    coverImageFileError,
+    coverImageMegabytes,
+    type CoverImageLimits,
+} from '@/lib/coverImage';
 import { filled } from '@/lib/helpers';
 import { formatCoverOffset, type MediaEdit } from '@/lib/mediaEditor';
 import { rangeFill } from '@/lib/rangeFill';
 import { storeChunked as mediaStoreChunked } from '@/routes/app/media';
 import { ChunkedUploadError, uploadChunked } from '@/utils/chunkedUpload';
 
-type CoverMode = 'frame' | 'image';
+const COVER_MODES = ['frame', 'image'] as const;
+
+type CoverMode = (typeof COVER_MODES)[number];
 
 const props = withDefaults(
     defineProps<{
@@ -88,11 +94,13 @@ const maxMegabytes = computed(() => {
         return '';
     }
 
-    return String(Math.floor(props.coverImageLimits.maxBytes / 1024 / 1024));
+    return String(coverImageMegabytes(props.coverImageLimits));
 });
 
+const isModePressed = (option: CoverMode): boolean => mode.value === option;
+
 const modeButtonClass = (option: CoverMode): string => {
-    if (mode.value === option) {
+    if (isModePressed(option)) {
         return 'bg-primary-selected font-medium text-primary-text';
     }
 
@@ -185,10 +193,10 @@ const uploadCoverImage = async (event: Event): Promise<void> => {
             class="grid grid-cols-2 rounded-lg border border-border p-1"
         >
             <button
-                v-for="option in ['frame', 'image'] as const"
+                v-for="option in COVER_MODES"
                 :key="option"
                 type="button"
-                :aria-pressed="mode === option"
+                :aria-pressed="isModePressed(option)"
                 :data-testid="`media-editor-cover-mode-${option}`"
                 class="rounded-md px-2 py-1.5 text-sm whitespace-nowrap transition-colors"
                 :class="modeButtonClass(option)"

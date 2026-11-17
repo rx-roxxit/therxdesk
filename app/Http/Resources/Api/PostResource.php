@@ -22,13 +22,15 @@ class PostResource extends JsonResource
             ? $this->approvalRequestedBy
             : ($this->status === Status::PendingApproval ? $this->user : null);
 
+        $coverOutcome = $this->coverOutcomePayload();
+
         return [
             'id' => $this->id,
             'post_group_id' => $this->post_group_id,
             'author' => $this->person($this->user),
             'content' => $this->content,
             'media' => $this->media,
-            'cover_outcome' => $this->when($this->coverOutcome() !== null, fn (): ?array => $this->coverOutcome()),
+            'cover_outcome' => $this->when($coverOutcome !== null, $coverOutcome),
             'status' => $this->status?->value,
             'schedule_mode' => $this->schedule_mode?->value,
             'scheduled_at' => $this->scheduled_at?->format('Y-m-d H:i:s'),
@@ -67,7 +69,7 @@ class PostResource extends JsonResource
      *
      * @return array{outcome: string}|null
      */
-    private function coverOutcome(): ?array
+    private function coverOutcomePayload(): ?array
     {
         $record = $this->resource->coverOutcome;
 

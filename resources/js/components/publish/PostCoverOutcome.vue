@@ -4,6 +4,7 @@ import { computed } from 'vue';
 
 import { filled } from '@/lib/helpers';
 import type { PostCard } from '@/types/publish';
+import { CoverOutcomeState } from '@/types/video-policy';
 
 /**
  * The one line that says a network refused a published video's Cover. The
@@ -21,7 +22,7 @@ const coverFailed = computed<boolean>(() => {
         return false;
     }
 
-    return outcome.outcome === 'failed';
+    return outcome.outcome === CoverOutcomeState.Failed;
 });
 </script>
 

@@ -51,7 +51,7 @@ class AttachMediaFromUploadTool extends Tool
 
         $validated = $request->validate([
             ...PostMediaRequestRules::attachFromUpload(),
-            'meta' => PostMediaRules::metaRules(referenced: true),
+            'meta' => PostMediaRules::referencedMetaRules(),
         ]);
 
         $media = ResolveWorkspaceMedia::byUploadTokens($post->workspace, [(string) data_get($validated, 'upload_token')])->first();
