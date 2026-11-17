@@ -16,6 +16,7 @@ class NetworkCovers
      */
     private const array SETTERS = [
         'youtube' => YouTubeCover::class,
+        'facebook' => FacebookCover::class,
     ];
 
     public static function for(?Platform $platform): ?NetworkCover
