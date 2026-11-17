@@ -4,6 +4,7 @@ import { computed, ref, watch, type Component } from 'vue';
 
 import VideoPreview from '@/components/posts/previews/VideoPreview.vue';
 import { isVideoMedia } from '@/composables/useMedia';
+import { coverImageUrl } from '@/lib/coverImage';
 import type { MediaItem } from '@/types/media';
 
 interface Props {
@@ -59,6 +60,7 @@ const goToSlide = (index: number) => {
             <VideoPreview
                 v-if="isVideoMedia(item) && index === currentIndex"
                 :src="item.url"
+                :poster="coverImageUrl(item)"
                 :video-class="mediaClass"
             />
             <img

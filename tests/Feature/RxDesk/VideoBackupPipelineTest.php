@@ -642,3 +642,22 @@ test('retry is refused for a post whose backup has not failed', function () {
     expect($drive->sessions)->toHaveCount(0)
         ->and(Media::query()->whereKey($video->id)->exists())->toBeTrue();
 });
+
+test('a video with a Cover image is backed up alone, and its Cover image is deleted with it', function () {
+    $drive = fakeDrive();
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+    $cover = Media::factory()->ownedByPost($post)->create(['order' => 1]);
+    Storage::put($cover->path, 'cover bytes');
+    $post->update(['media' => [[...$video->toArray(), 'meta' => [...$video->meta, 'cover_image' => $cover->toArray()]]]]);
+
+    markBackupPostPublished($post);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    expect($drive->sessions)->toHaveCount(1)
+        ->and($drive->sessions['session-1']['bytes'])->toBe('video bytes')
+        ->and($post->refresh()->media)->toBe([])
+        ->and(Media::query()->whereKey([$video->id, $cover->id])->count())->toBe(0)
+        ->and(VideoRecord::query()->sole()->media_id)->toBe($video->id);
+    Storage::assertMissing([$video->path, $cover->path]);
+});

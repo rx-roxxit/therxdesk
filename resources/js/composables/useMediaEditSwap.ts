@@ -13,6 +13,7 @@ const editedMeta = (
     delete next.alt_text;
     delete next.user_tags;
     delete next.cover_offset_ms;
+    delete next.cover_image;
 
     return {
         ...next,
@@ -24,6 +25,7 @@ const editedMeta = (
         ...(change.coverOffsetMs !== null
             ? { cover_offset_ms: change.coverOffsetMs }
             : {}),
+        ...(change.coverImage ? { cover_image: change.coverImage } : {}),
     };
 };
 

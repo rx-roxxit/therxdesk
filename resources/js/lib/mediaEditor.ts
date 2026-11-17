@@ -68,6 +68,8 @@ export type MediaEdit = {
     altText: string;
     userTags: MediaUserTag[];
     coverOffsetMs: number | null;
+    /** The uploaded Cover image; it and a picked frame exclude each other. */
+    coverImage: MediaItem | null;
 };
 
 export const USER_TAGS_MAX = 20;
@@ -131,15 +133,22 @@ export const presetValuesFor = (
 
 export type EditorTab = 'edit' | 'thumbnail' | 'alt' | 'tags';
 
+/** A video gets the Thumbnail tab where it takes a picked frame or a Cover image. */
+const hasThumbnailTab = (rule: MediaRules): boolean => {
+    if (rule.supportsVideoCover) {
+        return true;
+    }
+
+    return rule.supportsCoverImage;
+};
+
 /** Tabs the editor offers for an item; an empty list means no pencil. */
 export const editorTabsFor = (
     item: MediaItem,
     rules: MediaRules[],
 ): EditorTab[] => {
     if (isVideo(item)) {
-        return rules.some((rule) => rule.supportsVideoCover)
-            ? ['thumbnail']
-            : [];
+        return rules.some(hasThumbnailTab) ? ['thumbnail'] : [];
     }
 
     if (!isImage(item) || isGif(item)) {
@@ -173,6 +182,7 @@ export const blankMediaEdit = (
     altText: '',
     userTags: [],
     coverOffsetMs: null,
+    coverImage: null,
 });
 
 export const createMediaEdit = (item: MediaItem): MediaEdit => ({
@@ -180,6 +190,7 @@ export const createMediaEdit = (item: MediaItem): MediaEdit => ({
     altText: item.meta?.alt_text ?? '',
     userTags: [...(item.meta?.user_tags ?? [])],
     coverOffsetMs: item.meta?.cover_offset_ms ?? null,
+    coverImage: item.meta?.cover_image ?? null,
 });
 
 export const hasPixelChanges = (edit: MediaEdit): boolean =>
@@ -196,7 +207,8 @@ export const hasMetaChanges = (edit: MediaEdit, item: MediaItem): boolean =>
     edit.altText.trim() !== (item.meta?.alt_text ?? '').trim() ||
     JSON.stringify(edit.userTags) !==
         JSON.stringify(item.meta?.user_tags ?? []) ||
-    (edit.coverOffsetMs ?? 0) !== (item.meta?.cover_offset_ms ?? 0);
+    (edit.coverOffsetMs ?? 0) !== (item.meta?.cover_offset_ms ?? 0) ||
+    edit.coverImage?.id !== item.meta?.cover_image?.id;
 
 /** A cover offset in milliseconds as `m:ss.s`. */
 export const formatCoverOffset = (milliseconds: number): string => {

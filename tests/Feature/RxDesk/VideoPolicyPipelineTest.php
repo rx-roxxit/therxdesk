@@ -311,3 +311,23 @@ test('backup uploads the video to drive one hour after publishing, then deletes 
         ->and($record->drive_file_id)->toBe('drive-file')
         ->and($record->drive_link)->toBe('https://drive.google.test/file/d/drive-file/view');
 });
+
+test('delete removes the Cover image of the video with it', function () {
+    ['post' => $post, 'video' => $video, 'image' => $image] = videoPolicyPost(VideoPolicy::Delete);
+    $cover = Media::factory()->ownedByPost($post)->stored()->create(['order' => 2]);
+    $post->update(['media' => [
+        [...$video->toArray(), 'meta' => [...$video->meta, 'cover_image' => $cover->toArray()]],
+        $image->toArray(),
+    ]]);
+    fakeTelegram();
+
+    publishThroughPipeline();
+    $this->travel(1)->hours();
+    runDueDefaultJobs();
+
+    expect(postMediaIds($post))->toBe([$image->id])
+        ->and(Media::query()->whereKey($cover->id)->exists())->toBeFalse()
+        ->and(VideoRecord::query()->sole()->media_id)->toBe($video->id);
+    Storage::assertMissing([$video->path, $cover->path]);
+    Storage::assertExists($image->path);
+});
