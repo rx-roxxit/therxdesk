@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 
 /**
  * The System admin's view of who stores what: each Owner's Storage used and
- * Quota, with the totals.
+ * Quota, with the totals and the state of the disk and the Disk guard.
  */
 class UsageCommand extends Command
 {
@@ -26,6 +26,7 @@ class UsageCommand extends Command
 
         if ($accounts->isEmpty()) {
             $this->info('No Owners yet.');
+            $this->reportDisk($storage);
 
             return self::SUCCESS;
         }
@@ -46,8 +47,21 @@ class UsageCommand extends Command
         $quotas = ByteSize::format((int) $usages->sum('limit'));
 
         $this->info("Total: {$used} used of {$quotas} handed out.");
+        $this->reportDisk($storage);
 
         return self::SUCCESS;
+    }
+
+    private function reportDisk(AccountStorage $storage): void
+    {
+        $disk = $storage->diskStatus();
+        $state = $disk->isGuarding() ? 'ACTIVE: uploads and imports are refused' : 'inactive';
+
+        $this->newLine();
+        $this->line('Disk total: '.ByteSize::format($disk->total));
+        $this->line('Disk free: '.ByteSize::format($disk->free));
+        $this->line('Disk guard threshold: '.ByteSize::format($disk->threshold));
+        $this->line("Disk guard: {$state}");
     }
 
     private function ownerLabel(Account $account): string

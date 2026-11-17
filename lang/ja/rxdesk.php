@@ -77,6 +77,7 @@ return [
         'errors' => [
             'quota_owner' => "You're out of storage: you've used :used of your :limit. Delete posts or media you no longer need, then try again.",
             'import_owner' => "You're out of storage, so this file can't be added. Delete posts or media you no longer need, then try again.",
+            'disk_guard' => "The server is out of space, so this file can't be added. Ask the admin to free some space, then try again.",
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],

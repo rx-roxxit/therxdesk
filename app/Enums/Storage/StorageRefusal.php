@@ -8,10 +8,12 @@ use App\Services\Storage\StorageUsage;
 use App\Support\ByteSize;
 
 /**
- * Why `AccountStorage` refuses to store more bytes for an account.
+ * Why `AccountStorage` refuses to store more bytes for an account. The Disk
+guard is checked first, so its "server is out of space" wins over the Quota.
  */
 enum StorageRefusal: string
 {
+    case DiskGuard = 'disk_guard';
     case Quota = 'quota';
 
     /**
@@ -21,6 +23,7 @@ enum StorageRefusal: string
     public function message(StorageUsage $usage, bool $toOwner): string
     {
         return match ($this) {
+            self::DiskGuard => __('rxdesk.storage.errors.disk_guard'),
             self::Quota => $this->quotaMessage($usage, $toOwner),
         };
     }
@@ -32,6 +35,7 @@ enum StorageRefusal: string
     public function importFailure(bool $toOwner): string
     {
         return match ($this) {
+            self::DiskGuard => 'server_out_of_space',
             self::Quota => $toOwner ? 'storage_full' : 'owner_storage_full',
         };
     }
