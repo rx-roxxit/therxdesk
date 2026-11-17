@@ -422,7 +422,7 @@ return [
         'copy' => 'Copiar imagem',
         'copied' => 'Imagem copiada',
         'create_post' => 'Criar post',
-        'mark' => 'Feito com TryPost',
+        'mark' => 'Feito com The RX Desk',
         'copy_failed' => 'Não foi possível copiar a imagem. Baixe-a.',
         'post_failed' => 'Não foi possível preparar o post. Tente de novo.',
         'caption_workspace' => ':metric nos nossos canais: :value (:range) 📈',

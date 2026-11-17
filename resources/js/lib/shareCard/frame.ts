@@ -1,3 +1,4 @@
+import { RX_MARK } from '@/lib/rxMark';
 import { ink, muted, surface } from '@/lib/shareCard/colors';
 import { paintChange } from '@/lib/shareCard/draw';
 import { ellipsise, writeText } from '@/lib/shareCard/text';
@@ -103,32 +104,20 @@ export const paintPanel = (context: CanvasRenderingContext2D): Box => {
     return panel;
 };
 
-/** The grid the logo's paths are drawn on. */
-const LOGO_GRID = 410;
-
-/** The TryPost mark, the four quarters of `AppLogo.vue`. */
+/** The RX mark of `AppLogo.vue` (`lib/rxMark.ts`), in the card's ink. */
 const paintLogo = (context: CanvasRenderingContext2D, at: Point, size: number): void => {
-    const quarters: [string, string][] = [
-        ['M410 109.736V410H128.863L410 109.736Z', '#3660E0'],
-        ['M410 0H281.138L205 81.3178L410 300.264V0Z', '#855ED4'],
-        ['M0 0V300.264L205 81.3178L281.138 0H0Z', '#FFCC33'],
-        ['M0 109.736V410H128.862L205 328.682L0 109.736Z', '#F39200'],
-    ];
-
     context.save();
-    context.beginPath();
-    context.arc(at.x + size / 2, at.y + size / 2, size / 2, 0, Math.PI * 2);
-    context.clip();
-    context.fillStyle = surface();
-    context.fillRect(at.x, at.y, size, size);
     context.translate(at.x, at.y);
-    context.scale(size / LOGO_GRID, size / LOGO_GRID);
-
-    for (const [path, color] of quarters) {
-        context.fillStyle = color;
-        context.fill(new Path2D(path));
-    }
-
+    context.scale(size / RX_MARK.grid, size / RX_MARK.grid);
+    context.beginPath();
+    context.roundRect(0, 0, RX_MARK.grid, RX_MARK.grid, RX_MARK.radius);
+    context.fillStyle = ink();
+    context.fill();
+    context.strokeStyle = surface();
+    context.lineWidth = RX_MARK.strokeWidth;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.stroke(new Path2D(RX_MARK.letters));
     context.restore();
 };
 

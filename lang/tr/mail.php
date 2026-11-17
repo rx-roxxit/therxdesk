@@ -8,7 +8,7 @@ return [
         'tagline' => ':brand ekibi tarafından gönderildi',
         'manage_notifications' => 'Bildirimleri yönet',
         'signoff' => 'Saygılarımızla,',
-        'team' => 'TryPost Ekibi',
+        'team' => 'The RX Desk Ekibi',
     ],
 
     'account_disconnected' => [
@@ -19,7 +19,7 @@ return [
         'intro' => 'Aşağıdaki hesabın :workspace çalışma alanıyla bağlantısı kesildi.',
         'reasons_title' => 'Bunun nedeni şunlar olabilir:',
         'reason_expired' => 'Erişim jetonunun süresi doldu',
-        'reason_revoked' => 'TryPost erişimini iptal ettin',
+        'reason_revoked' => 'The RX Desk erişimini iptal ettin',
         'reason_error' => 'Bir kimlik doğrulama hatası oluştu',
         'reconnect_cta' => 'Planlamaya ve paylaşmaya devam etmek için hesabını yeniden bağla.',
         'button' => 'Hesabı yeniden bağla',
@@ -133,7 +133,7 @@ return [
         'heading' => 'Gönderin paylaşıldı',
         'body' => ':workspace çalışma alanındaki gönderin başarıyla paylaşıldı.',
         'button' => 'Sosyal ağda görüntüle',
-        'open_in_app' => 'TryPost’ta aç',
+        'open_in_app' => 'The RX Desk’ta aç',
     ],
 
     'webhook_paused' => [
@@ -153,7 +153,7 @@ return [
         'intro' => '<strong>:workspace</strong> çalışma alanınızdaki aşağıdaki sosyal hesapların bağlantısı kesildi ve yeniden bağlanması gerekiyor:',
         'reasons_title' => 'Bu şu nedenlerle olmuş olabilir:',
         'reason_expired' => 'Erişim tokenlarının süresi doldu',
-        'reason_revoked' => 'Platformda TryPost erişimini iptal ettiniz',
+        'reason_revoked' => 'Platformda The RX Desk erişimini iptal ettiniz',
         'reason_changed' => 'Platform kimlik doğrulama gereksinimlerini değiştirdi',
         'reconnect_cta' => 'Gönderi zamanlamaya ve yayınlamaya devam etmek için lütfen bu hesapları yeniden bağlayın.',
         'button' => 'Hesapları Yeniden Bağla',

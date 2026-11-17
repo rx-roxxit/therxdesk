@@ -102,7 +102,7 @@ return [
             'subtitle' => 'ابدأ بالصيغ التي تناسب معظم الحسابات.',
         ],
         'see_all' => 'عرض الكل',
-        'by_trypost' => 'من TryPost',
+        'by_trypost' => 'من The RX Desk',
         'by_author' => 'بواسطة :name',
         'copy' => 'نسخ القالب',
         'copied' => 'تم النسخ',

@@ -20,8 +20,8 @@ return [
     'throttle' => 'ログインの試行回数が多すぎます。:seconds 秒後にもう一度お試しください。',
 
     'flash' => [
-        'welcome' => 'TryPost へようこそ！',
-        'welcome_trial' => 'TryPost へようこそ！トライアルが開始されました。',
+        'welcome' => 'The RX Desk へようこそ！',
+        'welcome_trial' => 'The RX Desk へようこそ！トライアルが開始されました。',
     ],
 
     'legal' => '続行すると、<a href=":terms_url" target="_blank">利用規約</a>および<a href=":privacy_url" target="_blank">プライバシーポリシー</a>に同意したものとみなされます。',
@@ -35,7 +35,7 @@ return [
         ],
         'diego' => [
             'role' => 'CEO, Globalfy.com',
-            'quote' => 'TryPostは本当に使いやすいです。Claudeで直接投稿を作り、MCPで公開したり予約したりできます。設定は5分で終わりました。',
+            'quote' => 'The RX Deskは本当に使いやすいです。Claudeで直接投稿を作り、MCPで公開したり予約したりできます。設定は5分で終わりました。',
         ],
         'luiz' => [
             'role' => 'コンテンツクリエイター',
@@ -60,7 +60,7 @@ return [
     'github_email_unavailable' => 'GitHub からメールアドレスを取得できませんでした。GitHub のメールアドレスを公開するか、email スコープを許可してから、もう一度お試しください。',
 
     'login' => [
-        'title' => 'TryPost にログイン',
+        'title' => 'The RX Desk にログイン',
         'page_title' => 'ログイン',
         'email' => 'メールアドレス',
         'password' => 'パスワード',
@@ -74,7 +74,7 @@ return [
     ],
 
     'register' => [
-        'title' => 'TryPost アカウントを作成',
+        'title' => 'The RX Desk アカウントを作成',
         'page_title' => '登録',
         'name' => '名前',
         'name_placeholder' => '氏名',

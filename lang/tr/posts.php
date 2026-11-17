@@ -82,8 +82,8 @@ return [
             'edit_in_canva' => ':name dosyasını Canva\'da düzenle',
             'errors' => [
                 'import_failed' => 'Dosya içe aktarılamadı. Lütfen tekrar deneyin.',
-                'popup_blocked' => 'Tarayıcınız pencereyi engelledi. TryPost için açılır pencerelere izin verip tekrar deneyin.',
-                'scope_not_granted' => 'TryPost\'un seçtiğiniz dosyaya erişmesi gerekiyor. Tekrar deneyin ve erişime izin verin.',
+                'popup_blocked' => 'Tarayıcınız pencereyi engelledi. The RX Desk için açılır pencerelere izin verip tekrar deneyin.',
+                'scope_not_granted' => 'The RX Desk\'un seçtiğiniz dosyaya erişmesi gerekiyor. Tekrar deneyin ve erişime izin verin.',
                 'session_expired' => 'Oturumunuzun süresi doldu. Kaynağı yeniden açın.',
                 'video_not_ready' => 'Google Photos bu videoyu hâlâ işliyor. Birkaç dakika sonra tekrar deneyin.',
                 'google_connect_failed' => 'Google\'a bağlanılamadı. Lütfen tekrar deneyin.',
@@ -386,7 +386,7 @@ return [
                 'play' => 'Önizlemeyi çal',
                 'pause' => 'Önizlemeyi duraklat',
                 'remove' => 'Müziği kaldır',
-                'part_hint' => 'Instagram, parçanın hangi kısmının çalacağını TryPost\'un seçmesine izin vermiyor.',
+                'part_hint' => 'Instagram, parçanın hangi kısmının çalacağını The RX Desk\'un seçmesine izin vermiyor.',
                 'volume' => 'Ses',
                 'video_volume' => 'Video',
                 'audio_volume' => 'Müzik',
@@ -1101,7 +1101,7 @@ return [
         ],
         'created_by' => 'Oluşturan: :name :when',
         'welcome' => [
-            'title' => 'TryPost\'a hoş geldin 👋',
+            'title' => 'The RX Desk\'a hoş geldin 👋',
             'description' => 'Gönderilerinizi planlamaya ve yayınlamaya başlamak için bir kanal bağlayın.',
             'invite' => 'Ekibini davet et',
             'connect_more' => 'Daha fazla kanal bağla',

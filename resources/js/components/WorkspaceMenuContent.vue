@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
-    IconBrandDiscord,
     IconBrandGithub,
-    IconBulb,
     IconCheck,
     IconCoin,
     IconHelpCircle,
     IconLayoutGrid,
-    IconLifebuoy,
     IconMessageChatbot,
     IconDeviceDesktop,
     IconLanguage,
@@ -148,40 +145,7 @@ const showChatSupport = computed(() => page.props.selfHosted === false);
 const showChangelog = computed(() => Boolean(page.props.changelog));
 const { openList: openChangelog } = useChangelogDialog();
 
-const statusTheme = computed(() =>
-    currentTheme.value === 'dark' ||
-    (currentTheme.value === 'system' &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches)
-        ? 'dark'
-        : 'light',
-);
-
-const supportLinks = [
-    {
-        key: 'help-center',
-        label: 'sidebar.support.help_center',
-        href: 'https://docs.trypost.it',
-        icon: IconLifebuoy,
-    },
-    {
-        key: 'discord',
-        label: 'sidebar.support.discord',
-        href: 'https://trypost.it/discord',
-        icon: IconBrandDiscord,
-    },
-    {
-        key: 'feature-requests',
-        label: 'sidebar.support.feature_requests',
-        href: 'https://github.com/orgs/trypostit/discussions/categories/feature-requests',
-        icon: IconBulb,
-    },
-    {
-        key: 'github',
-        label: 'sidebar.support.github',
-        href: 'https://github.com/trypostit',
-        icon: IconBrandGithub,
-    },
-];
+const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
 </script>
 
 <template>
@@ -428,19 +392,15 @@ const supportLinks = [
                     >
                         {{ $t('sidebar.help') }}
                     </DropdownMenuLabel>
-                    <DropdownMenuItem
-                        v-for="link in supportLinks.slice(0, 1)"
-                        :key="link.key"
-                        as-child
-                    >
+                    <DropdownMenuItem as-child>
                         <a
-                            :href="link.href"
+                            :href="sourceCodeUrl"
                             target="_blank"
                             rel="noopener noreferrer"
-                            :data-testid="`sidebar-support-${link.key}`"
+                            data-testid="sidebar-support-source-code"
                         >
-                            <component :is="link.icon" />
-                            {{ $t(link.label) }}
+                            <IconBrandGithub />
+                            {{ $t('rxdesk.help.source_code') }}
                         </a>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -459,58 +419,6 @@ const supportLinks = [
                         <IconSparkles />
                         {{ $t('sidebar.support.changelog') }}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel
-                        class="px-2 py-1.5 text-xs font-medium tracking-normal text-muted-foreground normal-case"
-                        data-testid="sidebar-support-community-title"
-                    >
-                        {{ $t('sidebar.support.community') }}
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem
-                        v-for="link in supportLinks.slice(1)"
-                        :key="link.key"
-                        as-child
-                    >
-                        <a
-                            :href="link.href"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            :data-testid="`sidebar-support-${link.key}`"
-                        >
-                            <component :is="link.icon" />
-                            {{ $t(link.label) }}
-                        </a>
-                    </DropdownMenuItem>
-                    <template v-if="showChatSupport">
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel
-                            class="px-2 py-1.5 text-xs font-medium tracking-normal text-muted-foreground normal-case"
-                            data-testid="sidebar-support-status-title"
-                        >
-                            {{ $t('sidebar.support.status') }}
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem as-child>
-                            <a
-                                href="https://status.trypost.it"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                :aria-label="$t('sidebar.support.status')"
-                                data-testid="sidebar-support-status"
-                            >
-                                <iframe
-                                    :src="`https://status.trypost.it/badge?theme=${statusTheme}`"
-                                    :title="$t('sidebar.support.status')"
-                                    width="250"
-                                    height="30"
-                                    frameborder="0"
-                                    scrolling="no"
-                                    tabindex="-1"
-                                    class="pointer-events-none"
-                                    style="color-scheme: normal"
-                                />
-                            </a>
-                        </DropdownMenuItem>
-                    </template>
                 </DropdownMenuSubContent>
             </DropdownMenuPortal>
         </DropdownMenuSub>

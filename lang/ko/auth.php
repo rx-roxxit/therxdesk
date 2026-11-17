@@ -20,8 +20,8 @@ return [
     'throttle' => '로그인 시도가 너무 많습니다. :seconds초 후에 다시 시도해 주세요.',
 
     'flash' => [
-        'welcome' => 'TryPost에 오신 것을 환영합니다!',
-        'welcome_trial' => 'TryPost에 오신 것을 환영합니다! 체험이 시작되었습니다.',
+        'welcome' => 'The RX Desk에 오신 것을 환영합니다!',
+        'welcome_trial' => 'The RX Desk에 오신 것을 환영합니다! 체험이 시작되었습니다.',
     ],
 
     'legal' => '계속 진행하면 <a href=":terms_url" target="_blank">서비스 약관</a> 및 <a href=":privacy_url" target="_blank">개인정보 처리방침</a>에 동의하는 것입니다.',
@@ -35,7 +35,7 @@ return [
         ],
         'diego' => [
             'role' => 'CEO, Globalfy.com',
-            'quote' => 'TryPost는 정말 쓰기 쉽습니다. Claude에서 바로 게시물을 만들고 MCP로 발행하거나 예약할 수 있습니다. 설정은 5분 만에 끝났습니다.',
+            'quote' => 'The RX Desk는 정말 쓰기 쉽습니다. Claude에서 바로 게시물을 만들고 MCP로 발행하거나 예약할 수 있습니다. 설정은 5분 만에 끝났습니다.',
         ],
         'luiz' => [
             'role' => '콘텐츠 크리에이터',
@@ -60,7 +60,7 @@ return [
     'github_email_unavailable' => 'GitHub에서 이메일을 가져올 수 없습니다. GitHub 이메일을 공개로 설정하거나 이메일 권한을 부여한 후 다시 시도하세요.',
 
     'login' => [
-        'title' => 'TryPost에 로그인',
+        'title' => 'The RX Desk에 로그인',
         'page_title' => '로그인',
         'email' => '이메일 주소',
         'password' => '비밀번호',
@@ -74,7 +74,7 @@ return [
     ],
 
     'register' => [
-        'title' => 'TryPost 계정 만들기',
+        'title' => 'The RX Desk 계정 만들기',
         'page_title' => '회원가입',
         'name' => '이름',
         'name_placeholder' => '전체 이름',

@@ -20,8 +20,8 @@ return [
     'throttle' => 'Забагато спроб входу. Спробуйте ще раз через :seconds сек.',
 
     'flash' => [
-        'welcome' => 'Ласкаво просимо до TryPost!',
-        'welcome_trial' => 'Ласкаво просимо до TryPost! Ваш пробний період розпочато.',
+        'welcome' => 'Ласкаво просимо до The RX Desk!',
+        'welcome_trial' => 'Ласкаво просимо до The RX Desk! Ваш пробний період розпочато.',
     ],
 
     'legal' => 'Продовжуючи, ви погоджуєтеся з нашими <a href=":terms_url" target="_blank">Умовами використання</a> та <a href=":privacy_url" target="_blank">Політикою конфіденційності</a>.',
@@ -35,7 +35,7 @@ return [
         ],
         'diego' => [
             'role' => 'CEO, Globalfy.com',
-            'quote' => 'Мені подобається, наскільки TryPost простий. Я створюю допис просто в Claude, а потім через MCP публікую його та планую на майбутнє. Налаштував за п\'ять хвилин.',
+            'quote' => 'Мені подобається, наскільки The RX Desk простий. Я створюю допис просто в Claude, а потім через MCP публікую його та планую на майбутнє. Налаштував за п\'ять хвилин.',
         ],
         'luiz' => [
             'role' => 'Контент-креатор',
@@ -60,7 +60,7 @@ return [
     'github_email_unavailable' => 'Не вдалося отримати ваш email з GitHub. Зробіть email публічним або надайте доступ до email, потім спробуйте ще раз.',
 
     'login' => [
-        'title' => 'Вхід у TryPost',
+        'title' => 'Вхід у The RX Desk',
         'page_title' => 'Вхід',
         'email' => 'Адреса email',
         'password' => 'Пароль',
@@ -74,7 +74,7 @@ return [
     ],
 
     'register' => [
-        'title' => 'Створіть акаунт TryPost',
+        'title' => 'Створіть акаунт The RX Desk',
         'page_title' => 'Реєстрація',
         'name' => 'Ім’я',
         'name_placeholder' => 'Повне ім’я',

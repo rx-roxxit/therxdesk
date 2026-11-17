@@ -8,7 +8,7 @@ return [
         'tagline' => 'Enviado por el equipo de :brand',
         'manage_notifications' => 'Gestionar notificaciones',
         'signoff' => 'Un saludo,',
-        'team' => 'El equipo de TryPost',
+        'team' => 'El equipo de The RX Desk',
     ],
 
     'account_disconnected' => [
@@ -19,7 +19,7 @@ return [
         'intro' => 'La siguiente cuenta se desconectó del espacio de trabajo :workspace.',
         'reasons_title' => 'Esto puede haber ocurrido porque:',
         'reason_expired' => 'Tu token de acceso caducó',
-        'reason_revoked' => 'Revocaste el acceso a TryPost',
+        'reason_revoked' => 'Revocaste el acceso a The RX Desk',
         'reason_error' => 'Hubo un error de autenticación',
         'reconnect_cta' => 'Reconecta tu cuenta para seguir programando y publicando.',
         'button' => 'Reconectar cuenta',
@@ -133,7 +133,7 @@ return [
         'heading' => 'Tu publicación salió',
         'body' => 'Tu publicación en el espacio de trabajo :workspace se publicó correctamente.',
         'button' => 'Ver en la red social',
-        'open_in_app' => 'Abrir en TryPost',
+        'open_in_app' => 'Abrir en The RX Desk',
     ],
 
     'webhook_paused' => [
@@ -153,7 +153,7 @@ return [
         'intro' => 'Las siguientes cuentas sociales en tu workspace <strong>:workspace</strong> se han desconectado y necesitan ser reconectadas:',
         'reasons_title' => 'Esto puede haber ocurrido porque:',
         'reason_expired' => 'Los tokens de acceso expiraron',
-        'reason_revoked' => 'Revocaste el acceso a TryPost en la plataforma',
+        'reason_revoked' => 'Revocaste el acceso a The RX Desk en la plataforma',
         'reason_changed' => 'La plataforma cambió sus requisitos de autenticación',
         'reconnect_cta' => 'Reconecta estas cuentas para seguir programando y publicando posts.',
         'button' => 'Reconectar cuentas',

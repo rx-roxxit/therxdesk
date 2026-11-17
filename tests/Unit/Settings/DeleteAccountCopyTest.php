@@ -34,22 +34,22 @@ $accountDeleteInvitedMemberMarkers = [
  * @var array<string, string>
  */
 $workspaceDeleteConditionalMemberMarkers = [
-    'en' => 'without another TryPost workspace',
-    'uk' => 'без іншого workspace у TryPost',
-    'pt-BR' => 'sem outro workspace no TryPost',
-    'es' => 'sin otro workspace en TryPost',
-    'fr' => 'sans autre workspace TryPost',
-    'de' => 'ohne anderen TryPost-Workspace',
-    'it' => 'senza un altro workspace TryPost',
-    'nl' => 'zonder andere TryPost-workspace',
-    'pl' => 'bez innego workspace w TryPost',
-    'el' => 'χωρίς άλλο workspace στο TryPost',
-    'ja' => '別のTryPostワークスペースがない',
-    'ko' => '다른 TryPost 워크스페이스가 없는',
-    'zh' => '没有其他 TryPost 工作区',
-    'ru' => 'без другого workspace в TryPost',
-    'tr' => 'Başka bir TryPost workspace',
-    'ar' => 'مساحة عمل أخرى في TryPost',
+    'en' => 'without another RX Desk workspace',
+    'uk' => 'без іншого workspace у The RX Desk',
+    'pt-BR' => 'sem outro workspace no The RX Desk',
+    'es' => 'sin otro workspace en The RX Desk',
+    'fr' => 'sans autre workspace The RX Desk',
+    'de' => 'ohne anderen The RX Desk-Workspace',
+    'it' => 'senza un altro workspace The RX Desk',
+    'nl' => 'zonder andere The RX Desk-workspace',
+    'pl' => 'bez innego workspace w The RX Desk',
+    'el' => 'χωρίς άλλο workspace στο The RX Desk',
+    'ja' => '別のThe RX Deskワークスペースがない',
+    'ko' => '다른 The RX Desk 워크스페이스가 없는',
+    'zh' => '没有其他 The RX Desk 工作区',
+    'ru' => 'без другого workspace в The RX Desk',
+    'tr' => 'Başka bir The RX Desk workspace',
+    'ar' => 'مساحة عمل أخرى في The RX Desk',
 ];
 
 test('workspace delete members warning describes conditional permanent deletion', function () {
@@ -57,7 +57,7 @@ test('workspace delete members warning describes conditional permanent deletion'
 
     expect($warning)
         ->toContain('lose access')
-        ->toContain('without another TryPost workspace')
+        ->toContain('without another RX Desk workspace')
         ->toContain('permanently deleted')
         ->not->toContain('personal account');
 });
