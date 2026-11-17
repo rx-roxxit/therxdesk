@@ -8,6 +8,8 @@ namespace App\Enums\Media;
  * Origin of a media attachment on a post. `null`/absent means "uploaded by
  * the user". The picker sources are the ones offered in the composer's media
  * menu; each is exposed only when its flag is on and its keys are set.
+ * `GoogleDriveBackup` is reserved for the Owner's Video policy backup: an
+ * offline sign-in kept apart from the picker, never offered in the composer.
  */
 enum Source: string
 {
@@ -16,6 +18,7 @@ enum Source: string
     case GoogleDrive = 'google_drive';
     case GooglePhotos = 'google_photos';
     case Canva = 'canva';
+    case GoogleDriveBackup = 'google_drive_backup';
 
     /** @return list<self> */
     public static function pickerSources(): array
@@ -36,6 +39,9 @@ enum Source: string
             self::Canva => (bool) config('trypost.media_sources.canva.enabled')
                 && filled(config('services.canva.client_id'))
                 && filled(config('services.canva.client_secret')),
+            self::GoogleDriveBackup => filled(config('services.google_media.client_id'))
+                && filled(config('services.google_media.client_secret'))
+                && filled(config('services.google_media.backup_redirect')),
             self::Ai => false,
         };
     }
@@ -59,6 +65,7 @@ enum Source: string
             self::GoogleDrive => 'Google Drive',
             self::GooglePhotos => 'Google Photos',
             self::Canva => 'Canva',
+            self::GoogleDriveBackup => 'Google Drive backup',
         };
     }
 

@@ -35,6 +35,7 @@ use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
 use App\Models\User;
+use App\Models\VideoRecord;
 use App\Models\Webhook;
 use App\Models\WebhookLog;
 use App\Models\Workspace;
@@ -150,6 +151,7 @@ class AppServiceProvider extends ServiceProvider
             'postNoteReaction' => PostNoteReaction::class,
             'postTemplate' => PostTemplate::class,
             'signupCode' => SignupCode::class,
+            'videoRecord' => VideoRecord::class,
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,

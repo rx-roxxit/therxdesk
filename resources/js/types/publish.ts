@@ -14,6 +14,7 @@ import type {
 } from '@/types/post';
 import type { VerifiedBadge } from '@/types/social-account';
 import type { SocialAccountStatusValue } from '@/types/social-account-status';
+import type { VideoRecord } from '@/types/video-policy';
 
 export type PublishTab = 'queue' | 'approvals' | 'drafts' | 'sent';
 
@@ -99,6 +100,7 @@ export interface PostCard {
     labels: PostCardLabel[];
     notes_count: number;
     media?: MediaItem[];
+    video_records?: VideoRecord[];
     can_delete: boolean;
     metrics?: PostCardMetrics | null;
 }

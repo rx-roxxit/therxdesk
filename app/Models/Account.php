@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Account\DriveConnection;
 use App\Enums\Account\LifecycleStage;
+use App\Enums\Account\VideoPolicy;
+use App\Enums\Media\Source;
 use App\Models\Traits\BillsOwnerAsStripeCustomer;
 use App\Models\Traits\HasUsage;
 use Carbon\Carbon;
@@ -47,11 +50,38 @@ class Account extends Model
         'lifecycle_stage_changed_at' => 'datetime',
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
+        'video_policy' => VideoPolicy::class,
     ];
 
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * The Owner's Google Drive sign-in for the Video policy's Backup.
+     */
+    public function driveBackupConnection(): ?MediaSourceConnection
+    {
+        return MediaSourceConnection::query()
+            ->where('user_id', $this->owner_id)
+            ->where('source', Source::GoogleDriveBackup)
+            ->first();
+    }
+
+    public function driveConnection(): DriveConnection
+    {
+        $connection = $this->driveBackupConnection();
+
+        if ($connection === null) {
+            return DriveConnection::None;
+        }
+
+        if ($connection->needsReconnect()) {
+            return DriveConnection::NeedsReconnect;
+        }
+
+        return DriveConnection::Connected;
     }
 
     public function plan(): BelongsTo

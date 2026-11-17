@@ -190,6 +190,14 @@ class Post extends Model
         return $this->hasMany(Media::class, 'post_id')->orderBy('order');
     }
 
+    /**
+     * What The RX Desk's Video policy did with this post's videos.
+     */
+    public function videoRecords(): HasMany
+    {
+        return $this->hasMany(VideoRecord::class)->orderBy('created_at');
+    }
+
     public function socialAccount(): BelongsTo
     {
         return $this->belongsTo(SocialAccount::class);
