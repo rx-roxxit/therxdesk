@@ -12,6 +12,7 @@ test('invite results map to the expected flash banner and style', function (Resu
     'gone' => [Result::Gone, 'settings.members.flash.invite_workspace_gone', 'danger'],
     'already accepted' => [Result::AlreadyAccepted, 'settings.members.flash.already_member', 'info'],
     'already member' => [Result::AlreadyMember, 'settings.members.flash.already_member', 'info'],
+    'owner has workspaces' => [Result::OwnerHasWorkspaces, 'rxdesk.invite.owner_has_workspaces', 'danger'],
     'accepted' => [Result::Accepted, 'settings.members.flash.invite_accepted', 'success'],
     'declined' => [Result::Declined, 'settings.members.flash.invite_declined', 'info'],
 ]);
