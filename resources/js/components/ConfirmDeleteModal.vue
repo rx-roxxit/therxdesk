@@ -260,6 +260,7 @@ defineExpose({
                 <Button
                     variant="destructive"
                     :data-testid="actionTestId"
+                    :loading="processing"
                     :disabled="processing || !isConfirmed"
                     @click="remove"
                 >
