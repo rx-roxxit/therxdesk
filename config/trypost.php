@@ -534,6 +534,7 @@ return [
         'youtube' => [
             'enabled' => env('YOUTUBE_ENABLED', true),
             'data_api' => $url('YOUTUBE_DATA_API', 'https://www.googleapis.com/youtube/v3'),
+            'upload_api' => $url('YOUTUBE_UPLOAD_API', 'https://www.googleapis.com/upload/youtube/v3'),
             'analytics_api' => $url('YOUTUBE_ANALYTICS_API', 'https://youtubeanalytics.googleapis.com/v2'),
             'oauth_api' => $url('YOUTUBE_OAUTH_API', 'https://oauth2.googleapis.com'),
         ],

@@ -534,11 +534,12 @@ enum ContentType: string
     /**
      * Whether a single video of this type takes a Cover image the user uploads
      * (The RX Desk; rules in `App\Support\Media\CoverImage`). An Instagram feed
-     * post with a single video publishes as a Reel.
+     * post with a single video publishes as a Reel; a Facebook post takes it
+     * only when its single media item is a video.
      */
     public function supportsCoverImage(): bool
     {
-        return in_array($this, [self::InstagramFeed, self::InstagramReel], true);
+        return in_array($this, [self::InstagramFeed, self::InstagramReel, self::YouTubeShort, self::FacebookPost, self::FacebookReel], true);
     }
 
     /**
