@@ -9,6 +9,7 @@ import { computed, ref } from 'vue';
 
 import PreferencesController from '@/actions/App/Http/Controllers/App/Settings/PreferencesController';
 import { updateLanguage } from '@/actions/App/Http/Controllers/App/Settings/ProfileController';
+import VideoPolicyController from '@/actions/App/Http/Controllers/App/Settings/VideoPolicyController';
 import LanguageSelect from '@/components/LanguageSelect.vue';
 import SettingsRow from '@/components/settings/SettingsRow.vue';
 import SettingsSelect, {
@@ -19,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import dayjs from '@/dayjs';
 import { activeLocale } from '@/language';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
+import { filled } from '@/lib/helpers';
 import {
     applyTheme,
     type DefaultPostAction,
@@ -28,9 +30,12 @@ import {
 } from '@/preferences';
 import type { Language, User } from '@/types';
 import type { TimezoneOption } from '@/types/posting-schedule';
+import type { VideoPolicy } from '@/types/video-policy';
 
-defineProps<{
+const props = defineProps<{
     timezones: TimezoneOption[];
+    /** Null for a Member: only the account's Owner sees the Video policy. */
+    videoPolicy: VideoPolicy | null;
 }>();
 
 type PreferenceField =
@@ -39,7 +44,8 @@ type PreferenceField =
     | 'time_format'
     | 'week_starts_on'
     | 'default_post_action'
-    | 'locale';
+    | 'locale'
+    | 'video_policy';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user as User);
@@ -101,7 +107,10 @@ const defaultPostActionOptions: SettingsSelectOption[] = [
     { value: 'top', labelKey: 'posts.composer.queue.top' },
 ];
 
-const save = (field: Exclude<PreferenceField, 'locale'>, value: string): void => {
+const save = (
+    field: Exclude<PreferenceField, 'locale' | 'video_policy'>,
+    value: string,
+): void => {
     savedField.value = null;
 
     router.patch(
@@ -158,6 +167,32 @@ const changeWeekStart = (value: string): void => {
 const changeDefaultPostAction = (value: string): void => {
     defaultPostAction.value = value as DefaultPostAction;
     save('default_post_action', value);
+};
+
+const videoPolicy = ref<string>(props.videoPolicy ?? 'keep');
+
+const showsVideoPolicy = computed(() => filled(props.videoPolicy));
+
+const videoPolicyOptions: SettingsSelectOption[] = [
+    { value: 'keep', labelKey: 'rxdesk.video_policy.options.keep' },
+    { value: 'delete', labelKey: 'rxdesk.video_policy.options.delete' },
+];
+
+const changeVideoPolicy = (value: string): void => {
+    videoPolicy.value = value;
+    savedField.value = null;
+
+    router.patch(
+        VideoPolicyController.update.url(),
+        { video_policy: value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                savedField.value = 'video_policy';
+            },
+        },
+    );
 };
 </script>
 
@@ -259,6 +294,24 @@ const changeDefaultPostAction = (value: string): void => {
                     @update:model-value="changeDefaultPostAction"
                 />
             </SettingsRow>
+
+            <template v-if="showsVideoPolicy">
+                <Separator />
+
+                <SettingsRow
+                    id="video-policy"
+                    :title="$t('rxdesk.video_policy.heading')"
+                    :description="$t('rxdesk.video_policy.description')"
+                >
+                    <SettingsSelect
+                        :model-value="videoPolicy"
+                        :options="videoPolicyOptions"
+                        :label="$t('rxdesk.video_policy.heading')"
+                        testid="preferences-video-policy"
+                        @update:model-value="changeVideoPolicy"
+                    />
+                </SettingsRow>
+            </template>
 
             <span
                 v-if="savedField"

@@ -266,6 +266,7 @@ class BuildPublishPageProps
                 'socialAccount',
                 'user.avatarMedia',
                 'labels',
+                'videoRecords',
             ])
             ->withCount(['notes', 'groupPosts'])
             ->matchingLabelFilter($labelIds, $untagged);
