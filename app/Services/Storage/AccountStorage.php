@@ -66,6 +66,23 @@ class AccountStorage
     }
 
     /**
+     * How many more bytes the account may store before a refusal: none under
+     * the Disk guard, no limit while `unguarded()`.
+     */
+    public function room(Account $account): int
+    {
+        if (self::$unguardedDepth > 0) {
+            return PHP_INT_MAX;
+        }
+
+        if (filled($this->diskRefusal())) {
+            return 0;
+        }
+
+        return $this->usage($account)->remaining();
+    }
+
+    /**
      * The Disk guard alone, which refuses every new file, counted or not.
      */
     public function diskRefusal(): ?StorageRefusal

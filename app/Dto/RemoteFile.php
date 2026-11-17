@@ -9,7 +9,8 @@ use App\Enums\Media\Source;
 /**
  * A file to download into the workspace. `allowedHosts` null means the SSRF
  * guard alone decides; otherwise every hop must match one of the hosts
- * (exact, or `*.suffix`).
+ * (exact, or `*.suffix`). `size` is the byte size the source declared before
+ * the download (a picker's metadata), null when unknown.
  */
 final readonly class RemoteFile
 {
@@ -25,6 +26,7 @@ final readonly class RemoteFile
         public ?array $allowedHosts = null,
         public ?Source $source = null,
         public array $sourceMeta = [],
+        public ?int $size = null,
     ) {}
 
     public static function fromUrl(string $url): self
@@ -37,7 +39,7 @@ final readonly class RemoteFile
      */
     public function withHeaders(array $headers): self
     {
-        return new self($this->url, $this->filename, $headers, $this->allowedHosts, $this->source, $this->sourceMeta);
+        return new self($this->url, $this->filename, $headers, $this->allowedHosts, $this->source, $this->sourceMeta, $this->size);
     }
 
     /**
@@ -55,6 +57,7 @@ final readonly class RemoteFile
             'allowedHosts' => $this->allowedHosts,
             'source' => $this->source?->value,
             'sourceMeta' => $this->sourceMeta,
+            'size' => $this->size,
         ];
     }
 }
