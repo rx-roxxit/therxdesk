@@ -46,6 +46,12 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - Email header and footer are `maizzle/components/{header,footer}.html`. Rebuild with `$R sh -c 'cd maizzle && npm ci && npm run build'`, never by editing `resources/views/mail`.
 - App name, mail-from name, legal links (the fork's README) and the disabled changelog come from env (`docker/.env.docker.example` for dev). Production build args are set by the production compose file.
 
+### Signup (Signup codes, not open registration)
+
+- Self-hosted `/register` opens without an Invite (`EnsureRegistrationEnabled` no longer 404s). A signup without an Invite needs a Signup code (`SignupCode::isRequiredFor()`): `RegisterRequest` checks it, and `CreateOwnerWithSignupCode` locks the code row and consumes it in the same transaction as `CreateUser`. Never consume a code anywhere else.
+- Google and GitHub signup stay off (`GOOGLE_AUTH_ENABLED` / `GITHUB_AUTH_ENABLED` false), and their callbacks still require an Invite (`PreservesInvite`); `tests/Feature/RxDesk/OAuthSignupGateTest.php` guards it. Turning OAuth signup on means adding the code to that flow first.
+- The System admin manages codes with `$R php artisan rxdesk:code create --note="..."`, `rxdesk:code list` and `rxdesk:code revoke <code>`.
+
 ## Agent skills
 
 ### Issue tracker
