@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\App\Media;
 
 use App\Enums\Media\Type as MediaType;
+use App\Rules\FitsStorage;
 use App\Rules\HeicAccepted;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -36,7 +37,7 @@ class StoreChunkedMediaRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
@@ -48,7 +49,7 @@ class StoreChunkedMediaRequest extends FormRequest
         return [
             'range_start' => ['required', 'integer', 'min:0'],
             'range_end' => ['required', 'integer', 'gte:range_start'],
-            'total_size' => ['required', 'integer', 'min:1', 'max:'.$this->declaredType()->maxSizeInBytes()],
+            'total_size' => ['required', 'integer', 'min:1', 'max:'.$this->declaredType()->maxSizeInBytes(), new FitsStorage($this->user()->currentWorkspace, $this->user())],
             'file_name' => ['bail', 'required', 'string', new HeicAccepted, 'ends_with:'.implode(',', $allowedSuffixes)],
             'upload_id' => ['required', 'string', 'uuid'],
             // Capped at a day so `1e999` (INF, which JSON cannot encode) never reaches the meta column.

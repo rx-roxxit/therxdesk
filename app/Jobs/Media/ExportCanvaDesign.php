@@ -7,6 +7,7 @@ namespace App\Jobs\Media;
 use App\Dto\RemoteFile;
 use App\Enums\Media\Source;
 use App\Enums\Media\Type as MediaType;
+use App\Exceptions\Storage\StorageRefused;
 use App\Models\MediaSourceConnection;
 use App\Models\User;
 use App\Models\Workspace;
@@ -74,19 +75,25 @@ class ExportCanvaDesign implements ShouldQueue
             return;
         }
 
-        $imported = $importer->import(
-            $workspace,
-            new RemoteFile(
-                $url,
-                "canva-{$this->designId}.png",
-                allowedHosts: Source::Canva->downloadHosts(),
-                source: Source::Canva,
-                sourceMeta: ['design_id' => $this->designId],
-            ),
-            [MediaType::Image],
-            $this->timeout,
-            $deadline,
-        );
+        try {
+            $imported = $importer->import(
+                $workspace,
+                new RemoteFile(
+                    $url,
+                    "canva-{$this->designId}.png",
+                    allowedHosts: Source::Canva->downloadHosts(),
+                    source: Source::Canva,
+                    sourceMeta: ['design_id' => $this->designId],
+                ),
+                [MediaType::Image],
+                $this->timeout,
+                $deadline,
+            );
+        } catch (StorageRefused $refused) {
+            MediaImportStatus::fail($this->importId, $refused->importFailure($user));
+
+            return;
+        }
 
         if (! $imported->succeeded()) {
             MediaImportStatus::fail($this->importId, (string) $imported->failure);
