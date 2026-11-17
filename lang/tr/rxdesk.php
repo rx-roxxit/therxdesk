@@ -81,4 +81,8 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'storage_bar' => [
+        'label' => 'Storage',
+        'usage' => ':used of :limit used',
+    ],
 ];

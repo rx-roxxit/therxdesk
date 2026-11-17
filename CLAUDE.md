@@ -73,6 +73,7 @@ $R php artisan make:test --pest SomeFeatureTest                         # any ar
 - Publishing is never refused: `ScheduleNextOccurrence` copies media inside `AccountStorage::unguarded()`. Any other system path that must keep working over Quota goes through it too. Nothing is ever deleted for being over Quota.
 - Disk guard: `refusal()` checks it first (`StorageRefusal::DiskGuard`, "the server is out of space", the same words for Owner and Member, a queued import records `server_out_of_space`), so every enforcement point covers it and `unguarded()` exempts publishing from it too. Free space comes from `App\Services\Storage\DiskSpace` (bound to `LocalDiskSpace`, the default filesystem disk's root); tests bind `Tests\Support\FakeDiskSpace::bind(free: ...)` (`tests/Pest.php` binds 500 GB for every test). The threshold is `RXDESK_DISK_GUARD_THRESHOLD` (10GB). The `rxdesk:quota` over-commit warning compares the Quotas with free disk + all Owners' Storage used - the threshold (`AccountStorage::usableSize()`).
 - The System admin uses `$R php artisan rxdesk:quota show|set <email> [20GB|default]` and `$R php artisan rxdesk:usage`.
+- The Owner's storage bar (account menu, `StorageBar.vue`, links to Preferences `#video-policy`) reads the shared `storage` prop (`HandleInertiaRequests::storage()`, a closure, null for anyone who is not an account Owner), which gets its numbers from `AccountStorage::usage()`.
 
 ## Agent skills
 
