@@ -6,6 +6,7 @@ namespace App\Http\Requests\App\Media;
 
 use App\Dto\RemoteFile;
 use App\Enums\Media\Source;
+use App\Rules\FitsStorage;
 use App\Services\Media\Sources\GoogleDriveFiles;
 use App\Services\Media\Sources\GooglePhotosPicker;
 use Closure;
@@ -32,7 +33,7 @@ class StoreMediaImportRequest extends FormRequest
         $arm = data_get($this->arms(), (string) $this->input('source'));
 
         return [
-            'source' => ['bail', 'required', 'string', Rule::in(array_map(fn (Source $source): string => $source->value, $this->importableSources()))],
+            'source' => ['bail', 'required', 'string', Rule::in(array_map(fn (Source $source): string => $source->value, $this->importableSources())), new FitsStorage($this->user()->currentWorkspace, $this->user(), bytes: 1)],
             'files' => ['prohibited'],
             ...($arm === null ? [] : data_get($arm, 'rules')()),
         ];

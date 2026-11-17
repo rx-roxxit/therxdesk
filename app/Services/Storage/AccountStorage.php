@@ -1,0 +1,229 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Storage;
+
+use App\Enums\Storage\StorageRefusal;
+use App\Exceptions\Storage\StorageRefused;
+use App\Models\Account;
+use App\Models\Media;
+use App\Models\User;
+use App\Models\Workspace;
+use App\Support\ByteSize;
+use Closure;
+use Illuminate\Database\Eloquent\Collection;
+use InvalidArgumentException;
+
+/**
+ * The one place that knows how much an account stores and may store. Storage
+ * used is the size of every media row in the account's workspaces; rows
+ * without a workspace (avatars) and workspace logos are left out, and so are
+ * temporary files that never get a row (crops, chunks, derivatives).
+ *
+ * `refusal()` is the only decision: a new reason to refuse bytes (the Disk
+ * guard) is one more check there and one more `StorageRefusal` case.
+ */
+class AccountStorage
+{
+    /**
+     * Collections that belong to the workspace's look, not its content.
+     */
+    private const array UNCOUNTED_COLLECTIONS = ['logo'];
+
+    private static int $unguardedDepth = 0;
+
+    public function usage(Account $account): StorageUsage
+    {
+        return new StorageUsage($this->used($account), $this->limit($account));
+    }
+
+    public function canStore(Account $account, int $bytes): bool
+    {
+        return $this->refusal($account, $bytes) === null;
+    }
+
+    /**
+     * Why the account may not store `$bytes` more, or null when it may. Work
+     * run through `unguarded()` is never refused.
+     */
+    public function refusal(Account $account, int $bytes): ?StorageRefusal
+    {
+        if (self::$unguardedDepth > 0) {
+            return null;
+        }
+
+        if (! $this->usage($account)->fits($bytes)) {
+            return StorageRefusal::Quota;
+        }
+
+        return null;
+    }
+
+    /**
+     * Throws a validation error under `$key` when the workspace's account may
+     * not store `$bytes` more, worded for `$actor`.
+     *
+     * @throws StorageRefused
+     */
+    public function ensureCanStore(Workspace $workspace, int $bytes, ?User $actor, string $key = 'media'): void
+    {
+        $account = $workspace->account;
+        $refusal = $this->refusal($account, $bytes);
+
+        if ($refusal === null) {
+            return;
+        }
+
+        throw StorageRefused::because($refusal, $account, $key, $this->messageFor($refusal, $account, $actor));
+    }
+
+    /**
+     * Throws a validation error when a new media row would take its account
+     * past what it may store. A row that does not count (an avatar, a logo)
+     * always passes.
+     *
+     * @throws StorageRefused
+     */
+    public function ensureCanAdd(Media $media, ?User $actor): void
+    {
+        if (! $this->counts($media)) {
+            return;
+        }
+
+        $workspace = Workspace::query()->with('account')->find($media->workspace_id);
+
+        if ($workspace === null) {
+            return;
+        }
+
+        $this->ensureCanStore($workspace, (int) $media->size, $actor);
+    }
+
+    /**
+     * Whether a media row counts toward its account's Storage used.
+     */
+    public function counts(Media $media): bool
+    {
+        return $media->workspace_id !== null && ! in_array($media->collection, self::UNCOUNTED_COLLECTIONS, true);
+    }
+
+    /**
+     * The message that refuses `$bytes` more for the workspace's account, or
+     * null when they fit.
+     */
+    public function refusalMessage(Workspace $workspace, int $bytes, ?User $actor): ?string
+    {
+        $account = $workspace->account;
+        $refusal = $this->refusal($account, $bytes);
+
+        if ($refusal === null) {
+            return null;
+        }
+
+        return $this->messageFor($refusal, $account, $actor);
+    }
+
+    /**
+     * Runs work that must never be refused, such as publishing a post that is
+     * already scheduled (its next occurrence copies the media).
+     *
+     * @template TResult
+     *
+     * @param  Closure(): TResult  $work
+     * @return TResult
+     */
+    public static function unguarded(Closure $work): mixed
+    {
+        self::$unguardedDepth++;
+
+        try {
+            return $work();
+        } finally {
+            self::$unguardedDepth--;
+        }
+    }
+
+    private function messageFor(StorageRefusal $refusal, Account $account, ?User $actor): string
+    {
+        return $refusal->message($this->usage($account), self::speaksToOwner($account, $actor));
+    }
+
+    /**
+     * Whether a refusal talks to the account's Owner ("your storage"). Anyone
+     * else (a Member, or nobody signed in) hears it is the workspace owner's.
+     */
+    public static function speaksToOwner(?Account $account, ?User $actor): bool
+    {
+        return $account !== null && $actor !== null && $account->owner_id === $actor->id;
+    }
+
+    public function used(Account $account): int
+    {
+        return (int) Media::query()
+            ->whereIn('workspace_id', Workspace::query()->where('account_id', $account->id)->select('id'))
+            ->whereNotIn('collection', self::UNCOUNTED_COLLECTIONS)
+            ->sum('size');
+    }
+
+    public function limit(Account $account): int
+    {
+        if ($account->quota_bytes !== null) {
+            return (int) $account->quota_bytes;
+        }
+
+        return self::defaultQuota();
+    }
+
+    /**
+     * Sets the account's own Quota in bytes; null goes back to the default.
+     */
+    public function setQuota(Account $account, ?int $bytes): void
+    {
+        $account->forceFill(['quota_bytes' => $bytes])->save();
+    }
+
+    /**
+     * The Owners' accounts: those with at least one workspace. The empty
+     * account a Member signs up with stores nothing and holds no Quota.
+     *
+     * @return Collection<int, Account>
+     */
+    public function ownerAccounts(): Collection
+    {
+        return Account::query()->whereHas('workspaces')->with('owner')->get();
+    }
+
+    /**
+     * The Owner's account of a user, or null when they own no workspaces.
+     */
+    public function ownerAccountOf(User $user): ?Account
+    {
+        return Account::query()->where('owner_id', $user->id)->whereHas('workspaces')->first();
+    }
+
+    /**
+     * Every Owner's Quota added up.
+     */
+    public function totalQuota(): int
+    {
+        return (int) $this->ownerAccounts()->sum(fn (Account $account): int => $this->limit($account));
+    }
+
+    /**
+     * How much the disk can give to media (`RXDESK_USABLE_STORAGE`), or null
+     * when it is not set.
+     */
+    public function usableSize(): ?int
+    {
+        return ByteSize::parse(config('rxdesk.storage.usable_size'));
+    }
+
+    public static function defaultQuota(): int
+    {
+        $configured = (string) config('rxdesk.storage.default_quota');
+
+        return ByteSize::parse($configured)
+            ?? throw new InvalidArgumentException("RXDESK_DEFAULT_QUOTA \"{$configured}\" is not a size such as 5GB.");
+    }
+}
