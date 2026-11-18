@@ -49,6 +49,14 @@ _Avoid_: free plan, demo
 และไม่ย้ายไปกับ Plan ใหม่เมื่อเปลี่ยน Plan
 _Avoid_: early bird, discount, grandfathered price
 
+**Catalog**:
+ทุกอย่างที่วางขาย ได้แก่ Plan และราคา, Trial, Launch price และโปรโมชั่น System admin แก้ได้โดยไม่ต้องแก้โค้ด
+_Avoid_: settings, config, pricing table
+
+**Availability**:
+สถานะเปิดหรือปิดที่ลูกค้าเห็นของแต่ละเครือข่ายหรือบริการ (เช่น AI, Drive backup, การสมัครใหม่) System admin เป็นคนสลับ
+_Avoid_: settings, config, feature flag
+
 **Promotion code**:
 โค้ดที่ Owner กรอกตอนจ่ายเงินเพื่อรับส่วนลด System admin ออกให้ได้ เช่นโค้ดลด 100% ใช้ได้ครั้งเดียว
 _Avoid_: coupon (นั่นคือส่วนลดที่อยู่เบื้องหลังโค้ด), Signup code

@@ -14,7 +14,8 @@ The sections below describe the live, self-hosted Phase 1. Phase 2 turns it into
 - **AI credits** (ADR 0003) override `AGENTS.md` "AI usage is not recorded or metered": The RX Desk meters AI per Account per month, from the Plan, in its own code. Customers never see the AI provider or model name, in the UI, an error or the legal pages.
 - **Launch price** (ADR 0002) is a second Stripe Price per Plan, locked to that Plan; anything that maps a Stripe Price to a Plan knows both.
 - **Trial**: every new Owner gets the 7-day card-required trial, overriding `AGENTS.md` "There is no default offer". The Welcome plan step offers all four Plans, overriding "shows only Socials".
-- **Media on R2** (ADR 0001) and the **admin panel on `admin.<APP_DOMAIN>`** (ADR 0004, proposed: its package is a new dependency the owner confirms first).
+- **Media on R2** (ADR 0001).
+- **Admin is a separate app in a private repo** on `admin.<APP_DOMAIN>` (ADR 0004): nothing admin-only is installed in this public, AGPL app. Business values that change over time (the Catalog: Plans, prices, Quota, AI credits, Trial, Launch price, promotions; and Availability: each network and service on or off) are data the System admin edits, never env or code. Secrets stay in `.env.production`.
 - Until a Phase 2 piece ships, the Phase 1 section that covers its area stays the description of the live code; update that section in the same change that ships the piece.
 
 ### New copy is English only (owner decision November 2026)

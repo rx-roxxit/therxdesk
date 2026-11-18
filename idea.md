@@ -58,8 +58,8 @@ TryPost แบบ self-host หนึ่งชุดบน VPS ที่เจ�
 2. **Backup Postgres** ตอนนี้ยังไม่มีเลย ใช้ `laravel-database-backup` ของ upstream ส่งไป R2 bucket แยก (private)
    ต้องเปิดก่อนงานอื่นที่แตะข้อมูล production
 3. **ย้าย media ไป R2 ทั้งหมด** ก่อนเปิดขาย (ADR 0001)
-4. **หน้าแอดมิน** ที่ `admin.therxdesk.com` (ADR 0004): ลูกค้า, Plan, สถานะ subscription, Storage used,
-   AI credits, override Quota/credits, ระงับบัญชี, ออก Promotion code, ภาพรวมระบบ, offers
+4. **แอปแอดมิน** (repo private แยก) ที่ `admin.therxdesk.com` (ADR 0004): ลูกค้า, Plan, สถานะ subscription, Storage used,
+   AI credits, override Quota/credits, ระงับบัญชี, แก้ Catalog, สลับ Availability, ออก Promotion code, ภาพรวมระบบ
 5. **Billing และ Plan**: Quota และ AI credits มาจาก Plan, Welcome แสดง 4 Plan, Trial 7 วันเป็นค่าตั้งต้น,
    Launch price, เปิด Stripe webhook, ไล่ทุกจุดที่ `SELF_HOSTED` คุม
 6. **AI credits** (ADR 0003): เปิด AI ผ่าน OpenCode, นับเครดิตต่อ Account ต่อเดือน, ไม่เปิดเผย provider/โมเดล
@@ -86,7 +86,10 @@ TryPost แบบ self-host หนึ่งชุดบน VPS ที่เจ�
 | พื้นที่จัดเก็บ | ย้าย media ไป Cloudflare R2 ทั้งหมดก่อนเปิดขาย ไม่ทำแบบเก็บในเครื่องก่อนแล้วล้นไป R2 (ADR 0001) |
 | AI | เปิดตามระบบเดิมของ TryPost ผ่าน API key ของ OpenCode คิดเป็น AI credits รายเดือนตาม Plan ไม่เปิดเผย provider หรือโมเดลให้ลูกค้าเห็น (ADR 0003) |
 | ภาษา | ใช้ 16 ภาษาเดิมของ upstream ไม่เพิ่มภาษาไทย |
-| แอดมิน | มีหน้าเว็บแอดมินที่ admin.therxdesk.com ใช้แพ็กเกจ open source (ADR 0004) CLI เดิมยังใช้ได้ |
+| แอดมิน | แอปแอดมินแยก ใน repo private ของเรา deploy แยกที่ admin.therxdesk.com (ADR 0004) CLI เดิมยังใช้ได้ |
+| v3.0.0 | ชื่อรุ่นที่เปิดขาย = tag ของ commit ที่ deploy วันเปิดขาย ต้องจบทุกอย่างในขอบเขตเฟส 2 สเปคอยู่ใน GitHub issue "The RX Desk v3.0.0: SaaS launch" |
+| ตั้งค่าจากแอดมิน | ทุกอย่างที่เปลี่ยนตามช่วงธุรกิจเป็นข้อมูลที่ System admin แก้ได้โดยไม่ต้องแก้โค้ด: Catalog (Plan, ราคา, Quota, AI credits, Trial, Launch price, โปรโมชั่น) และ Availability (เปิด/ปิดแต่ละเครือข่ายและบริการ รวมถึงการสมัครใหม่) secret ยังอยู่ใน `.env.production` เครือข่ายที่ยังไม่มี credentials เปิดไม่ได้ |
+| รีวิวของแพลตฟอร์ม | ไม่บล็อก v3.0.0: วันเปิดขายแอดมินเปิดเฉพาะเครือข่ายที่พร้อม ที่เหลือเปิดทีหลังผ่าน Availability |
 | production ระหว่างพัฒนา | คง `SELF_HOSTED=true` จนถึงวันเปิดขาย โค้ดใหม่ไม่เปลี่ยนพฤติกรรมในโหมด self-hosted (ADR 0005) |
 
 ### คำถามที่ยังเปิดอยู่ (เฟส 2)
@@ -94,7 +97,7 @@ TryPost แบบ self-host หนึ่งชุดบน VPS ที่เจ�
 - **โควตา API ของแพลตฟอร์มที่ทุกลูกค้าใช้ร่วมกัน** จะเปิดรับคนทั่วโลกได้อย่างไร (YouTube upload 100 ครั้ง/วัน
   ต่อทั้งแอปจนกว่าจะผ่าน audit, X คิดเงินต่อโพสต์) รวมถึง fair use, captcha หน้าสมัคร และ throttle การอัปโหลด
   (เลื่อนไว้ คุยกันอีกรอบ)
-- แพ็กเกจแอดมินตัวไหน (แนะนำ Filament, MIT) เป็นการเพิ่ม dependency ต้องยืนยันก่อนติดตั้ง
+- แอปแอดมินคุยกับแอปหลักทางไหน (internal API หรือฐานข้อมูลร่วม) และใช้แพ็กเกจอะไร
 - ข้อความใหม่ที่ลูกค้าเห็น (ราคา, billing, AI credits) ยังเป็นอังกฤษอย่างเดียวตามกติกาเดิม หรือแปล 16 ภาษา
 - รอบรีเซ็ต AI credits: ตามรอบบิลหรือเดือนปฏิทิน และมีการซื้อเติมไหม
 - ลบข้อมูลหลังเลิกจ่ายกี่วัน (N)
@@ -149,5 +152,5 @@ TryPost แบบ self-host หนึ่งชุดบน VPS ที่เจ�
 
 ## ขั้นต่อไป
 1. ~~เฟส 1: /research, /grill-with-docs, /to-spec (#1), /to-tickets (#2–#14), /implement~~ live 17 พฤศจิกายน 2026
-2. เฟส 2: ~~วิเคราะห์และตัดสินใจ (18 พฤศจิกายน 2026)~~ → เอกสาร (ข้อ 1) → คุยเรื่องโควตา API ของแพลตฟอร์ม
-   → /to-spec → /to-tickets → /implement ตามลำดับในหัวข้อ "งานที่ต้องทำ"
+2. เฟส 2: ~~วิเคราะห์และตัดสินใจ (18 พฤศจิกายน 2026)~~ → ~~เอกสาร~~ → /wayfinder หาทางไปสู่สเปคของ v3.0.0
+   (map บน GitHub label `wayfinder:map`) → /to-tickets → /implement
