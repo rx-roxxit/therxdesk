@@ -32,7 +32,8 @@ yarn-error.log
 /.vscode
 /.zed
 /docs/*
-!/docs/agents/
-!/docs/adr/
-!/docs/research/
 /.superpowers/
+
+# The RX Desk: private planning docs (rx-roxxit/therxdesk-docs) and the file that loads them
+/private/
+/CLAUDE.local.md
