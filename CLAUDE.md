@@ -6,6 +6,17 @@
 
 The RX Desk is a fork of TryPost. Everything in `AGENTS.md` and `.ai/rules` applies, except where this section says otherwise. When the two disagree, this section wins.
 
+### Phase 2: selling as a SaaS (decided November 18, 2026, being built)
+
+The sections below describe the live, self-hosted Phase 1. Phase 2 turns it into a paid SaaS sold worldwide: four Plans (Mini, Standard, Plus, Max) that differ only in Quota and AI credits, priced in USD through Stripe. Scope, prices, task order and open questions live in `idea.md` ("เฟส 2"); the reasons live in `docs/adr/` (read the ADR for the area before working in it). Rules that bind Phase 2 code:
+
+- **Production keeps working throughout** (ADR 0005): production stays `SELF_HOSTED=true` until launch day, so every Phase 2 change behaves exactly as today in self-hosted mode, and its tests cover both modes. Migrations only add (nullable or defaulted columns). Stripe test mode and test R2 buckets belong to the dev stack.
+- **AI credits** (ADR 0003) override `AGENTS.md` "AI usage is not recorded or metered": The RX Desk meters AI per Account per month, from the Plan, in its own code. Customers never see the AI provider or model name, in the UI, an error or the legal pages.
+- **Launch price** (ADR 0002) is a second Stripe Price per Plan, locked to that Plan; anything that maps a Stripe Price to a Plan knows both.
+- **Trial**: every new Owner gets the 7-day card-required trial, overriding `AGENTS.md` "There is no default offer". The Welcome plan step offers all four Plans, overriding "shows only Socials".
+- **Media on R2** (ADR 0001) and the **admin panel on `admin.<APP_DOMAIN>`** (ADR 0004, proposed: its package is a new dependency the owner confirms first).
+- Until a Phase 2 piece ships, the Phase 1 section that covers its area stays the description of the live code; update that section in the same change that ships the piece.
+
 ### New copy is English only (owner decision November 2026)
 
 This overrides the 16-locale rules in `AGENTS.md` ("Writing in-app copy", "Translated copy must fit its UI slot", "Emails"), but only for copy The RX Desk adds:
