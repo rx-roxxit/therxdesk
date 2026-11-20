@@ -111,6 +111,12 @@ class HandleInertiaRequests extends Middleware
                 'terms' => config('trypost.legal.terms_url'),
                 'privacy' => config('trypost.legal.privacy_url'),
             ],
+            'site' => fn (): array => [
+                'supportEmail' => config('trypost.site.support_email'),
+                'statusUrl' => config('trypost.site.status_url'),
+                'sourceUrl' => config('trypost.site.source_url'),
+                'upstreamUrl' => config('trypost.site.upstream_url'),
+            ],
             'languages' => fn (): array => Locale::options(),
             'aiEnabled' => fn (): bool => filled(config('ai.providers.'.config('ai.default').'.key')),
             'googleAuthEnabled' => fn (): bool => SocialAuthProvider::Google->isEnabled(),
