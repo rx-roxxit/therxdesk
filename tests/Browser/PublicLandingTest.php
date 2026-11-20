@@ -72,6 +72,25 @@ test('the landing switches language without reloading the page', function () {
     $page->assertNoJavaScriptErrors();
 });
 
+test('the language picked on the landing follows the visitor to the sign-in page', function () {
+    $page = visit(route('app.home'));
+
+    waitFor($page, '@public-language-trigger');
+    $page->click('@public-language-trigger');
+    waitFor($page, '@public-language-option-ar');
+    $page->click('@public-language-option-ar');
+    waitForText($page, '@public-hero-title', 'كل العلامات');
+
+    // The sign-in page is outside the public pages, so it loads in full.
+    $page->click('@public-sign-in');
+    waitForPath($page, route('login', absolute: false));
+
+    waitForText($page, '@auth-title', 'تسجيل الدخول إلى');
+    waitForCondition($page, "document.documentElement.dir === 'rtl' && document.documentElement.lang === 'ar'");
+
+    $page->assertNoJavaScriptErrors();
+});
+
 test('the footer links every public page is expected to carry are there', function () {
     $page = visit(route('legal.terms'));
 

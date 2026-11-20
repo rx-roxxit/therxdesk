@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
  * The names of the cookies the page's scripts can read: a tracker's cookies
  * (PostHog's `ph_*`, GTM's `_ga`) would show here, the session cookie never
  * does (it is HTTP-only).
+ *
+ * @return list<string>
  */
 function readableCookieNames(mixed $page): array
 {
@@ -41,16 +43,37 @@ test('a public page starts no tracker', function (string $routeName, string $rea
     'terms' => ['legal.terms', '@public-footer-terms'],
 ]);
 
-test('leaving the landing for the sign-in page starts the tracking there', function () {
+test('leaving the landing for the sign-in page loads it in full and starts the tracking there', function () {
     $page = visit(route('app.home'));
 
     waitFor($page, '@public-sign-in');
+    $page->script('window.__publicDocument = true');
     expect($page->script("typeof window.dataLayer === 'undefined'"))->toBeTrue();
 
     $page->click('@public-sign-in');
     waitForPath($page, route('login', absolute: false));
 
-    waitForCondition($page, "Array.isArray(window.dataLayer) && window.dataLayer.some((entry) => entry.app_context === 'app')");
+    waitForCondition($page, "window.__publicDocument === undefined && Array.isArray(window.dataLayer) && window.dataLayer.some((entry) => entry.app_context === 'app')");
+
+    $page->back();
+    waitFor($page, '@public-sign-in');
+    expect($page->script("typeof window.dataLayer === 'undefined'"))->toBeTrue();
+    expect(readableCookieNames($page))->toBe(['XSRF-TOKEN']);
+
+    $page->assertNoJavaScriptErrors();
+});
+
+test('moving between public pages stays inside the page', function () {
+    $page = visit(route('legal.terms'));
+
+    waitFor($page, '@public-footer-privacy');
+    $page->script('window.__publicDocument = true');
+
+    $page->click('@public-footer-privacy');
+    waitForPath($page, route('legal.privacy', absolute: false));
+
+    expect($page->script('window.__publicDocument'))->toBeTrue();
+    expect($page->script("typeof window.dataLayer === 'undefined'"))->toBeTrue();
 
     $page->assertNoJavaScriptErrors();
 });
