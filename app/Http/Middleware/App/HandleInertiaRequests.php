@@ -82,6 +82,7 @@ class HandleInertiaRequests extends Middleware
             'env' => config('app.env'),
             'locale' => app()->getLocale(),
             'selfHosted' => $isSelfHosted,
+            'publicPage' => false,
         ];
     }
 
