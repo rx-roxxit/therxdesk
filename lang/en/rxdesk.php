@@ -122,6 +122,11 @@ return [
     ],
 
     'public' => [
+        'meta' => [
+            'landing' => 'Plan, write and schedule posts for every brand you manage, with a workspace, a calendar and approvals for each client.',
+            'privacy' => 'What The RX Desk collects, why, what it reads from Google, YouTube and Meta, and how to delete your data.',
+            'terms' => 'The terms for using The RX Desk: who can use it, your content, the networks you connect and what we are responsible for.',
+        ],
         'nav' => [
             'sign_in' => 'Sign in',
         ],
