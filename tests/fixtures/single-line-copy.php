@@ -287,11 +287,4 @@ return [
     'welcome.personas.startup' => 10,
     'welcome.software.none' => 28,
     'welcome.software.other' => 7,
-    'rxdesk.public.nav.sign_in' => 14,
-    'rxdesk.public.footer.terms' => 11,
-    'rxdesk.public.footer.privacy' => 18,
-    'rxdesk.public.footer.source_code' => 15,
-    'rxdesk.public.footer.built_on' => 32,
-    'rxdesk.public.footer.status' => 9,
-    'rxdesk.public.hero.signup_soon' => 47,
 ];

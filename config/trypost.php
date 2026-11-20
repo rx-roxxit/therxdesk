@@ -73,24 +73,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Public site
-    |--------------------------------------------------------------------------
-    |
-    | What every public page's footer shows. The support address reaches the
-    | people who run this install, and the status link appears only when one
-    | is configured, so the footer never links to a page that does not exist.
-    |
-    */
-
-    'site' => [
-        'support_email' => (string) (env('SITE_SUPPORT_EMAIL') ?: 'support@therxdesk.com'),
-        'status_url' => filled(env('SITE_STATUS_URL')) ? $url('SITE_STATUS_URL', '') : null,
-        'source_url' => 'https://github.com/rx-roxxit/therxdesk',
-        'upstream_url' => 'https://github.com/trypostit/trypost',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Well-known files
     |--------------------------------------------------------------------------
     |
