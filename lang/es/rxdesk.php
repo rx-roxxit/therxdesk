@@ -130,6 +130,81 @@ return [
             'lead' => 'Escribe una vez y adáptalo a cada red. Los canales, el calendario y las aprobaciones de cada cliente se quedan en su propio espacio de trabajo.',
             'signup_soon' => 'El registro se abre para todos muy pronto.',
         ],
+        'hook' => [
+            'workspaces' => 'Workspaces',
+            'channels' => 'Canales',
+            'unlimited' => 'Ilimitados',
+        ],
+        'networks' => [
+            'title' => 'Conecta las redes en las que ya publicas.',
+            'lead' => 'Conecta una vez las cuentas de cada marca. Tu equipo publica en ellas sin compartir contraseñas.',
+        ],
+        'composer' => [
+            'title' => 'Escribe una vez. Termínalo para cada red.',
+            'body' => 'Redacta en un solo editor y luego ajusta el texto, el contenido multimedia y la configuración que necesita cada red. Las vistas previas muestran la publicación tal como aparecerá, y los límites se comprueban mientras escribes, así que nada se rechaza al publicar.',
+            'points' => [
+                'per_network' => [
+                    'title' => 'Texto y multimedia por red.',
+                    'text' => 'Un mismo borrador puede llevar un texto, una imagen o un título distintos en cada canal.',
+                ],
+                'checked' => [
+                    'title' => 'Comprobado mientras escribes.',
+                    'text' => 'Límites de caracteres, hashtags y reglas de multimedia de los canales que elegiste.',
+                ],
+            ],
+        ],
+        'calendar' => [
+            'title' => 'Un calendario y una cola para cada marca.',
+            'body' => 'Define los horarios de publicación de cada canal y añade publicaciones a la cola: cada una toma el siguiente horario libre. Si cambian los planes, arrastra una publicación a otro día.',
+            'points' => [
+                'one_per_time' => [
+                    'title' => 'Una publicación por horario.',
+                    'text' => 'Una publicación en la cola conserva su horario, y nada se programa encima.',
+                ],
+                'drag' => [
+                    'title' => 'Arrastra para reprogramar.',
+                    'text' => 'Mueve una publicación a otro día directamente en el calendario.',
+                ],
+            ],
+        ],
+        'workspaces' => [
+            'title' => 'Un workspace para cada cliente.',
+            'body' => 'Cada marca tiene sus propios canales, calendario, multimedia y equipo. Las publicaciones de alguien de tu equipo pueden esperar tu aprobación antes de salir.',
+            'points' => [
+                'unlimited' => [
+                    'title' => 'Todos los workspaces que necesites.',
+                    'text' => 'Uno por cliente, o uno por cada marca que llevas tú.',
+                ],
+                'approvals' => [
+                    'title' => 'Aprobaciones por persona.',
+                    'text' => 'Actívalas para alguien nuevo y desactívalas cuando confíes en sus publicaciones.',
+                ],
+            ],
+        ],
+        'assistant' => [
+            'title' => 'Un asistente en el editor. Tu propia IA también puede trabajar aquí.',
+            'body' => 'El asistente integrado escribe y reescribe borradores en el editor. Conecta Claude o ChatGPT y podrá redactar, programar y leer resultados en tus workspaces.',
+            'points' => [
+                'rewrite' => [
+                    'title' => 'Reescritura cuando la pidas.',
+                    'text' => 'Acorta un borrador, reformúlalo o cambia su tono.',
+                ],
+                'api' => [
+                    'title' => 'MCP y API REST.',
+                    'text' => 'Tus herramientas de IA y tus propios scripts trabajan en los mismos workspaces que tú.',
+                ],
+            ],
+        ],
+        'closing' => [
+            'title' => 'Empieza con una marca. Suma la siguiente cuando la consigas.',
+        ],
+        'screenshots' => [
+            'calendar_list' => 'La cola de publicaciones de una panadería. Primero aparece una publicación de Facebook de alguien del equipo que espera aprobación para mañana a las 9:00, con botones para añadirla a la cola o rechazarla.',
+            'composer' => 'El editor con un borrador para Instagram, Facebook y YouTube, su imagen y la vista previa de Instagram al lado.',
+            'calendar_month' => 'El calendario del mes con las publicaciones de Instagram y Facebook de una panadería, una por día.',
+            'approvals' => 'La pestaña Aprobaciones con dos publicaciones de alguien del equipo: una para la cola y otra a una hora fija, cada una con un botón para rechazarla.',
+            'assistant' => 'El Asistente de IA, junto al editor, sugiere una versión más corta del borrador.',
+        ],
         'footer' => [
             'terms' => 'Términos',
             'privacy' => 'Privacidad',

@@ -130,6 +130,81 @@ return [
             'lead' => 'Scrivi una volta e adatta il testo a ogni rete. I canali, il calendario e le approvazioni di ogni cliente restano nel proprio spazio di lavoro.',
             'signup_soon' => 'La registrazione aprirà presto a tutti.',
         ],
+        'hook' => [
+            'workspaces' => 'Workspace',
+            'channels' => 'Canali',
+            'unlimited' => 'Illimitati',
+        ],
+        'networks' => [
+            'title' => 'Collega le reti su cui pubblichi già.',
+            'lead' => 'Collega una volta gli account di ogni brand. Il tuo team ci pubblica senza scambiarsi password.',
+        ],
+        'composer' => [
+            'title' => 'Scrivi una volta. Rifiniscilo per ogni rete.',
+            'body' => 'Scrivi la bozza in un solo editor, poi cambia testo, media e impostazioni come serve a ogni rete. Le anteprime mostrano il post come apparirà, e i limiti vengono controllati mentre scrivi, così niente viene rifiutato al momento della pubblicazione.',
+            'points' => [
+                'per_network' => [
+                    'title' => 'Testo e media per ogni rete.',
+                    'text' => 'Una bozza può avere didascalia, immagine o titolo diversi su ogni canale.',
+                ],
+                'checked' => [
+                    'title' => 'Controllato mentre scrivi.',
+                    'text' => 'Limiti di caratteri, hashtag e regole sui media dei canali che hai scelto.',
+                ],
+            ],
+        ],
+        'calendar' => [
+            'title' => 'Un calendario e una coda per ogni brand.',
+            'body' => 'Imposta gli orari di pubblicazione di ogni canale e aggiungi i post alla coda: ognuno prende il primo orario libero. Se i piani cambiano, trascina un post su un altro giorno.',
+            'points' => [
+                'one_per_time' => [
+                    'title' => 'Un post per orario.',
+                    'text' => 'Un post in coda mantiene il suo orario, e niente viene programmato sopra.',
+                ],
+                'drag' => [
+                    'title' => 'Trascina per riprogrammare.',
+                    'text' => 'Sposta un post su un altro giorno direttamente nel calendario.',
+                ],
+            ],
+        ],
+        'workspaces' => [
+            'title' => 'Un workspace per ogni cliente.',
+            'body' => 'Ogni brand ha i suoi canali, il suo calendario, i suoi media e il suo team. I post di un membro del team possono aspettare la tua approvazione prima di uscire.',
+            'points' => [
+                'unlimited' => [
+                    'title' => 'Tutti i workspace che ti servono.',
+                    'text' => 'Uno per cliente, o uno per ogni brand che gestisci tu.',
+                ],
+                'approvals' => [
+                    'title' => 'Approvazioni per persona.',
+                    'text' => 'Attivale per chi è appena arrivato e disattivale quando ti fidi dei suoi post.',
+                ],
+            ],
+        ],
+        'assistant' => [
+            'title' => "Un assistente nell'editor. Anche la tua IA può lavorarci.",
+            'body' => "L'assistente integrato scrive e riscrive le bozze nell'editor. Collega Claude o ChatGPT e potrà scrivere bozze, programmare e leggere i risultati nei tuoi workspace.",
+            'points' => [
+                'rewrite' => [
+                    'title' => 'Riscrittura su richiesta.',
+                    'text' => 'Accorcia una bozza, riformulala o cambiane il tono.',
+                ],
+                'api' => [
+                    'title' => 'MCP e API REST.',
+                    'text' => 'I tuoi strumenti di IA e i tuoi script lavorano negli stessi workspace in cui lavori tu.',
+                ],
+            ],
+        ],
+        'closing' => [
+            'title' => 'Inizia con un brand. Aggiungi il prossimo quando lo conquisti.',
+        ],
+        'screenshots' => [
+            'calendar_list' => "La coda dei post di una panetteria. In cima, un post Facebook di un membro del team attende l'approvazione per domani alle 9:00, con i pulsanti per aggiungerlo alla coda o rifiutarlo.",
+            'composer' => "L'editor con una bozza per Instagram, Facebook e YouTube, la sua immagine e l'anteprima di Instagram accanto.",
+            'calendar_month' => 'Il calendario del mese con i post Instagram e Facebook di una panetteria, uno al giorno.',
+            'approvals' => 'La scheda Approvazioni con due post di un membro del team: uno per la coda e uno a un orario fisso, ciascuno con un pulsante per rifiutarlo.',
+            'assistant' => "L'Assistente IA accanto all'editor propone una versione più breve della bozza.",
+        ],
         'footer' => [
             'terms' => 'Termini',
             'privacy' => 'Privacy',
