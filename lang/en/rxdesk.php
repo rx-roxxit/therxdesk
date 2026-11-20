@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. The `public` block (the pre-launch website) is written
-| natively in every locale; the rest stays English in every locale until v3.0.0
-| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
+| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
+| "New copy is English only"); upstream never touches this file.
 */
 
 return [
@@ -119,104 +118,5 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
-    ],
-
-    'public' => [
-        'meta' => [
-            'landing' => 'Plan, write and schedule posts for every brand you manage, with a workspace, a calendar and approvals for each client.',
-            'privacy' => 'What The RX Desk collects, why, what it reads from Google, YouTube and Meta, and how to delete your data.',
-            'terms' => 'The terms for using The RX Desk: who can use it, your content, the networks you connect and what we are responsible for.',
-        ],
-        'nav' => [
-            'sign_in' => 'Sign in',
-        ],
-        'hero' => [
-            'title' => 'Every brand you manage in one place.',
-            'lead' => 'Write once and adapt it for each network. Keep every client\'s channels, calendar and approvals in their own workspace.',
-            'signup_soon' => 'Signup opens to everyone soon.',
-        ],
-        'hook' => [
-            'workspaces' => 'Workspaces',
-            'channels' => 'Channels',
-            'unlimited' => 'Unlimited',
-        ],
-        'networks' => [
-            'title' => 'Connect the networks you already post to.',
-            'lead' => "Connect each brand's accounts once. Your team posts to them without sharing passwords.",
-        ],
-        'composer' => [
-            'title' => 'Write once. Finish it for each network.',
-            'body' => 'Draft in one editor, then change the text, media and settings each network needs. Previews show the post the way it will appear, and limits are checked as you type, so you catch problems before you schedule.',
-            'points' => [
-                'per_network' => [
-                    'title' => 'Text and media per network.',
-                    'text' => 'One draft can carry a different caption, image or title on each network.',
-                ],
-                'checked' => [
-                    'title' => 'Checked as you type.',
-                    'text' => 'Character limits, hashtags and media rules for the channels you picked.',
-                ],
-            ],
-        ],
-        'calendar' => [
-            'title' => 'A calendar and a queue for every brand.',
-            'body' => 'Set the times each channel posts at, then add posts to the queue: each one takes the next open time. When plans change, drag a post to another day.',
-            'points' => [
-                'one_per_time' => [
-                    'title' => 'One post per posting time.',
-                    'text' => 'A queued post keeps its time, and nothing is booked on top of it.',
-                ],
-                'drag' => [
-                    'title' => 'Drag to reschedule.',
-                    'text' => 'Move a post to another day right on the calendar.',
-                ],
-            ],
-        ],
-        'workspaces' => [
-            'title' => 'A workspace for each client.',
-            'body' => "Each brand keeps its own channels, calendar, media and team. A teammate's posts can wait for your approval before they go out.",
-            'points' => [
-                'unlimited' => [
-                    'title' => 'As many workspaces as you need.',
-                    'text' => 'One per client, or one per brand you run yourself.',
-                ],
-                'approvals' => [
-                    'title' => 'Approvals per teammate.',
-                    'text' => 'Turn them on for someone new, and off once you trust their posts.',
-                ],
-            ],
-        ],
-        'assistant' => [
-            'title' => 'An assistant in the editor. Your own AI can use the desk too.',
-            'body' => 'The built-in assistant writes and rewrites drafts in the editor. Connect Claude or ChatGPT, and it can draft, schedule and read results in your workspaces.',
-            'points' => [
-                'rewrite' => [
-                    'title' => 'Rewrites on request.',
-                    'text' => 'Shorten a draft, rephrase it or change its tone.',
-                ],
-                'api' => [
-                    'title' => 'MCP and REST API.',
-                    'text' => 'Your AI tools and your own scripts work in the same workspaces you do.',
-                ],
-            ],
-        ],
-        'closing' => [
-            'title' => 'Start with one brand. Add the next when you land it.',
-        ],
-        'screenshots' => [
-            'calendar_list' => "The queue of a bakery's posts. First comes a teammate's Facebook post, waiting for approval at tomorrow's 9:00 AM posting time, with Add to queue and Reject buttons.",
-            'composer' => 'The editor with a draft for Instagram, Facebook and YouTube, its image, and live Instagram and Facebook previews beside it.',
-            'calendar_month' => "The month calendar with a bakery's Instagram and Facebook posts, one a day.",
-            'approvals' => 'The Approvals tab with two posts from a teammate: one to add to the queue and one to schedule, each with a Reject button.',
-            'assistant' => 'The AI Assistant beside the editor, suggesting a shorter version of the draft.',
-        ],
-        'footer' => [
-            'terms' => 'Terms',
-            'privacy' => 'Privacy',
-            'source_code' => 'Source code',
-            'built_on' => 'Built on :upstream (AGPL-3.0)',
-            'status' => 'Status',
-        ],
-        'skip_to_content' => 'Skip to content',
     ],
 ];

@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. The `public` block (the pre-launch website) is written
-| natively in every locale; the rest stays English in every locale until v3.0.0
-| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
+| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
+| "New copy is English only"); upstream never touches this file.
 */
 
 return [
@@ -119,104 +118,5 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
-    ],
-
-    'public' => [
-        'meta' => [
-            'landing' => 'Beiträge für jede Marke, die du betreust, schreiben und einplanen – mit eigenem Workspace, Kalender und Freigaben für jeden Kunden.',
-            'privacy' => 'Was The RX Desk erfasst und warum, was es von Google, YouTube und Meta liest und wie du deine Daten löschst.',
-            'terms' => 'Die Bedingungen für The RX Desk: wer es nutzen darf, deine Inhalte, die verbundenen Netzwerke und wofür wir verantwortlich sind.',
-        ],
-        'nav' => [
-            'sign_in' => 'Anmelden',
-        ],
-        'hero' => [
-            'title' => 'Alle Marken, die du betreust, an einem Ort.',
-            'lead' => 'Einmal schreiben und für jedes Netzwerk anpassen. Kanäle, Kalender und Freigaben jedes Kunden bleiben in einem eigenen Workspace.',
-            'signup_soon' => 'Die Registrierung öffnet bald für alle.',
-        ],
-        'hook' => [
-            'workspaces' => 'Workspaces',
-            'channels' => 'Kanäle',
-            'unlimited' => 'Unbegrenzt',
-        ],
-        'networks' => [
-            'title' => 'Verbinde die Netzwerke, auf denen du schon postest.',
-            'lead' => 'Verbinde die Konten jeder Marke einmal. Dein Team postet darauf, ohne Passwörter weiterzugeben.',
-        ],
-        'composer' => [
-            'title' => 'Einmal schreiben. Für jedes Netzwerk fertigstellen.',
-            'body' => 'Schreib den Entwurf in einem Editor und passe dann Text, Medien und Einstellungen an, die jedes Netzwerk braucht. Die Vorschau zeigt den Beitrag so, wie er erscheinen wird, und Limits werden schon beim Tippen geprüft, damit du Probleme bemerkst, bevor du planst.',
-            'points' => [
-                'per_network' => [
-                    'title' => 'Text und Medien pro Netzwerk.',
-                    'text' => 'Ein Entwurf kann in jedem Netzwerk eine andere Bildunterschrift, ein anderes Bild oder einen anderen Titel haben.',
-                ],
-                'checked' => [
-                    'title' => 'Beim Tippen geprüft.',
-                    'text' => 'Zeichenlimits, Hashtags und Medienregeln der Kanäle, die du ausgewählt hast.',
-                ],
-            ],
-        ],
-        'calendar' => [
-            'title' => 'Ein Kalender und eine Warteschlange für jede Marke.',
-            'body' => 'Lege die Posting-Zeiten jedes Kanals fest und füge Beiträge zur Warteschlange hinzu: Jeder nimmt die nächste freie Zeit. Ändern sich die Pläne, ziehst du einen Beitrag auf einen anderen Tag.',
-            'points' => [
-                'one_per_time' => [
-                    'title' => 'Ein Beitrag pro Posting-Zeit.',
-                    'text' => 'Ein Beitrag in der Warteschlange behält seine Zeit, und nichts wird darüber gebucht.',
-                ],
-                'drag' => [
-                    'title' => 'Zum Verschieben ziehen.',
-                    'text' => 'Verschiebe einen Beitrag direkt im Kalender auf einen anderen Tag.',
-                ],
-            ],
-        ],
-        'workspaces' => [
-            'title' => 'Ein Workspace für jeden Kunden.',
-            'body' => 'Jede Marke behält ihre eigenen Kanäle, ihren Kalender, ihre Medien und ihr Team. Beiträge aus deinem Team können auf deine Freigabe warten, bevor sie live gehen.',
-            'points' => [
-                'unlimited' => [
-                    'title' => 'So viele Workspaces, wie du brauchst.',
-                    'text' => 'Einen pro Kunde oder einen pro Marke, die du selbst führst.',
-                ],
-                'approvals' => [
-                    'title' => 'Freigaben pro Teammitglied.',
-                    'text' => 'Schalte sie für neue Leute ein und wieder aus, sobald du ihren Beiträgen vertraust.',
-                ],
-            ],
-        ],
-        'assistant' => [
-            'title' => 'Ein Assistent im Editor. Auch deine eigene KI kann hier arbeiten.',
-            'body' => 'Der eingebaute Assistent schreibt und überarbeitet Entwürfe im Editor. Verbinde Claude oder ChatGPT, dann kann die KI in deinen Workspaces Entwürfe schreiben, Beiträge planen und Ergebnisse lesen.',
-            'points' => [
-                'rewrite' => [
-                    'title' => 'Umschreiben auf Wunsch.',
-                    'text' => 'Kürze einen Entwurf, formuliere ihn um oder ändere seinen Ton.',
-                ],
-                'api' => [
-                    'title' => 'MCP und REST-API.',
-                    'text' => 'Deine KI-Tools und eigenen Skripte arbeiten in denselben Workspaces wie du.',
-                ],
-            ],
-        ],
-        'closing' => [
-            'title' => 'Fang mit einer Marke an. Nimm die nächste dazu, sobald du sie gewinnst.',
-        ],
-        'screenshots' => [
-            'calendar_list' => 'Die Warteschlange einer Bäckerei. Ganz oben wartet ein Facebook-Beitrag aus dem Team auf Freigabe für morgen um 9:00 Uhr, mit Buttons, um ihn zur Warteschlange hinzuzufügen oder abzulehnen.',
-            'composer' => 'Der Editor mit einem Entwurf für Instagram, Facebook und YouTube, seinem Bild und den Live-Vorschauen für Instagram und Facebook daneben.',
-            'calendar_month' => 'Der Monatskalender mit den Instagram- und Facebook-Beiträgen einer Bäckerei, einer pro Tag.',
-            'approvals' => 'Der Tab Freigaben mit zwei Beiträgen aus dem Team: einer für die Warteschlange, einer zu einer festen Zeit, jeweils mit einem Button zum Ablehnen.',
-            'assistant' => 'Der KI-Assistent neben dem Editor schlägt eine kürzere Fassung des Entwurfs vor.',
-        ],
-        'footer' => [
-            'terms' => 'AGB',
-            'privacy' => 'Datenschutz',
-            'source_code' => 'Quellcode',
-            'built_on' => 'Basierend auf :upstream (AGPL-3.0)',
-            'status' => 'Status',
-        ],
-        'skip_to_content' => 'Zum Inhalt springen',
     ],
 ];

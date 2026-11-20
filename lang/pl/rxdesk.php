@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. The `public` block (the pre-launch website) is written
-| natively in every locale; the rest stays English in every locale until v3.0.0
-| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
+| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
+| "New copy is English only"); upstream never touches this file.
 */
 
 return [
@@ -119,104 +118,5 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
-    ],
-
-    'public' => [
-        'meta' => [
-            'landing' => 'Planowanie, pisanie i harmonogram postów każdej marki, którą prowadzisz, z osobną przestrzenią roboczą, kalendarzem i zatwierdzeniami dla każdego klienta.',
-            'privacy' => 'Co The RX Desk zbiera i dlaczego, co odczytuje z Google, YouTube i Meta oraz jak usunąć swoje dane.',
-            'terms' => 'Warunki korzystania z The RX Desk: kto może z niego korzystać, Twoje treści, połączone sieci i za co odpowiadamy.',
-        ],
-        'nav' => [
-            'sign_in' => 'Zaloguj się',
-        ],
-        'hero' => [
-            'title' => 'Wszystkie marki, którymi zarządzasz, w jednym miejscu.',
-            'lead' => 'Napisz raz i dostosuj treść do każdej sieci. Kanały, kalendarz i zatwierdzenia każdego klienta zostają w osobnej przestrzeni roboczej.',
-            'signup_soon' => 'Rejestracja wkrótce otworzy się dla wszystkich.',
-        ],
-        'hook' => [
-            'workspaces' => 'Przestrzenie robocze',
-            'channels' => 'Kanały',
-            'unlimited' => 'Bez limitu',
-        ],
-        'networks' => [
-            'title' => 'Połącz sieci, w których już publikujesz.',
-            'lead' => 'Połącz konta każdej marki raz. Twój zespół publikuje na nich bez przekazywania haseł.',
-        ],
-        'composer' => [
-            'title' => 'Napisz raz. Dopracuj dla każdej sieci.',
-            'body' => 'Przygotuj szkic w jednym edytorze, a potem zmień tekst, media i ustawienia, których potrzebuje każda sieć. Podglądy pokazują post tak, jak się pojawi, a limity są sprawdzane podczas pisania, więc problemy widać przed zaplanowaniem.',
-            'points' => [
-                'per_network' => [
-                    'title' => 'Tekst i media dla każdej sieci.',
-                    'text' => 'Jeden szkic może mieć inny opis, obraz lub tytuł w każdej sieci.',
-                ],
-                'checked' => [
-                    'title' => 'Sprawdzane podczas pisania.',
-                    'text' => 'Limity znaków, hashtagi i zasady dotyczące mediów dla wybranych kanałów.',
-                ],
-            ],
-        ],
-        'calendar' => [
-            'title' => 'Kalendarz i kolejka dla każdej marki.',
-            'body' => 'Ustaw godziny publikacji każdego kanału i dodawaj posty do kolejki: każdy zajmuje najbliższą wolną godzinę. Gdy plany się zmienią, przeciągnij post na inny dzień.',
-            'points' => [
-                'one_per_time' => [
-                    'title' => 'Jeden post na godzinę publikacji.',
-                    'text' => 'Post w kolejce zachowuje swoją godzinę i nic nie zostanie na nią zaplanowane.',
-                ],
-                'drag' => [
-                    'title' => 'Przeciągnij, aby zmienić termin.',
-                    'text' => 'Przenieś post na inny dzień bezpośrednio w kalendarzu.',
-                ],
-            ],
-        ],
-        'workspaces' => [
-            'title' => 'Przestrzeń robocza dla każdego klienta.',
-            'body' => 'Każda marka ma własne kanały, kalendarz, media i zespół. Posty członka zespołu mogą czekać na Twoje zatwierdzenie, zanim zostaną opublikowane.',
-            'points' => [
-                'unlimited' => [
-                    'title' => 'Tyle przestrzeni roboczych, ile potrzeba.',
-                    'text' => 'Jedna na klienta albo jedna na każdą markę prowadzoną samodzielnie.',
-                ],
-                'approvals' => [
-                    'title' => 'Zatwierdzanie dla każdej osoby.',
-                    'text' => 'Włącz je dla nowej osoby i wyłącz, gdy jej posty budzą zaufanie.',
-                ],
-            ],
-        ],
-        'assistant' => [
-            'title' => 'Asystent w edytorze. Twoja własna AI też może tu pracować.',
-            'body' => 'Wbudowany asystent pisze i przepisuje szkice w edytorze. Połącz Claude lub ChatGPT, a będzie mógł tworzyć szkice, planować posty i czytać wyniki w Twoich przestrzeniach roboczych.',
-            'points' => [
-                'rewrite' => [
-                    'title' => 'Przepisywanie na życzenie.',
-                    'text' => 'Skróć szkic, przeredaguj go albo zmień jego ton.',
-                ],
-                'api' => [
-                    'title' => 'MCP i REST API.',
-                    'text' => 'Narzędzia AI i własne skrypty pracują w tych samych przestrzeniach roboczych co Ty.',
-                ],
-            ],
-        ],
-        'closing' => [
-            'title' => 'Zacznij od jednej marki. Dodaj kolejną, gdy ją zdobędziesz.',
-        ],
-        'screenshots' => [
-            'calendar_list' => 'Kolejka postów piekarni. Na początku post na Facebooku od członka zespołu czeka na zatwierdzenie na jutro na 9:00, z przyciskami do dodania go do kolejki lub odrzucenia.',
-            'composer' => 'Edytor ze szkicem dla Instagrama, Facebooka i YouTube, jego obrazem i podglądami Instagrama oraz Facebooka na żywo obok.',
-            'calendar_month' => 'Kalendarz miesięczny z postami piekarni na Instagramie i Facebooku, po jednym dziennie.',
-            'approvals' => 'Karta Zatwierdzenia z dwoma postami od członka zespołu: jednym do kolejki i jednym na stałą godzinę, każdy z przyciskiem do odrzucenia.',
-            'assistant' => 'Asystent AI obok edytora proponuje krótszą wersję szkicu.',
-        ],
-        'footer' => [
-            'terms' => 'Warunki',
-            'privacy' => 'Prywatność',
-            'source_code' => 'Kod źródłowy',
-            'built_on' => 'Oparte na :upstream (AGPL-3.0)',
-            'status' => 'Status',
-        ],
-        'skip_to_content' => 'Przejdź do treści',
     ],
 ];

@@ -87,15 +87,6 @@ export interface LegalLinks {
     privacy: string;
 }
 
-/** What the public pages' footer shows, from `config/trypost.php` (`site`). */
-export interface SiteLinks {
-    supportEmail: string;
-    /** A status page, when this install has one; the link is left out otherwise. */
-    statusUrl: string | null;
-    sourceUrl: string;
-    upstreamUrl: string;
-}
-
 export interface CanvaPresetOption {
     value: string;
     width: number;
@@ -132,9 +123,6 @@ export interface SharedData {
     flash: FlashData;
     selfHosted: boolean;
     legal: LegalLinks;
-    site: SiteLinks;
-    /** A public page (the landing, the legal pages): it carries no analytics. */
-    publicPage: boolean;
     contentTypeMediaRules?: Record<string, ContentTypeMediaRule>;
     defaultCropPresets?: CropPresetValue[];
     features?: Features | null;

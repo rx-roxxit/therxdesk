@@ -77,7 +77,6 @@ test('auth and welcome pages do not overflow horizontally on a phone', function 
     config(['trypost.self_hosted' => false]);
 
     $guestPages = [
-        'landing' => route('app.home'),
         'login' => route('login'),
         'register' => route('register'),
         'forgot password' => route('password.request'),

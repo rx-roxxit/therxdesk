@@ -55,11 +55,9 @@ services:
       SELF_HOSTED: "true"
       RXDESK_DEFAULT_QUOTA: ${RXDESK_DEFAULT_QUOTA:-5GB}
       RXDESK_DISK_GUARD_THRESHOLD: ${RXDESK_DISK_GUARD_THRESHOLD:-10GB}
-      LEGAL_TERMS_URL: https://${APP_DOMAIN}/terms
-      LEGAL_PRIVACY_URL: https://${APP_DOMAIN}/privacy
-      # The public pages' footer. The status link is left out while it is empty.
-      SITE_SUPPORT_EMAIL: ${SITE_SUPPORT_EMAIL:-support@therxdesk.com}
-      SITE_STATUS_URL: ${SITE_STATUS_URL:-}
+      # Terms and Privacy live on the website, not in the app.
+      LEGAL_TERMS_URL: https://${SITE_DOMAIN:?set SITE_DOMAIN}/terms
+      LEGAL_PRIVACY_URL: https://${SITE_DOMAIN:?set SITE_DOMAIN}/privacy
 
       # ===== Off on purpose =====
       POSTHOG_ENABLED: "false"

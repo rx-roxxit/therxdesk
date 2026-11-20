@@ -10,10 +10,7 @@ export default defineConfig({
         laravel({
             input: ['resources/js/app.ts', 'resources/css/app.css'],
             ssr: 'resources/js/ssr.ts',
-            assets: [
-                'resources/changelog/**/*.png',
-                'resources/js/assets/landing/og-image.jpg',
-            ],
+            assets: ['resources/changelog/**/*.png'],
             refresh: true,
         }),
         tailwindcss(),

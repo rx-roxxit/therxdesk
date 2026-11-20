@@ -1,8 +1,4 @@
 @php($theme = data_get($page, 'props.auth.user.theme', 'light'))
-{{-- A public page (the landing, the legal pages) carries no tracker:
-     `MarkPublicPage` sets the flag, and Google Tag Manager stays out. --}}
-@php($publicPage = (bool) data_get($page, 'props.publicPage', false))
-@php($publicMeta = data_get($page, 'props.meta'))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $htmlDir ?? 'ltr' }}" data-theme="{{ $theme }}" @class(['dark' => $theme === 'dark'])>
     <head>
@@ -10,9 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        @unless($publicPage)
-            @include('partials.gtm')
-        @endunless
+        @include('partials.gtm')
 
         {{-- Resolves the "system" theme before the first paint and follows the
              OS setting while the page is open. Explicit themes are rendered by
@@ -45,11 +39,7 @@
             }
         </style>
 
-        @if ($publicPage && filled($publicMeta))
-            @include('partials.public-meta', ['meta' => $publicMeta])
-        @else
-            <title data-inertia>{{ config('app.name', 'TryPost.it') }}</title>
-        @endif
+        <title data-inertia>{{ config('app.name', 'TryPost.it') }}</title>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -62,9 +52,7 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
-        @unless($publicPage)
-            @include('partials.gtm-noscript')
-        @endunless
+        @include('partials.gtm-noscript')
         @inertia
     </body>
 </html>

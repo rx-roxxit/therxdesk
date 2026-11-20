@@ -2,7 +2,6 @@ import { getActiveLanguage, loadLanguageAsync } from 'laravel-vue-i18n';
 import { ref } from 'vue';
 
 import dayjs from '@/dayjs';
-import { filled } from '@/lib/helpers';
 import type { Auth, Language } from '@/types';
 
 interface LocaleProps {
@@ -12,38 +11,6 @@ interface LocaleProps {
 }
 
 const chosen = ref<string | null>(null);
-
-/**
- * The RX Desk: where a logged-out visitor's pick is kept for the tab. Moving
- * between the public pages and the auth screens loads the page in full (see
- * `HandleInertiaRequests::version()`), which would drop a pick held in memory
- * only. A guest has no user id, so this cannot live in the per-user browser
- * storage; it is the one sessionStorage key, removed once the visitor signs
- * in.
- */
-const GUEST_LOCALE_KEY = 'trypost.guest-locale';
-
-const storedGuestLocale = (): string | null => {
-    try {
-        return window.sessionStorage.getItem(GUEST_LOCALE_KEY);
-    } catch {
-        return null;
-    }
-};
-
-const storeGuestLocale = (locale: string | null): void => {
-    try {
-        if (!filled(locale)) {
-            window.sessionStorage.removeItem(GUEST_LOCALE_KEY);
-
-            return;
-        }
-
-        window.sessionStorage.setItem(GUEST_LOCALE_KEY, locale);
-    } catch {
-        // Storage refused: the pick lasts until the next full page load.
-    }
-};
 
 /**
  * The locale the page is currently rendered in. `dayjs.locale()` is global and
@@ -87,45 +54,11 @@ const directionOf = (
  * the value returned here, so this only aligns dayjs and the document.
  */
 export const bootLocale = (props: LocaleProps): string => {
-    const kept = keptGuestLocale(props);
-
-    if (filled(kept)) {
-        chosen.value = kept;
-        align(kept, directionOf(kept, props.languages));
-
-        return kept;
-    }
-
     const locale = props.locale ?? 'en';
 
     align(locale);
 
     return locale;
-};
-
-/**
- * The language a logged-out visitor picked earlier in this tab, while it is
- * still one the app offers. A signed-in page forgets it: the account's
- * language decides from then on.
- */
-const keptGuestLocale = (props: LocaleProps): string | null => {
-    if (filled(props.auth?.user)) {
-        storeGuestLocale(null);
-
-        return null;
-    }
-
-    const stored = storedGuestLocale();
-
-    if (!filled(stored)) {
-        return null;
-    }
-
-    if (!filled(directionOf(stored, props.languages))) {
-        return null;
-    }
-
-    return stored;
 };
 
 /**
@@ -135,7 +68,6 @@ const keptGuestLocale = (props: LocaleProps): string | null => {
  */
 export const chooseGuestLocale = (language: Language): void => {
     chosen.value = language.code;
-    storeGuestLocale(language.code);
 
     void loadLanguageAsync(language.code);
     align(language.code, language.dir);
@@ -151,7 +83,6 @@ export const syncLocale = (props: LocaleProps): void => {
 
     if (authenticated) {
         chosen.value = null;
-        storeGuestLocale(null);
     }
 
     const next = authenticated ? props.locale : (chosen.value ?? props.locale);

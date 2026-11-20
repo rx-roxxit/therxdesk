@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. The `public` block (the pre-launch website) is written
-| natively in every locale; the rest stays English in every locale until v3.0.0
-| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
+| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
+| "New copy is English only"); upstream never touches this file.
 */
 
 return [
@@ -119,104 +118,5 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
-    ],
-
-    'public' => [
-        'meta' => [
-            'landing' => '관리하는 모든 브랜드의 게시물을 계획하고 작성하고 예약하세요. 고객마다 워크스페이스, 캘린더, 승인을 따로 둘 수 있습니다.',
-            'privacy' => 'The RX Desk가 수집하는 정보와 그 이유, Google·YouTube·Meta에서 읽는 정보, 데이터를 삭제하는 방법.',
-            'terms' => 'The RX Desk 이용 약관: 이용 대상, 내 콘텐츠, 연결하는 네트워크, 그리고 저희가 책임지는 범위.',
-        ],
-        'nav' => [
-            'sign_in' => '로그인',
-        ],
-        'hero' => [
-            'title' => '관리하는 모든 브랜드를 한곳에서.',
-            'lead' => '한 번 작성하고 네트워크별로 다듬으세요. 고객마다 채널, 캘린더, 승인을 각자의 워크스페이스에 모아 둡니다.',
-            'signup_soon' => '곧 누구나 가입할 수 있습니다.',
-        ],
-        'hook' => [
-            'workspaces' => '워크스페이스',
-            'channels' => '채널',
-            'unlimited' => '무제한',
-        ],
-        'networks' => [
-            'title' => '이미 게시하고 있는 네트워크를 연결하세요.',
-            'lead' => '브랜드별 계정은 한 번만 연결하면 됩니다. 팀은 비밀번호를 공유하지 않고 게시할 수 있습니다.',
-        ],
-        'composer' => [
-            'title' => '한 번 쓰고, 네트워크마다 다듬으세요.',
-            'body' => '하나의 에디터에서 초안을 쓴 다음, 네트워크마다 필요한 텍스트, 미디어, 설정을 바꾸세요. 미리보기로 실제 모습을 확인하고, 입력하는 동안 제한을 확인하므로 예약하기 전에 문제를 찾을 수 있습니다.',
-            'points' => [
-                'per_network' => [
-                    'title' => '네트워크별 텍스트와 미디어.',
-                    'text' => '하나의 초안에 네트워크마다 다른 캡션, 이미지, 제목을 넣을 수 있습니다.',
-                ],
-                'checked' => [
-                    'title' => '입력하면서 확인.',
-                    'text' => '선택한 채널의 글자 수 제한, 해시태그, 미디어 규칙을 확인합니다.',
-                ],
-            ],
-        ],
-        'calendar' => [
-            'title' => '브랜드마다 캘린더와 대기열.',
-            'body' => '채널마다 게시 시간을 정하고 게시물을 대기열에 추가하세요. 각 게시물은 다음 빈 시간에 들어갑니다. 계획이 바뀌면 게시물을 다른 날로 끌어다 놓으세요.',
-            'points' => [
-                'one_per_time' => [
-                    'title' => '게시 시간마다 게시물 하나.',
-                    'text' => '대기열의 게시물은 자기 시간을 유지하고, 그 위에 다른 게시물이 잡히지 않습니다.',
-                ],
-                'drag' => [
-                    'title' => '끌어서 일정 변경.',
-                    'text' => '캘린더에서 바로 게시물을 다른 날로 옮기세요.',
-                ],
-            ],
-        ],
-        'workspaces' => [
-            'title' => '클라이언트마다 워크스페이스 하나.',
-            'body' => '브랜드마다 채널, 캘린더, 미디어, 팀을 따로 둡니다. 팀원의 게시물은 게시되기 전에 승인을 기다리게 할 수 있습니다.',
-            'points' => [
-                'unlimited' => [
-                    'title' => '필요한 만큼 워크스페이스를.',
-                    'text' => '클라이언트마다 하나, 또는 직접 운영하는 브랜드마다 하나.',
-                ],
-                'approvals' => [
-                    'title' => '팀원별 승인.',
-                    'text' => '새로 온 팀원에게는 켜고, 게시물을 믿을 수 있게 되면 끄세요.',
-                ],
-            ],
-        ],
-        'assistant' => [
-            'title' => '에디터 안의 어시스턴트. 내 AI도 여기서 일할 수 있습니다.',
-            'body' => '내장 어시스턴트가 에디터에서 초안을 쓰고 다시 씁니다. Claude나 ChatGPT를 연결하면 워크스페이스에서 초안 작성, 예약, 결과 확인을 할 수 있습니다.',
-            'points' => [
-                'rewrite' => [
-                    'title' => '요청하면 다시 쓰기.',
-                    'text' => '초안을 줄이거나, 다르게 표현하거나, 어조를 바꾸세요.',
-                ],
-                'api' => [
-                    'title' => 'MCP와 REST API.',
-                    'text' => 'AI 도구와 직접 만든 스크립트도 같은 워크스페이스에서 작동합니다.',
-                ],
-            ],
-        ],
-        'closing' => [
-            'title' => '브랜드 하나로 시작하세요. 다음 브랜드를 맡게 되면 추가하세요.',
-        ],
-        'screenshots' => [
-            'calendar_list' => '빵집의 게시물 대기열. 맨 위에 팀원의 Facebook 게시물이 내일 오전 9:00 승인을 기다리고 있고, 대기열에 추가하는 버튼과 거절 버튼이 있습니다.',
-            'composer' => 'Instagram, Facebook, YouTube용 초안과 이미지, 옆에 Instagram과 Facebook 실시간 미리보기가 보이는 에디터.',
-            'calendar_month' => '빵집의 Instagram과 Facebook 게시물이 하루에 하나씩 보이는 월간 캘린더.',
-            'approvals' => '팀원이 보낸 게시물 두 개가 있는 승인 탭. 하나는 대기열용, 하나는 정해진 시간용이며 각각 거절 버튼이 있습니다.',
-            'assistant' => '에디터 옆의 AI 어시스턴트가 초안의 짧은 버전을 제안하고 있습니다.',
-        ],
-        'footer' => [
-            'terms' => '약관',
-            'privacy' => '개인정보',
-            'source_code' => '소스 코드',
-            'built_on' => ':upstream 기반 (AGPL-3.0)',
-            'status' => '상태',
-        ],
-        'skip_to_content' => '본문으로 건너뛰기',
     ],
 ];
