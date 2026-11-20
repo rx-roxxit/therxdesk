@@ -2,13 +2,13 @@
 
 [The RX Desk](https://therxdesk.com) is a social media management service for freelancers and small agencies: every brand you manage in one place, with a composer that writes once and adapts per network, a calendar and queues, workspaces for each client and approvals before anything goes live.
 
-**Live site: [therxdesk.com](https://therxdesk.com)**
+**Website: [therxdesk.com](https://therxdesk.com)**
 
 ## This repository
 
-This is the source code of the hosted service at [therxdesk.com](https://therxdesk.com). What runs there is what you read here.
+This is the source code of the hosted app at app.therxdesk.com. What runs there is what you read here. The website at therxdesk.com is a separate program and is not part of this repository.
 
-The RX Desk is a fork of [TryPost](https://github.com/trypostit/trypost), the open-source social media scheduler by Paulo Castellano and the TryPost contributors. Most of the application is their work, and we are grateful for it. The RX Desk adds its own branding, sign-up rules, storage limits and public pages on top of it.
+The RX Desk is a fork of [TryPost](https://github.com/trypostit/trypost), the open-source social media scheduler by Paulo Castellano and the TryPost contributors. Most of the application is their work, and we are grateful for it. The RX Desk adds its own branding, sign-up rules and storage limits on top of it.
 
 ## Self-hosting
 

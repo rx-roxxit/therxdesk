@@ -15,8 +15,3 @@
 
 	reverse_proxy app:80
 }
-
-# www (its own certificate) only sends visitors to the bare domain.
-www.{$APP_DOMAIN} {
-	redir https://{$APP_DOMAIN}{uri} permanent
-}
