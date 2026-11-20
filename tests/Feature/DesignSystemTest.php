@@ -29,8 +29,8 @@ test('the shared tokens match the design system', function () {
         ->toContain('--critical: #ffb2a8;')
         ->toContain('--critical-hover: #ff8575;')
         ->toContain('--color-critical: var(--critical);')
-        ->toContain("'Inter', ui-sans-serif")
-        ->toContain("'Outfit', ui-sans-serif")
+        ->toContain("'Inter Variable', ui-sans-serif")
+        ->toContain("'Outfit Variable', ui-sans-serif")
         ->toContain('--font-heading: var(--font-heading);')
         ->toContain('--radius: 0.5rem;')
         ->toContain('--text-sm: 14px;')
@@ -39,9 +39,6 @@ test('the shared tokens match the design system', function () {
         ->toContain('--color-rating: var(--rating);');
 
     expect($styles)->not->toContain('#fa5d19');
-
-    expect(file_get_contents(resource_path('views/app.blade.php')))
-        ->toContain('family=Inter:wght@400..700&family=Outfit:wght@400;500;600;700');
 
     expect(file_get_contents(resource_path('js/components/ui/badge/index.ts')))
         ->toContain('bg-success-subtle text-success-text');
