@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
  */
 function singleLineCopyLength(string $translation): int
 {
-    $values = ['count' => '12', 'total' => '7', 'network' => 'Google Business Profile', 'name' => 'Português (Brasil)'];
+    $values = ['count' => '12', 'total' => '7', 'network' => 'Google Business Profile', 'name' => 'Português (Brasil)', 'upstream' => 'TryPost'];
 
     return collect(explode('|', $translation))
         ->map(fn (string $form): string => (string) preg_replace('/^\s*(\{[^}]*\}|\[[^\]]*\])\s*/', '', $form))

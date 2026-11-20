@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. The `public` block (the pre-launch website) is written
+| natively in every locale; the rest stays English in every locale until v3.0.0
+| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
 */
 
 return [
@@ -118,5 +119,24 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+
+    'public' => [
+        'nav' => [
+            'sign_in' => '로그인',
+        ],
+        'hero' => [
+            'title' => '관리하는 모든 브랜드를 한곳에서.',
+            'lead' => '한 번 작성하고 네트워크별로 다듬으세요. 고객마다 채널, 캘린더, 승인을 각자의 워크스페이스에 모아 둡니다.',
+            'signup_soon' => '곧 누구나 가입할 수 있습니다.',
+        ],
+        'footer' => [
+            'terms' => '약관',
+            'privacy' => '개인정보',
+            'source_code' => '소스 코드',
+            'built_on' => ':upstream 기반 (AGPL-3.0)',
+            'status' => '상태',
+        ],
+        'skip_to_content' => '본문으로 건너뛰기',
     ],
 ];

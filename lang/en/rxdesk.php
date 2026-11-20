@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. The `public` block (the pre-launch website) is written
+| natively in every locale; the rest stays English in every locale until v3.0.0
+| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
 */
 
 return [
@@ -118,5 +119,24 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+
+    'public' => [
+        'nav' => [
+            'sign_in' => 'Sign in',
+        ],
+        'hero' => [
+            'title' => 'Every brand you manage in one place.',
+            'lead' => 'Write once and adapt it for each network. Keep every client\'s channels, calendar and approvals in their own workspace.',
+            'signup_soon' => 'Signup opens to everyone soon.',
+        ],
+        'footer' => [
+            'terms' => 'Terms',
+            'privacy' => 'Privacy',
+            'source_code' => 'Source code',
+            'built_on' => 'Built on :upstream (AGPL-3.0)',
+            'status' => 'Status',
+        ],
+        'skip_to_content' => 'Skip to content',
     ],
 ];
