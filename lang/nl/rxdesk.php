@@ -122,6 +122,11 @@ return [
     ],
 
     'public' => [
+        'meta' => [
+            'landing' => 'Plan, schrijf en plan posts in voor elk merk dat je beheert, met een eigen werkruimte, agenda en goedkeuringen per klant.',
+            'privacy' => 'Wat The RX Desk verzamelt en waarom, wat het leest van Google, YouTube en Meta, en hoe je je gegevens verwijdert.',
+            'terms' => 'De voorwaarden voor The RX Desk: wie het mag gebruiken, je content, de netwerken die je koppelt en waarvoor wij verantwoordelijk zijn.',
+        ],
         'nav' => [
             'sign_in' => 'Inloggen',
         ],

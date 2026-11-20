@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\SocialAccount\Platform;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\PublicPages\PublicUrl;
 
 test('a visitor signs in from the landing', function () {
     $page = visit(route('app.home'));
@@ -128,6 +129,29 @@ test('a signed-in visit to the home page lands on the calendar', function () {
 
     $calendarPath = json_encode(route('app.calendar', absolute: false));
     waitForCondition($page, "location.pathname.startsWith({$calendarPath})");
+
+    $page->assertNoJavaScriptErrors();
+});
+
+test('the page head follows a visit inside the site, replacing the tags the server rendered', function () {
+    $page = visit(route('app.home'));
+
+    waitFor($page, '@public-footer-terms');
+    $page->script('window.__publicLandingMarker = 1');
+
+    $page->click('@public-footer-terms');
+    waitForPath($page, route('legal.terms', absolute: false));
+
+    $canonical = PublicUrl::route('legal.terms');
+    waitForState($page, '[data-inertia="canonical"]', "element.href === '{$canonical}'");
+    waitForState($page, '[data-inertia="og:title"]', "element.content.startsWith('Terms of Service')");
+    waitForCondition($page, "document.title.startsWith('Terms of Service')");
+
+    // The tags the server rendered were replaced, not joined by copies.
+    foreach (['canonical', 'description', 'og:title', 'og:url'] as $key) {
+        waitForCount($page, "[data-inertia=\"{$key}\"]", 1);
+    }
+    expect($page->script('window.__publicLandingMarker'))->toBe(1);
 
     $page->assertNoJavaScriptErrors();
 });

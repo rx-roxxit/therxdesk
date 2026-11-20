@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import type { PublicPageMeta } from '@/types/public-page';
 
 defineProps<{
+    meta: PublicPageMeta;
     title: string;
     /** Rendered on the server from resources/legal/*.md (HTML stripped). */
     body_html: string;
@@ -11,8 +11,7 @@ defineProps<{
 </script>
 
 <template>
-    <PublicLayout>
-        <Head :title="title" />
+    <PublicLayout :meta="meta">
         <article class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
             <h1
                 class="font-heading text-3xl font-semibold tracking-tight text-foreground"

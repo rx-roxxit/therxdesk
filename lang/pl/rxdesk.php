@@ -122,6 +122,11 @@ return [
     ],
 
     'public' => [
+        'meta' => [
+            'landing' => 'Planowanie, pisanie i harmonogram postów każdej marki, którą prowadzisz, z osobną przestrzenią roboczą, kalendarzem i zatwierdzeniami dla każdego klienta.',
+            'privacy' => 'Co The RX Desk zbiera i dlaczego, co odczytuje z Google, YouTube i Meta oraz jak usunąć swoje dane.',
+            'terms' => 'Warunki korzystania z The RX Desk: kto może z niego korzystać, Twoje treści, połączone sieci i za co odpowiadamy.',
+        ],
         'nav' => [
             'sign_in' => 'Zaloguj się',
         ],
