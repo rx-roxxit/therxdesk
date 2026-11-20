@@ -37,3 +37,4 @@ yarn-error.log
 # The RX Desk: private planning docs (rx-roxxit/therxdesk-docs) and the file that loads them
 /private/
 /CLAUDE.local.md
+/.claude/rules/rxdesk
