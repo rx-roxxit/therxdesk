@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Inertia\Testing\AssertableInertia;
 
-test('home redirects to login for guests', function () {
-    $response = $this->get(route('app.home'));
-
-    $response->assertRedirect(route('login'));
+test('a guest gets the public landing on the home page', function () {
+    $this->get(route('app.home'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('public/Landing')
+            ->has('languages'));
 });
 
 test('home redirects to calendar for authenticated users', function () {
