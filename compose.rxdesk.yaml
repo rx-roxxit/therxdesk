@@ -57,9 +57,6 @@ services:
       RXDESK_DISK_GUARD_THRESHOLD: ${RXDESK_DISK_GUARD_THRESHOLD:-10GB}
       LEGAL_TERMS_URL: https://${APP_DOMAIN}/terms
       LEGAL_PRIVACY_URL: https://${APP_DOMAIN}/privacy
-      # The public pages' footer. The status link is left out while it is empty.
-      SITE_SUPPORT_EMAIL: ${SITE_SUPPORT_EMAIL:-support@therxdesk.com}
-      SITE_STATUS_URL: ${SITE_STATUS_URL:-}
 
       # ===== Off on purpose =====
       POSTHOG_ENABLED: "false"

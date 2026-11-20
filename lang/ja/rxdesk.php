@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. The `public` block (the pre-launch website) is written
-| natively in every locale; the rest stays English in every locale until v3.0.0
-| (see AGENTS.md, "Writing in-app copy"). Upstream never touches this file.
+| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
+| "New copy is English only"); upstream never touches this file.
 */
 
 return [
@@ -119,24 +118,5 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
-    ],
-
-    'public' => [
-        'nav' => [
-            'sign_in' => 'ログイン',
-        ],
-        'hero' => [
-            'title' => '運営するすべてのブランドを、ひとつの場所に。',
-            'lead' => '一度書いて、各ネットワークに合わせて調整できます。クライアントごとのチャンネル、カレンダー、承認はそれぞれのワークスペースにまとまります。',
-            'signup_soon' => 'まもなく誰でも登録できるようになります。',
-        ],
-        'footer' => [
-            'terms' => '利用規約',
-            'privacy' => 'プライバシー',
-            'source_code' => 'ソースコード',
-            'built_on' => ':upstream をベースに構築 (AGPL-3.0)',
-            'status' => 'ステータス',
-        ],
-        'skip_to_content' => 'コンテンツへスキップ',
     ],
 ];
