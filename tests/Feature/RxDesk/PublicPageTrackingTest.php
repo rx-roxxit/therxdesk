@@ -71,3 +71,38 @@ test('a public page sets only the session and XSRF cookies', function (string $r
 
     expect($names)->toEqualCanonicalizing(['XSRF-TOKEN', config('session.cookie')]);
 })->with('public pages');
+
+/** The asset version the page of this route was rendered with. */
+function inertiaVersionOf(mixed $testCase, string $url): string
+{
+    return (string) data_get($testCase->get($url)->viewData('page'), 'version');
+}
+
+test('a visit from a public page into the app loads the app page in full, so its trackers start there', function () {
+    $publicVersion = inertiaVersionOf($this, route('app.home'));
+
+    $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => $publicVersion])
+        ->get(route('login'))
+        ->assertConflict()
+        ->assertHeader('X-Inertia-Location', route('login'));
+});
+
+test('a visit from the app to a public page loads it in full, so no tracker started in the app runs there', function () {
+    $user = trackedAppUser();
+    $appVersion = inertiaVersionOf($this->actingAs($user), route('app.settings.preferences'));
+
+    $this->actingAs($user)
+        ->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => $appVersion])
+        ->get(route('legal.terms'))
+        ->assertConflict()
+        ->assertHeader('X-Inertia-Location', route('legal.terms'));
+});
+
+test('a visit between public pages stays inside the page', function () {
+    $publicVersion = inertiaVersionOf($this, route('app.home'));
+
+    $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => $publicVersion])
+        ->get(route('legal.privacy'))
+        ->assertOk()
+        ->assertJsonPath('component', 'legal/Show');
+});
