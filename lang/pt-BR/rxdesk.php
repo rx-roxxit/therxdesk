@@ -122,11 +122,6 @@ return [
     ],
 
     'public' => [
-        'meta' => [
-            'landing' => 'Planeje, escreva e agende posts para cada marca que você gerencia, com um espaço de trabalho, um calendário e aprovações para cada cliente.',
-            'privacy' => 'O que o The RX Desk coleta e por quê, o que ele lê do Google, do YouTube e da Meta, e como excluir seus dados.',
-            'terms' => 'Os termos de uso do The RX Desk: quem pode usá-lo, seu conteúdo, as redes que você conecta e pelo que somos responsáveis.',
-        ],
         'nav' => [
             'sign_in' => 'Entrar',
         ],

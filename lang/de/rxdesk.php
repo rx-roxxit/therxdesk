@@ -122,11 +122,6 @@ return [
     ],
 
     'public' => [
-        'meta' => [
-            'landing' => 'Beiträge für jede Marke, die du betreust, schreiben und einplanen – mit eigenem Workspace, Kalender und Freigaben für jeden Kunden.',
-            'privacy' => 'Was The RX Desk erfasst und warum, was es von Google, YouTube und Meta liest und wie du deine Daten löschst.',
-            'terms' => 'Die Bedingungen für The RX Desk: wer es nutzen darf, deine Inhalte, die verbundenen Netzwerke und wofür wir verantwortlich sind.',
-        ],
         'nav' => [
             'sign_in' => 'Anmelden',
         ],

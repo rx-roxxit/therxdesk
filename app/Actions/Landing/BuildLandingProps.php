@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions\Landing;
 
 use App\Enums\SocialAccount\Platform;
-use App\Support\PublicPages\PublicPageMeta;
 use Illuminate\Support\Arr;
 
 /**
@@ -16,12 +15,11 @@ use Illuminate\Support\Arr;
 class BuildLandingProps
 {
     /**
-     * @return array{meta: array{title: string, document_title: string, site_name: string, description: string, canonical: string, image: array{url: string, width: string, height: string}|null}, networks: list<array{value: string, label: string}>}
+     * @return array{networks: list<array{value: string, label: string}>}
      */
     public static function execute(): array
     {
         return [
-            'meta' => PublicPageMeta::for('app.home', __('rxdesk.public.meta.landing')),
             'networks' => self::networks(),
         ];
     }

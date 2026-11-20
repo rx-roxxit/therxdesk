@@ -122,11 +122,6 @@ return [
     ],
 
     'public' => [
-        'meta' => [
-            'landing' => '为你管理的每个品牌规划、撰写并定时发布帖子，每位客户都有自己的工作区、日历与审批。',
-            'privacy' => 'The RX Desk 收集哪些信息、为什么收集、从 Google、YouTube 和 Meta 读取哪些内容，以及如何删除你的数据。',
-            'terms' => 'The RX Desk 使用条款：谁可以使用、你的内容、你连接的网络，以及我们承担的责任。',
-        ],
         'nav' => [
             'sign_in' => '登录',
         ],

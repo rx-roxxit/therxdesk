@@ -122,11 +122,6 @@ return [
     ],
 
     'public' => [
-        'meta' => [
-            'landing' => 'Yönettiğiniz her markanın gönderilerini planlayın, yazın ve zamanlayın; her müşteri için ayrı çalışma alanı, takvim ve onaylar.',
-            'privacy' => 'The RX Desk\'in neleri neden topladığı, Google, YouTube ve Meta\'dan neleri okuduğu ve verilerinizi nasıl silebileceğiniz.',
-            'terms' => 'The RX Desk kullanım koşulları: kimlerin kullanabileceği, içeriğiniz, bağladığınız ağlar ve nelerden sorumlu olduğumuz.',
-        ],
         'nav' => [
             'sign_in' => 'Giriş yap',
         ],
