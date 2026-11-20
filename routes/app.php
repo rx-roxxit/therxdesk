@@ -90,10 +90,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
 
-    Route::get('/', function () {
-        return redirect()->route('app.calendar');
-    })->name('app.home');
-
     Route::get('subscribe', [BillingController::class, 'subscribe'])->name('app.subscribe');
     Route::get('welcome', fn () => redirect()->route('app.welcome.persona'))->name('app.welcome');
     Route::get('welcome/persona', [WelcomeController::class, 'persona'])->name('app.welcome.persona');

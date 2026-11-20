@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 
-import AppLogo from '@/components/AppLogo.vue';
-import { home } from '@/routes/app';
+import PublicLayout from '@/layouts/PublicLayout.vue';
 
 defineProps<{
     title: string;
@@ -12,23 +11,20 @@ defineProps<{
 </script>
 
 <template>
-    <div class="min-h-svh bg-background text-foreground">
+    <PublicLayout>
         <Head :title="title" />
-        <main class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
-            <Link :href="home()" class="inline-flex text-xl">
-                <AppLogo />
-            </Link>
+        <article class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-16">
             <h1
-                class="mt-10 text-3xl font-bold tracking-tight"
+                class="font-heading text-3xl font-semibold tracking-tight text-foreground"
                 data-testid="legal-title"
             >
                 {{ title }}
             </h1>
-            <article
+            <div
                 class="prose prose-base mt-6 max-w-none text-foreground dark:prose-invert prose-a:text-primary-text"
                 data-testid="legal-body"
                 v-html="body_html"
             />
-        </main>
-    </div>
+        </article>
+    </PublicLayout>
 </template>
