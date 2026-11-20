@@ -31,10 +31,12 @@ export const SHARE_EXPORT_SCALE = 2;
 export const BORDER = 2.5;
 
 /** The app's body face, for labels and ticks. */
-const SANS = "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+const SANS =
+    "'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 /** The app's heading face (`--font-heading`), for names and numbers. */
-const HEADING = "Outfit, Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
+const HEADING =
+    "'Outfit Variable', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif";
 
 /** A body font at `weight` and `size`. */
 export const sans = (weight: number, size: number): string => `${weight} ${size}px ${SANS}`;
