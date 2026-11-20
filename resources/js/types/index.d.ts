@@ -133,8 +133,6 @@ export interface SharedData {
     selfHosted: boolean;
     legal: LegalLinks;
     site: SiteLinks;
-    /** A public page (the landing, the legal pages): it carries no analytics. */
-    publicPage: boolean;
     contentTypeMediaRules?: Record<string, ContentTypeMediaRule>;
     defaultCropPresets?: CropPresetValue[];
     features?: Features | null;

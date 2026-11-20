@@ -11,12 +11,7 @@ import { initializeDataLayer } from '@/datalayer';
 import { bootLocale, i18nConfig, syncLocale, textDirection } from '@/language';
 import { syncContentTypeMediaRules } from '@/lib/contentTypeMediaRules';
 import { trackInAppPushes } from '@/lib/inAppHistory';
-import { createPageTracking } from '@/lib/tracking';
-import {
-    capturePageview,
-    initializePostHog,
-    syncPostHogContext,
-} from '@/posthog';
+import { capturePageview, initializePostHog, syncPostHogContext } from '@/posthog';
 import { syncPreferences } from '@/preferences';
 import type { Auth } from '@/types';
 
@@ -33,28 +28,26 @@ createInertiaApp({
         const locale = bootLocale(props.initialPage.props);
         syncPreferences(props.initialPage.props);
 
-        // PostHog identify + dual-group context + pageview on the first page
-        // and on every Inertia navigation below, so the account group counts
-        // stay reactive and workspace switches re-attach the right workspace
-        // group. A public page (the landing, the legal pages) is skipped:
-        // it carries no analytics.
-        const trackPage = createPageTracking({
-            initializeDataLayer: (page) =>
-                initializeDataLayer(
-                    page.props.auth as Auth | undefined,
-                    page.props.flash as
-                        | { conversion_event?: string; [key: string]: unknown }
-                        | undefined,
-                    page.props.applicationUrl as string,
-                    page.props.env as string,
-                ),
-            initializePostHog,
-            syncPostHogContext,
-            capturePageview,
-        });
+        const auth = props.initialPage.props.auth as Auth | undefined;
+        const flash = props.initialPage.props.flash as
+            | { conversion_event?: string; [key: string]: unknown }
+            | undefined;
 
-        trackPage(props.initialPage);
+        initializeDataLayer(
+            auth,
+            flash,
+            props.initialPage.props.applicationUrl as string,
+            props.initialPage.props.env as string,
+        );
+
+        // Initial PostHog identify + dual-group context + first pageview.
+        // The same hooks fire on every Inertia navigation below so the
+        // account group counts stay reactive and workspace switches
+        // re-attach the right workspace group.
+        initializePostHog();
+        syncPostHogContext(props.initialPage);
         syncContentTypeMediaRules(props.initialPage);
+        capturePageview();
 
         // `success`, not `navigate`: switching language answers with `back()`,
         // which keeps the same URL, so Inertia updates the props without
@@ -67,8 +60,9 @@ createInertiaApp({
         trackInAppPushes();
 
         router.on('navigate', (event) => {
-            trackPage(event.detail.page);
+            syncPostHogContext(event.detail.page);
             syncContentTypeMediaRules(event.detail.page);
+            capturePageview();
         });
 
         let mounted = false;

@@ -30,30 +30,15 @@ use App\Support\HeicConverter;
 use App\Support\LinkTlds;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
 
-    /**
-     * The RX Desk: a public page (`MarkPublicPage`) carries its own asset
-     * version, so an Inertia visit that crosses between the public pages and
-     * the rest of the app loads the destination in full. A document is then
-     * public or not for its whole life: one opened on the landing still loads
-     * Google Tag Manager when it reaches the app, and a tracker started in
-     * the app never keeps running on a public page.
-     */
     public function version(Request $request): ?string
     {
-        $version = parent::version($request);
-
-        if (Inertia::getShared('publicPage') === true) {
-            return "{$version}:public";
-        }
-
-        return $version;
+        return parent::version($request);
     }
 
     /**
@@ -97,7 +82,6 @@ class HandleInertiaRequests extends Middleware
             'env' => config('app.env'),
             'locale' => app()->getLocale(),
             'selfHosted' => $isSelfHosted,
-            'publicPage' => false,
         ];
     }
 
