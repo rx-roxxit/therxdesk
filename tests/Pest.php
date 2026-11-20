@@ -716,13 +716,14 @@ function parityMcpPage(string $key, TestResponse $api): array
 
 /**
  * Wait until the Inter web font is loaded, so layout assertions measure the
- * font users see instead of whichever fallback the operating system has.
+ * font users see instead of whichever fallback the operating system has. The
+ * app serves the face itself, as 'Inter Variable' (resources/css/app.css).
  */
 function waitForWebFonts(mixed $page): void
 {
     $page->script(<<<'JS'
         (async () => {
-            const interFaces = () => [...document.fonts].filter((face) => face.family.replaceAll('"', '') === 'Inter');
+            const interFaces = () => [...document.fonts].filter((face) => face.family.replaceAll('"', '') === 'Inter Variable');
             for (let attempt = 0; attempt < 100 && interFaces().length === 0; attempt++) {
                 await new Promise((resolve) => setTimeout(resolve, 50));
             }
