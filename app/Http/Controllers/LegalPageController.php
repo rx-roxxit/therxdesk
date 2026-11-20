@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Support\PublicPages\PublicPageMeta;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Support\Uri;
@@ -32,9 +33,11 @@ class LegalPageController extends Controller
     private function show(string $document): Response
     {
         $markdown = File::get(resource_path("legal/{$document}.md"));
+        $title = Str::of($markdown)->before("\n")->after('# ')->trim()->value();
 
         return Inertia::render('legal/Show', [
-            'title' => Str::of($markdown)->before("\n")->after('# ')->trim()->value(),
+            'meta' => PublicPageMeta::for("legal.{$document}", __("rxdesk.public.meta.{$document}"), $title),
+            'title' => $title,
             'body_html' => Str::markdown(Str::after($markdown, "\n"), [
                 'html_input' => 'strip',
                 'allow_unsafe_links' => false,
