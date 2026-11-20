@@ -294,7 +294,4 @@ return [
     'rxdesk.public.footer.built_on' => 32,
     'rxdesk.public.footer.status' => 9,
     'rxdesk.public.hero.signup_soon' => 47,
-    'rxdesk.public.hook.workspaces' => 20,
-    'rxdesk.public.hook.channels' => 8,
-    'rxdesk.public.hook.unlimited' => 12,
 ];

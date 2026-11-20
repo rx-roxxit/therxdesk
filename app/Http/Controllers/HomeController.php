@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\Landing\BuildLandingProps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,6 +22,6 @@ class HomeController extends Controller
             return redirect()->route('app.calendar');
         }
 
-        return Inertia::render('public/Landing', BuildLandingProps::execute());
+        return Inertia::render('public/Landing');
     }
 }
