@@ -10,16 +10,14 @@ import PublicLayout from '@/layouts/PublicLayout.vue';
 import { filled } from '@/lib/helpers';
 import { login } from '@/routes';
 import type { LandingNetwork } from '@/types/landing';
-import type { PublicPageMeta } from '@/types/public-page';
 
 defineProps<{
-    meta: PublicPageMeta;
     networks: LandingNetwork[];
 }>();
 </script>
 
 <template>
-    <PublicLayout :meta="meta">
+    <PublicLayout>
         <section
             class="border-b border-border bg-muted"
             aria-labelledby="public-hero-title"

@@ -43,15 +43,3 @@ production. `R="docker compose run --rm -T -u app app"`.
 - The dev disk does not serve a private upload back, so the harness answers
   `/storage/...` with the same image it uploaded.
 - Tours and the AI card are marked as seen in the browser before the capture.
-
-## The Open Graph image
-
-`og-image.jpg` (1200×630) is what link previews show for every public page:
-the RX mark, the landing's headline and the `calendar_list` desktop capture.
-`tests/fixtures/og-image-harness.ts` draws it from the committed capture and
-the self-hosted fonts, so it needs no running app. Redraw it whenever that
-capture changes, in an empty output folder (`$OUT`):
-
-1. `docker run --rm -v "$PWD":/work:ro -v therxdesk_app-node-modules:/work/node_modules:ro -v "$OUT":/out -w /work mcr.microsoft.com/playwright:v1.61.1-noble node tests/fixtures/og-image-harness.ts /out`
-2. `docker compose run --rm -T -u app -v "$OUT":/in:ro app magick /in/og-image.png -strip -quality 85 -sampling-factor 4:4:4 resources/js/assets/landing/og-image.jpg`
-3. Look at it and run `npm run build` (Vite serves it as a build asset).

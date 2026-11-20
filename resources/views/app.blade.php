@@ -2,7 +2,6 @@
 {{-- A public page (the landing, the legal pages) carries no tracker:
      `MarkPublicPage` sets the flag, and Google Tag Manager stays out. --}}
 @php($publicPage = (bool) data_get($page, 'props.publicPage', false))
-@php($publicMeta = data_get($page, 'props.meta'))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $htmlDir ?? 'ltr' }}" data-theme="{{ $theme }}" @class(['dark' => $theme === 'dark'])>
     <head>
@@ -45,11 +44,7 @@
             }
         </style>
 
-        @if ($publicPage && filled($publicMeta))
-            @include('partials.public-meta', ['meta' => $publicMeta])
-        @else
-            <title data-inertia>{{ config('app.name', 'TryPost.it') }}</title>
-        @endif
+        <title data-inertia>{{ config('app.name', 'TryPost.it') }}</title>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
