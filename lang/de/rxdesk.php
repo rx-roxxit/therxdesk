@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Einmal schreiben. Für jedes Netzwerk fertigstellen.',
-            'body' => 'Schreib den Entwurf in einem Editor und passe dann Text, Medien und Einstellungen an, die jedes Netzwerk braucht. Die Vorschau zeigt den Beitrag so, wie er erscheinen wird, und Limits werden schon beim Tippen geprüft, damit beim Veröffentlichen nichts abgelehnt wird.',
+            'body' => 'Schreib den Entwurf in einem Editor und passe dann Text, Medien und Einstellungen an, die jedes Netzwerk braucht. Die Vorschau zeigt den Beitrag so, wie er erscheinen wird, und Limits werden schon beim Tippen geprüft, damit du Probleme bemerkst, bevor du planst.',
             'points' => [
                 'per_network' => [
                     'title' => 'Text und Medien pro Netzwerk.',
-                    'text' => 'Ein Entwurf kann auf jedem Kanal eine andere Bildunterschrift, ein anderes Bild oder einen anderen Titel haben.',
+                    'text' => 'Ein Entwurf kann in jedem Netzwerk eine andere Bildunterschrift, ein anderes Bild oder einen anderen Titel haben.',
                 ],
                 'checked' => [
                     'title' => 'Beim Tippen geprüft.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'Die Warteschlange einer Bäckerei. Ganz oben wartet ein Facebook-Beitrag aus dem Team auf Freigabe für morgen um 9:00 Uhr, mit Buttons, um ihn zur Warteschlange hinzuzufügen oder abzulehnen.',
-            'composer' => 'Der Editor mit einem Entwurf für Instagram, Facebook und YouTube, seinem Bild und der Live-Vorschau für Instagram daneben.',
+            'composer' => 'Der Editor mit einem Entwurf für Instagram, Facebook und YouTube, seinem Bild und den Live-Vorschauen für Instagram und Facebook daneben.',
             'calendar_month' => 'Der Monatskalender mit den Instagram- und Facebook-Beiträgen einer Bäckerei, einer pro Tag.',
             'approvals' => 'Der Tab Freigaben mit zwei Beiträgen aus dem Team: einer für die Warteschlange, einer zu einer festen Zeit, jeweils mit einem Button zum Ablehnen.',
             'assistant' => 'Der KI-Assistent neben dem Editor schlägt eine kürzere Fassung des Entwurfs vor.',

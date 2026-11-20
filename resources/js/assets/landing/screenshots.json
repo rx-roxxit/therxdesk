@@ -31,8 +31,8 @@
     },
     "composer": {
         "desktop": {
-            "width": 1280,
-            "height": 852
+            "width": 1440,
+            "height": 1400
         },
         "phone": {
             "width": 390,
@@ -41,8 +41,8 @@
     },
     "assistant": {
         "desktop": {
-            "width": 1280,
-            "height": 852
+            "width": 1440,
+            "height": 1400
         },
         "phone": {
             "width": 390,

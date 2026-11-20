@@ -10,6 +10,7 @@ use App\Enums\Post\PublishStatus;
 use App\Enums\Post\ScheduleMode;
 use App\Enums\Post\Status as PostStatus;
 use App\Enums\PostPlatform\ContentType;
+use App\Enums\SocialAccount\Platform;
 use App\Models\Account;
 use App\Models\Post;
 use App\Models\SocialAccount;
@@ -166,7 +167,7 @@ class LandingDemoSeeder extends Seeder
      */
     private function post(User $owner, SocialAccount $channel, string $text, CarbonImmutable $at, array $colors): Post
     {
-        $isInstagram = $channel->platform->network() === 'instagram';
+        $isInstagram = $channel->platform->network() === Platform::Instagram->network();
         $hasPassed = $at->isPast();
 
         return Post::factory()->forAccount($channel, $isInstagram ? ContentType::InstagramFeed : ContentType::FacebookPost)->create([
@@ -247,13 +248,14 @@ class LandingDemoSeeder extends Seeder
         ob_start();
         imagepng($image);
         $png = (string) ob_get_clean();
+        $encoded = base64_encode($png);
 
         return [
             'id' => (string) Str::uuid(),
             'type' => 'image',
             'mime_type' => 'image/png',
             'path' => 'demo/landing.png',
-            'url' => 'data:image/png;base64,'.base64_encode($png),
+            'url' => "data:image/png;base64,{$encoded}",
             'size' => strlen($png),
             'meta' => ['width' => 540, 'height' => 540],
         ];

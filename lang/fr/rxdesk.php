@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Écrivez une fois. Finalisez pour chaque réseau.',
-            'body' => "Rédigez dans un seul éditeur, puis adaptez le texte, les médias et les réglages dont chaque réseau a besoin. Les aperçus montrent la publication telle qu'elle apparaîtra, et les limites sont vérifiées pendant la saisie : rien n'est refusé au moment de publier.",
+            'body' => "Rédigez dans un seul éditeur, puis adaptez le texte, les médias et les réglages dont chaque réseau a besoin. Les aperçus montrent la publication telle qu'elle apparaîtra, et les limites sont vérifiées pendant la saisie : vous repérez les problèmes avant de programmer.",
             'points' => [
                 'per_network' => [
                     'title' => 'Texte et médias par réseau.',
-                    'text' => 'Un même brouillon peut avoir une légende, une image ou un titre différents sur chaque canal.',
+                    'text' => 'Un même brouillon peut avoir une légende, une image ou un titre différents sur chaque réseau.',
                 ],
                 'checked' => [
                     'title' => 'Vérifié pendant la saisie.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => "La file d'attente d'une boulangerie. En tête, une publication Facebook d'un membre de l'équipe attend l'approbation pour demain à 9 h, avec des boutons pour l'ajouter à la file ou la refuser.",
-            'composer' => "L'éditeur avec un brouillon pour Instagram, Facebook et YouTube, son image et l'aperçu Instagram en direct à côté.",
+            'composer' => "L'éditeur avec un brouillon pour Instagram, Facebook et YouTube, son image et les aperçus Instagram et Facebook en direct à côté.",
             'calendar_month' => 'Le calendrier du mois avec les publications Instagram et Facebook d’une boulangerie, une par jour.',
             'approvals' => "L'onglet Approbations avec deux publications d'un membre de l'équipe : l'une pour la file d'attente, l'autre à une heure fixe, chacune avec un bouton pour la refuser.",
             'assistant' => "L'Assistant IA, à côté de l'éditeur, propose une version plus courte du brouillon.",

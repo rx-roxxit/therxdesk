@@ -28,9 +28,21 @@ const DRAFT =
 const ASSISTANT_REPLY =
     'Sourdough Saturday is back. First loaves out at 8, rye with caraway and orange all weekend.';
 
+/**
+ * The composer captures use a taller window and the expanded composer, so the
+ * previews column shows more than one network.
+ */
 const DEVICES = {
-    desktop: { viewport: { width: 1440, height: 900 }, isMobile: false },
-    phone: { viewport: { width: 390, height: 844 }, isMobile: true },
+    desktop: {
+        viewport: { width: 1440, height: 900 },
+        composerViewport: { width: 1440, height: 1400 },
+        isMobile: false,
+    },
+    phone: {
+        viewport: { width: 390, height: 844 },
+        composerViewport: { width: 390, height: 844 },
+        isMobile: true,
+    },
 } as const;
 
 type Device = keyof typeof DEVICES;
@@ -118,6 +130,15 @@ const openComposerWithDraft = async (page: Page): Promise<void> => {
     await page.goto(`${baseUrl}/posts/create`);
     await page.locator('[data-testid="post-composer-dialog"]').waitFor();
     await page.locator('[data-testid="composer-all-accounts"]').click();
+
+    // Expanded, the composer fills the window, so the previews column shows
+    // more than one network (the button only exists on wide screens).
+    const expand = page.locator('[data-testid="composer-expand-dialog"]');
+
+    if (await expand.isVisible()) {
+        await expand.click();
+    }
+
     await page.locator('[data-testid="composer-base-content"]').fill(DRAFT);
     await page
         .locator('[data-testid="composer-file-input"]')
@@ -130,8 +151,10 @@ const openComposerWithDraft = async (page: Page): Promise<void> => {
 };
 
 for (const device of Object.keys(DEVICES) as Device[]) {
+    const { viewport, composerViewport, isMobile } = DEVICES[device];
     const context = await browser.newContext({
-        ...DEVICES[device],
+        viewport,
+        isMobile,
         deviceScaleFactor: 2,
         locale: 'en-US',
         timezoneId: 'UTC',
@@ -150,6 +173,7 @@ for (const device of Object.keys(DEVICES) as Device[]) {
     await page.goto(`${baseUrl}/schedule?tab=approvals`);
     await capture(page, 'approvals', device, 'main');
 
+    await page.setViewportSize(composerViewport);
     await openComposerWithDraft(page);
     await capture(
         page,

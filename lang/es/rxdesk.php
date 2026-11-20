@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Escribe una vez. Termínalo para cada red.',
-            'body' => 'Redacta en un solo editor y luego ajusta el texto, el contenido multimedia y la configuración que necesita cada red. Las vistas previas muestran la publicación tal como aparecerá, y los límites se comprueban mientras escribes, así que nada se rechaza al publicar.',
+            'body' => 'Redacta en un solo editor y luego ajusta el texto, el contenido multimedia y la configuración que necesita cada red. Las vistas previas muestran la publicación tal como aparecerá, y los límites se comprueban mientras escribes, así que detectas los problemas antes de programar.',
             'points' => [
                 'per_network' => [
                     'title' => 'Texto y multimedia por red.',
-                    'text' => 'Un mismo borrador puede llevar un texto, una imagen o un título distintos en cada canal.',
+                    'text' => 'Un mismo borrador puede llevar un texto, una imagen o un título distintos en cada red.',
                 ],
                 'checked' => [
                     'title' => 'Comprobado mientras escribes.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'La cola de publicaciones de una panadería. Primero aparece una publicación de Facebook de alguien del equipo que espera aprobación para mañana a las 9:00, con botones para añadirla a la cola o rechazarla.',
-            'composer' => 'El editor con un borrador para Instagram, Facebook y YouTube, su imagen y la vista previa de Instagram al lado.',
+            'composer' => 'El editor con un borrador para Instagram, Facebook y YouTube, su imagen y las vistas previas de Instagram y Facebook al lado.',
             'calendar_month' => 'El calendario del mes con las publicaciones de Instagram y Facebook de una panadería, una por día.',
             'approvals' => 'La pestaña Aprobaciones con dos publicaciones de alguien del equipo: una para la cola y otra a una hora fija, cada una con un botón para rechazarla.',
             'assistant' => 'El Asistente de IA, junto al editor, sugiere una versión más corta del borrador.',

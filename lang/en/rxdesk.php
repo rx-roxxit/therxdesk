@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Write once. Finish it for each network.',
-            'body' => "Draft in one editor, then change the text, media and settings each network needs. Previews show the post the way it will appear, and limits are checked as you type, so a post isn't turned down when it publishes.",
+            'body' => 'Draft in one editor, then change the text, media and settings each network needs. Previews show the post the way it will appear, and limits are checked as you type, so you catch problems before you schedule.',
             'points' => [
                 'per_network' => [
                     'title' => 'Text and media per network.',
-                    'text' => 'One draft can carry a different caption, image or title on each channel.',
+                    'text' => 'One draft can carry a different caption, image or title on each network.',
                 ],
                 'checked' => [
                     'title' => 'Checked as you type.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => "The queue of a bakery's posts. First comes a teammate's Facebook post, waiting for approval at tomorrow's 9:00 AM posting time, with Add to queue and Reject buttons.",
-            'composer' => 'The editor with a draft for Instagram, Facebook and YouTube, its image, and the live Instagram preview beside it.',
+            'composer' => 'The editor with a draft for Instagram, Facebook and YouTube, its image, and live Instagram and Facebook previews beside it.',
             'calendar_month' => "The month calendar with a bakery's Instagram and Facebook posts, one a day.",
             'approvals' => 'The Approvals tab with two posts from a teammate: one to add to the queue and one to schedule, each with a Reject button.',
             'assistant' => 'The AI Assistant beside the editor, suggesting a shorter version of the draft.',
