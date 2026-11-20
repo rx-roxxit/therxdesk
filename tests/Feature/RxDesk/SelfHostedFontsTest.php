@@ -65,8 +65,8 @@ test('an app page asks no font host for its fonts', function () {
         ->assertDontSee('fonts.gstatic.com');
 });
 
-test('a public page asks no font host for its fonts', function () {
-    $this->get(route('legal.privacy'))
+test('a guest page asks no font host for its fonts', function () {
+    $this->get(route('login'))
         ->assertOk()
         ->assertDontSee('fonts.googleapis.com')
         ->assertDontSee('fonts.gstatic.com');
