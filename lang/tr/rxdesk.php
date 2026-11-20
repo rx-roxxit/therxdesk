@@ -130,6 +130,81 @@ return [
             'lead' => 'Bir kez yazın, her ağa uyarlayın. Her müşterinin kanalları, takvimi ve onayları kendi çalışma alanında kalır.',
             'signup_soon' => 'Kayıt yakında herkese açılıyor.',
         ],
+        'hook' => [
+            'workspaces' => 'Çalışma Alanları',
+            'channels' => 'Kanallar',
+            'unlimited' => 'Sınırsız',
+        ],
+        'networks' => [
+            'title' => 'Zaten paylaşım yaptığınız ağları bağlayın.',
+            'lead' => 'Her markanın hesaplarını bir kez bağlayın. Ekibiniz şifre paylaşmadan bu hesaplarda paylaşım yapar.',
+        ],
+        'composer' => [
+            'title' => 'Bir kez yazın. Her ağ için tamamlayın.',
+            'body' => 'Taslağı tek bir düzenleyicide yazın, ardından her ağın ihtiyaç duyduğu metni, medyayı ve ayarları değiştirin. Önizlemeler gönderiyi görüneceği gibi gösterir ve sınırlar siz yazarken kontrol edilir; böylece yayın sırasında hiçbir şey reddedilmez.',
+            'points' => [
+                'per_network' => [
+                    'title' => 'Ağa göre metin ve medya.',
+                    'text' => 'Tek bir taslak her kanalda farklı bir açıklama, görsel veya başlık taşıyabilir.',
+                ],
+                'checked' => [
+                    'title' => 'Yazarken kontrol edilir.',
+                    'text' => "Seçtiğiniz kanalların karakter sınırları, hashtag'leri ve medya kuralları.",
+                ],
+            ],
+        ],
+        'calendar' => [
+            'title' => 'Her marka için bir takvim ve bir kuyruk.',
+            'body' => 'Her kanalın paylaşım saatlerini belirleyin ve gönderileri kuyruğa ekleyin: her biri sıradaki boş saati alır. Planlar değişirse bir gönderiyi başka bir güne sürükleyin.',
+            'points' => [
+                'one_per_time' => [
+                    'title' => 'Her paylaşım saatine bir gönderi.',
+                    'text' => 'Kuyruktaki bir gönderi saatini korur ve üzerine başka bir şey planlanmaz.',
+                ],
+                'drag' => [
+                    'title' => 'Yeniden planlamak için sürükleyin.',
+                    'text' => 'Bir gönderiyi doğrudan takvimde başka bir güne taşıyın.',
+                ],
+            ],
+        ],
+        'workspaces' => [
+            'title' => 'Her müşteri için bir çalışma alanı.',
+            'body' => 'Her marka kendi kanallarını, takvimini, medyasını ve ekibini korur. Bir ekip üyesinin gönderileri yayına çıkmadan önce onayınızı bekleyebilir.',
+            'points' => [
+                'unlimited' => [
+                    'title' => 'İhtiyacınız kadar çalışma alanı.',
+                    'text' => 'Her müşteri için bir tane ya da kendi yönettiğiniz her marka için bir tane.',
+                ],
+                'approvals' => [
+                    'title' => 'Kişi bazında onay.',
+                    'text' => 'Yeni gelen biri için açın, gönderilerine güvendiğinizde kapatın.',
+                ],
+            ],
+        ],
+        'assistant' => [
+            'title' => 'Düzenleyicide bir asistan. Kendi yapay zekânız da burada çalışabilir.',
+            'body' => "Yerleşik asistan, düzenleyicide taslak yazar ve yeniden yazar. Claude veya ChatGPT'yi bağlayın; çalışma alanlarınızda taslak hazırlayabilir, gönderi planlayabilir ve sonuçları okuyabilir.",
+            'points' => [
+                'rewrite' => [
+                    'title' => 'İstediğinizde yeniden yazım.',
+                    'text' => 'Bir taslağı kısaltın, yeniden ifade edin veya tonunu değiştirin.',
+                ],
+                'api' => [
+                    'title' => 'MCP ve REST API.',
+                    'text' => 'Yapay zekâ araçlarınız ve kendi betikleriniz sizinle aynı çalışma alanlarında çalışır.',
+                ],
+            ],
+        ],
+        'closing' => [
+            'title' => 'Bir markayla başlayın. Bir sonrakini kazandığınızda ekleyin.',
+        ],
+        'screenshots' => [
+            'calendar_list' => 'Bir fırının gönderi kuyruğu. En üstte, bir ekip üyesinin yarın saat 9:00 için onay bekleyen Facebook gönderisi var; kuyruğa ekleme ve reddetme düğmeleriyle.',
+            'composer' => 'Instagram, Facebook ve YouTube için bir taslak, görseli ve yanında canlı Instagram önizlemesiyle düzenleyici.',
+            'calendar_month' => 'Bir fırının Instagram ve Facebook gönderilerini gösteren aylık takvim, günde bir gönderi.',
+            'approvals' => 'Bir ekip üyesinden iki gönderi içeren Onaylar sekmesi: biri kuyruk için, diğeri belirli bir saat için; her birinde reddetme düğmesi var.',
+            'assistant' => 'Düzenleyicinin yanındaki Yapay Zekâ Asistanı, taslağın daha kısa bir sürümünü öneriyor.',
+        ],
         'footer' => [
             'terms' => 'Koşullar',
             'privacy' => 'Gizlilik',
