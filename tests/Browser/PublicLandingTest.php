@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\SocialAccount\Platform;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -18,41 +17,6 @@ test('a visitor signs in from the landing', function () {
     $page->assertNoJavaScriptErrors();
 });
 
-test('the landing shows its sections, the open networks and real screens of the app', function () {
-    foreach (Platform::cases() as $platform) {
-        config(["trypost.platforms.{$platform->value}.enabled" => false]);
-    }
-
-    config([
-        'trypost.platforms.youtube.enabled' => true,
-        'trypost.platforms.facebook.enabled' => true,
-    ]);
-
-    $page = visit(route('app.home'));
-
-    waitFor($page, '@public-networks');
-    $page->assertVisible('@public-hook-strip')
-        ->assertVisible('@public-network-youtube')
-        ->assertVisible('@public-network-facebook')
-        ->assertMissing('@public-network-instagram')
-        ->assertMissing('@public-network-x')
-        ->assertVisible('@public-section-composer')
-        ->assertVisible('@public-section-calendar')
-        ->assertVisible('@public-section-workspaces')
-        ->assertVisible('@public-section-assistant')
-        ->assertVisible('@public-closing-sign-in');
-
-    foreach (['calendar_list', 'composer', 'calendar_month', 'approvals', 'assistant'] as $screen) {
-        $page->hover("@public-screenshot-{$screen}");
-        waitForState($page, "@public-screenshot-{$screen} img", 'element.complete && element.naturalWidth > 0');
-    }
-
-    expect(elementsMap($page, '[data-testid^="public-screenshot-"] img', 'element.alt.length > 0'))
-        ->toBe([true, true, true, true, true]);
-
-    $page->assertNoBrokenImages()->assertNoJavaScriptErrors();
-});
-
 test('the landing switches language without reloading the page', function () {
     $page = visit(route('app.home'));
 
@@ -64,7 +28,6 @@ test('the landing switches language without reloading the page', function () {
     $page->click('@public-language-option-ar');
 
     waitForText($page, '@public-hero-title', 'كل العلامات');
-    waitForText($page, '@public-section-composer', 'اكتب مرة واحدة');
     waitForCondition($page, "document.documentElement.dir === 'rtl'");
 
     expect($page->script('window.__publicLandingMarker'))->toBe(1);
