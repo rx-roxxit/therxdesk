@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Eén keer schrijven. Per netwerk afmaken.',
-            'body' => 'Schrijf het concept in één editor en pas daarna de tekst, media en instellingen aan die elk netwerk nodig heeft. De voorbeelden tonen de post zoals die verschijnt, en limieten worden gecontroleerd terwijl je typt, zodat niets bij het publiceren wordt geweigerd.',
+            'body' => 'Schrijf het concept in één editor en pas daarna de tekst, media en instellingen aan die elk netwerk nodig heeft. De voorbeelden tonen de post zoals die verschijnt, en limieten worden gecontroleerd terwijl je typt, zodat je problemen ziet voordat je inplant.',
             'points' => [
                 'per_network' => [
                     'title' => 'Tekst en media per netwerk.',
-                    'text' => 'Eén concept kan op elk kanaal een ander bijschrift, een andere afbeelding of een andere titel hebben.',
+                    'text' => 'Eén concept kan per netwerk een ander bijschrift, een andere afbeelding of een andere titel hebben.',
                 ],
                 'checked' => [
                     'title' => 'Gecontroleerd terwijl je typt.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'De wachtrij van een bakkerij. Bovenaan wacht een Facebook-post van een teamlid op goedkeuring voor morgen om 9:00, met knoppen om hem aan de wachtrij toe te voegen of af te wijzen.',
-            'composer' => 'De editor met een concept voor Instagram, Facebook en YouTube, de afbeelding ervan en het live Instagram-voorbeeld ernaast.',
+            'composer' => 'De editor met een concept voor Instagram, Facebook en YouTube, de afbeelding ervan en de live voorbeelden voor Instagram en Facebook ernaast.',
             'calendar_month' => 'De maandkalender met de Instagram- en Facebook-posts van een bakkerij, één per dag.',
             'approvals' => 'Het tabblad Goedkeuringen met twee posts van een teamlid: één voor de wachtrij en één op een vaste tijd, elk met een knop om hem af te wijzen.',
             'assistant' => 'De AI-assistent naast de editor stelt een kortere versie van het concept voor.',

@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => '写一次，再为每个平台定稿。',
-            'body' => '在一个编辑器里写草稿，然后按各平台的需要调整文字、媒体和设置。预览会显示帖子的实际样子，输入时就会检查限制，发布时不会被拒。',
+            'body' => '在一个编辑器里写草稿，然后按各平台的需要调整文字、媒体和设置。预览会显示帖子的实际样子，输入时就会检查限制，排期前就能发现问题。',
             'points' => [
                 'per_network' => [
                     'title' => '每个平台的文字和媒体。',
-                    'text' => '同一份草稿可以在每个频道使用不同的文案、图片或标题。',
+                    'text' => '同一份草稿可以在每个平台使用不同的文案、图片或标题。',
                 ],
                 'checked' => [
                     'title' => '边输入边检查。',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => '一家面包店的帖子队列。最上面是团队成员的一篇 Facebook 帖子，排在明天 9:00，正在等待审批，带有加入队列和拒绝按钮。',
-            'composer' => '编辑器中有一份发往 Instagram、Facebook 和 YouTube 的草稿及其图片，旁边是 Instagram 实时预览。',
+            'composer' => '编辑器中有一份发往 Instagram、Facebook 和 YouTube 的草稿及其图片，旁边是 Instagram 和 Facebook 的实时预览。',
             'calendar_month' => '月历视图，显示一家面包店的 Instagram 和 Facebook 帖子，每天一篇。',
             'approvals' => '审批标签页中有团队成员的两篇帖子：一篇加入队列，一篇定时发布，每篇都有拒绝按钮。',
             'assistant' => '编辑器旁的 AI 助手给出了一个更短的草稿版本。',

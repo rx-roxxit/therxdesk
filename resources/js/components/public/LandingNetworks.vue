@@ -27,7 +27,7 @@ defineProps<{
             </div>
 
             <ul
-                class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
             >
                 <li
                     v-for="network in networks"
@@ -40,13 +40,8 @@ defineProps<{
                         size="xs"
                         :title="null"
                     />
-                    <span class="flex min-w-0 flex-col">
-                        <span class="font-medium text-foreground">
-                            {{ network.label }}
-                        </span>
-                        <span class="text-sm text-muted-foreground">
-                            {{ $t(`channels.platforms.${network.value}`) }}
-                        </span>
+                    <span class="font-medium text-foreground">
+                        {{ network.label }}
                     </span>
                 </li>
             </ul>

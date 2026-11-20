@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Escreva uma vez. Ajuste para cada rede.',
-            'body' => 'Escreva o rascunho em um só editor e depois ajuste o texto, as mídias e as configurações que cada rede pede. As pré-visualizações mostram o post como ele vai aparecer, e os limites são verificados enquanto você digita, para nada ser recusado na hora de publicar.',
+            'body' => 'Escreva o rascunho em um só editor e depois ajuste o texto, as mídias e as configurações que cada rede pede. As pré-visualizações mostram o post como ele vai aparecer, e os limites são verificados enquanto você digita, para você achar problemas antes de agendar.',
             'points' => [
                 'per_network' => [
                     'title' => 'Texto e mídia por rede.',
-                    'text' => 'Um rascunho pode ter legenda, imagem ou título diferentes em cada canal.',
+                    'text' => 'Um rascunho pode ter legenda, imagem ou título diferentes em cada rede.',
                 ],
                 'checked' => [
                     'title' => 'Verificado enquanto você digita.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'A fila de posts de uma padaria. Primeiro vem um post do Facebook de alguém da equipe, esperando aprovação para amanhã às 9:00, com botões para adicioná-lo à fila ou rejeitá-lo.',
-            'composer' => 'O editor com um rascunho para Instagram, Facebook e YouTube, a imagem dele e a pré-visualização do Instagram ao lado.',
+            'composer' => 'O editor com um rascunho para Instagram, Facebook e YouTube, a imagem dele e as pré-visualizações do Instagram e do Facebook ao lado.',
             'calendar_month' => 'O calendário do mês com os posts de Instagram e Facebook de uma padaria, um por dia.',
             'approvals' => 'A aba Aprovações com dois posts de alguém da equipe: um para a fila e outro em um horário definido, cada um com um botão para rejeitá-lo.',
             'assistant' => 'O Assistente de IA, ao lado do editor, sugere uma versão mais curta do rascunho.',

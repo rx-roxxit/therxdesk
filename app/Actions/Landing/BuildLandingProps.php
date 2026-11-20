@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Landing;
 
 use App\Enums\SocialAccount\Platform;
+use Illuminate\Support\Arr;
 
 /**
  * The page props of the public landing. Everything the page shows that can
@@ -32,9 +33,9 @@ class BuildLandingProps
      */
     private static function networks(): array
     {
-        return array_map(
-            fn (array $option): array => ['value' => $option['value'], 'label' => $option['label']],
+        return Arr::map(
             Platform::connectableOptions(),
+            fn (array $option): array => Arr::only($option, ['value', 'label']),
         );
     }
 }

@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Bir kez yazın. Her ağ için tamamlayın.',
-            'body' => 'Taslağı tek bir düzenleyicide yazın, ardından her ağın ihtiyaç duyduğu metni, medyayı ve ayarları değiştirin. Önizlemeler gönderiyi görüneceği gibi gösterir ve sınırlar siz yazarken kontrol edilir; böylece yayın sırasında hiçbir şey reddedilmez.',
+            'body' => 'Taslağı tek bir düzenleyicide yazın, ardından her ağın ihtiyaç duyduğu metni, medyayı ve ayarları değiştirin. Önizlemeler gönderiyi görüneceği gibi gösterir ve sınırlar siz yazarken kontrol edilir; böylece sorunları planlamadan önce görürsünüz.',
             'points' => [
                 'per_network' => [
                     'title' => 'Ağa göre metin ve medya.',
-                    'text' => 'Tek bir taslak her kanalda farklı bir açıklama, görsel veya başlık taşıyabilir.',
+                    'text' => 'Tek bir taslak her ağda farklı bir açıklama, görsel veya başlık taşıyabilir.',
                 ],
                 'checked' => [
                     'title' => 'Yazarken kontrol edilir.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'Bir fırının gönderi kuyruğu. En üstte, bir ekip üyesinin yarın saat 9:00 için onay bekleyen Facebook gönderisi var; kuyruğa ekleme ve reddetme düğmeleriyle.',
-            'composer' => 'Instagram, Facebook ve YouTube için bir taslak, görseli ve yanında canlı Instagram önizlemesiyle düzenleyici.',
+            'composer' => 'Instagram, Facebook ve YouTube için bir taslak, görseli ve yanında canlı Instagram ve Facebook önizlemeleriyle düzenleyici.',
             'calendar_month' => 'Bir fırının Instagram ve Facebook gönderilerini gösteren aylık takvim, günde bir gönderi.',
             'approvals' => 'Bir ekip üyesinden iki gönderi içeren Onaylar sekmesi: biri kuyruk için, diğeri belirli bir saat için; her birinde reddetme düğmesi var.',
             'assistant' => 'Düzenleyicinin yanındaki Yapay Zekâ Asistanı, taslağın daha kısa bir sürümünü öneriyor.',

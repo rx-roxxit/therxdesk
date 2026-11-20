@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Napisz raz. Dopracuj dla każdej sieci.',
-            'body' => 'Przygotuj szkic w jednym edytorze, a potem zmień tekst, media i ustawienia, których potrzebuje każda sieć. Podglądy pokazują post tak, jak się pojawi, a limity są sprawdzane podczas pisania, więc nic nie zostanie odrzucone przy publikacji.',
+            'body' => 'Przygotuj szkic w jednym edytorze, a potem zmień tekst, media i ustawienia, których potrzebuje każda sieć. Podglądy pokazują post tak, jak się pojawi, a limity są sprawdzane podczas pisania, więc problemy widać przed zaplanowaniem.',
             'points' => [
                 'per_network' => [
                     'title' => 'Tekst i media dla każdej sieci.',
-                    'text' => 'Jeden szkic może mieć inny opis, obraz lub tytuł na każdym kanale.',
+                    'text' => 'Jeden szkic może mieć inny opis, obraz lub tytuł w każdej sieci.',
                 ],
                 'checked' => [
                     'title' => 'Sprawdzane podczas pisania.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => 'Kolejka postów piekarni. Na początku post na Facebooku od członka zespołu czeka na zatwierdzenie na jutro na 9:00, z przyciskami do dodania go do kolejki lub odrzucenia.',
-            'composer' => 'Edytor ze szkicem dla Instagrama, Facebooka i YouTube, jego obrazem i podglądem Instagrama na żywo obok.',
+            'composer' => 'Edytor ze szkicem dla Instagrama, Facebooka i YouTube, jego obrazem i podglądami Instagrama oraz Facebooka na żywo obok.',
             'calendar_month' => 'Kalendarz miesięczny z postami piekarni na Instagramie i Facebooku, po jednym dziennie.',
             'approvals' => 'Karta Zatwierdzenia z dwoma postami od członka zespołu: jednym do kolejki i jednym na stałą godzinę, każdy z przyciskiem do odrzucenia.',
             'assistant' => 'Asystent AI obok edytora proponuje krótszą wersję szkicu.',

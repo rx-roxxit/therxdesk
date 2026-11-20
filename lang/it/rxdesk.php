@@ -141,11 +141,11 @@ return [
         ],
         'composer' => [
             'title' => 'Scrivi una volta. Rifiniscilo per ogni rete.',
-            'body' => 'Scrivi la bozza in un solo editor, poi cambia testo, media e impostazioni come serve a ogni rete. Le anteprime mostrano il post come apparirà, e i limiti vengono controllati mentre scrivi, così niente viene rifiutato al momento della pubblicazione.',
+            'body' => 'Scrivi la bozza in un solo editor, poi cambia testo, media e impostazioni come serve a ogni rete. Le anteprime mostrano il post come apparirà, e i limiti vengono controllati mentre scrivi, così trovi i problemi prima di programmare.',
             'points' => [
                 'per_network' => [
                     'title' => 'Testo e media per ogni rete.',
-                    'text' => 'Una bozza può avere didascalia, immagine o titolo diversi su ogni canale.',
+                    'text' => 'Una bozza può avere didascalia, immagine o titolo diversi su ogni rete.',
                 ],
                 'checked' => [
                     'title' => 'Controllato mentre scrivi.',
@@ -200,7 +200,7 @@ return [
         ],
         'screenshots' => [
             'calendar_list' => "La coda dei post di una panetteria. In cima, un post Facebook di un membro del team attende l'approvazione per domani alle 9:00, con i pulsanti per aggiungerlo alla coda o rifiutarlo.",
-            'composer' => "L'editor con una bozza per Instagram, Facebook e YouTube, la sua immagine e l'anteprima di Instagram accanto.",
+            'composer' => "L'editor con una bozza per Instagram, Facebook e YouTube, la sua immagine e le anteprime di Instagram e Facebook accanto.",
             'calendar_month' => 'Il calendario del mese con i post Instagram e Facebook di una panetteria, uno al giorno.',
             'approvals' => 'La scheda Approvazioni con due post di un membro del team: uno per la coda e uno a un orario fisso, ciascuno con un pulsante per rifiutarlo.',
             'assistant' => "L'Assistente IA accanto all'editor propone una versione più breve della bozza.",
