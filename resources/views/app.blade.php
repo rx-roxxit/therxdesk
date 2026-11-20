@@ -1,4 +1,7 @@
 @php($theme = data_get($page, 'props.auth.user.theme', 'light'))
+{{-- A public page (the landing, the legal pages) carries no tracker:
+     `MarkPublicPage` sets the flag, and Google Tag Manager stays out. --}}
+@php($publicPage = (bool) data_get($page, 'props.publicPage', false))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $htmlDir ?? 'ltr' }}" data-theme="{{ $theme }}" @class(['dark' => $theme === 'dark'])>
     <head>
@@ -6,7 +9,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        @include('partials.gtm')
+        @unless($publicPage)
+            @include('partials.gtm')
+        @endunless
 
         {{-- Resolves the "system" theme before the first paint and follows the
              OS setting while the page is open. Explicit themes are rendered by
@@ -52,7 +57,9 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
-        @include('partials.gtm-noscript')
+        @unless($publicPage)
+            @include('partials.gtm-noscript')
+        @endunless
         @inertia
     </body>
 </html>
