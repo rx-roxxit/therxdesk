@@ -84,7 +84,7 @@ test('the palette lists quick actions, navigation and channels', function () {
         ->assertNoJavaScriptErrors();
 
     expect($page->script("document.querySelector('[data-testid=\"command-palette-item-action-create-post\"]').hasAttribute('data-highlighted')"))->toBeTrue()
-        ->and($page->script("getComputedStyle(document.querySelector('[data-testid=\"command-palette-item-action-create-post-icon\"]')).alignSelf"))->toBe('flex-start')
+        ->and($page->script("getComputedStyle(document.querySelector('[data-testid=\"command-palette-item-action-create-post-icon\"]')).alignSelf"))->toBe('flow-start')
         ->and($page->script("getComputedStyle(document.querySelector('[data-testid=\"command-palette-item-nav-publish-icon\"]')).alignSelf"))->toBe('center')
         ->and($page->script("document.querySelector('[data-testid=\"command-palette-item-nav-insights-icon\"]').classList.contains('tabler-icon-trending-up')"))->toBeTrue();
 });

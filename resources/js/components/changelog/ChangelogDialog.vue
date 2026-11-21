@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { useChangelogDialog } from '@/composables/useChangelogDialog';
 import date from '@/date';
+import { stableItemsElement } from '@/lib/infiniteScroll';
 import type { ChangelogEntry, ChangelogReaction } from '@/types/changelog';
 
 const page = usePage();
@@ -38,6 +39,7 @@ const REACTION_OPTIONS: { value: ChangelogReaction; emoji: string; label: string
 ];
 
 const header = useTemplateRef<HTMLElement>('header');
+const itemsElement = stableItemsElement('#changelog-list');
 const openedIds = ref(new Set<string>());
 const reactions = ref<Record<string, ChangelogReaction | null>>({});
 
@@ -279,7 +281,7 @@ watch(activeEntry, (entry) => {
                 <InfiniteScroll
                     v-else
                     data="changelogEntries"
-                    items-element="#changelog-list"
+                    :items-element="itemsElement"
                     only-next
                     preserve-url
                 >

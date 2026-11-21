@@ -6,7 +6,7 @@ description: Drive The RX Desk web app (the Laravel + Inertia/Vue dev stack on l
 # Verify The RX Desk
 
 Proves behavior in the running dev app: sign in as a throwaway Owner, click through a feature in Chromium
-(Playwright 1.61.1 in its official image), and keep the screenshots, trace and database rows as evidence. Tests
+(Playwright 1.65.1 in its official image), and keep the screenshots, trace and database rows as evidence. Tests
 (`tests/Browser`, Pest + Playwright) prove code paths in isolation; this proves the assembled app a user opens.
 
 Every helper lives in `scripts/` and runs from anywhere in the checkout. Set `V=.claude/skills/verify-therxdesk/scripts`
@@ -116,7 +116,7 @@ $V/drive.sh <journey> <folder>     # evidence in <folder>
 ```
 
 A journey is a key of `JOURNEYS` in `scripts/drive.ts`. `drive.sh` runs it with `node` in
-`mcr.microsoft.com/playwright:v1.61.1-noble` on the host network, against `http://localhost:8000`, with the repo
+`mcr.microsoft.com/playwright:v1.65.1-noble` on the host network, against `http://localhost:8000`, with the repo
 mounted read-only, the dev `node_modules` volume for `playwright`, and the fixture in `VERIFY_FIXTURE`. It prints
 `ok`/`FAIL` per check and exits non-zero when the journey fails.
 
@@ -151,6 +151,21 @@ $V/db.sh "select id, status, content from posts where workspace_id = '<workspace
 ```
 
 `db.sh` opens a read-only transaction on the dev database (`trypost`), so a write fails instead of landing.
+
+## Browser suite
+
+```sh
+$V/browser-suite.sh                                    # the whole suite, three processes
+$V/browser-suite.sh tests/Browser/BillingPageTest.php  # one file
+```
+
+`tests/Browser` never runs in the Alpine dev image: the bundled Chromium needs glibc, and the Pest browser plugin
+needs a Playwright at least as new as the version it pins. `browser-suite.sh` builds a throwaway image from the
+official Playwright image at the version installed in `node_modules` plus PHP 8.5 (it needs `rsync` and a built
+`public/build`), copies the checkout to `~/.cache/verify-therxdesk/state/browser-suite/repo` without `public/hot`,
+and runs the suite against the dev stack's `pgsql` and `redis`. Screenshots and traces stay in that copy.
+`browser-suite.sh` is the only place this suite runs today: the fork's GitHub Actions have never run, so the
+workflow's `browser` job does not run on its own.
 
 ## Evidence
 
@@ -196,6 +211,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | `doctor.sh` | is this instance worth driving | no |
 | `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `guests` removes register-journey Owners | `up`, `down`, `guests` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
+| `browser-suite.sh [pest args]` | run `tests/Browser` in the Playwright + PHP image | a scratch copy under `state/` |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
 | `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plan_prices` |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |

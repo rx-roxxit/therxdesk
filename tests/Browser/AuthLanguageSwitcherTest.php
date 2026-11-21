@@ -31,10 +31,10 @@ test('the picked language survives navigating between auth screens', function ()
     $page->click('@language-picker-option-pt-BR');
 
     waitFor($page, '@language-picker-trigger');
-    $page->assertSee('Entrar no TryPost');
+    $page->assertSee(__('auth.login.title', [], 'pt-BR'));
 
     $page->click('@login-sign-up-link');
     waitFor($page, '@language-picker-trigger');
 
-    $page->assertSee('Criar conta')->assertNoJavaScriptErrors();
+    $page->assertSee(__('auth.register.submit', [], 'pt-BR'))->assertNoJavaScriptErrors();
 });

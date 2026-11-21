@@ -144,6 +144,7 @@ test('switching theme in the sidebar applies it in place and saves it', function
 
 test('the user menu has a help and support submenu with the support links', function (bool $selfHosted) {
     config(['trypost.self_hosted' => $selfHosted]);
+    config(['trypost.changelog.enabled' => true]);
     $user = User::factory()->create();
     $workspace = Workspace::factory()->create([
         'account_id' => $user->account_id,
@@ -159,33 +160,31 @@ test('the user menu has a help and support submenu with the support links', func
 
     $links = $page->script(<<<'JS'
         (async () => {
-            const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-            document.querySelector('[data-testid="sidebar-workspace-menu"]').click();
-            await wait(400);
-            const trigger = document.querySelector('[data-testid="sidebar-support-trigger"]');
+            const find = async (testId) => {
+                for (let attempt = 0; attempt < 100; attempt++) {
+                    const element = document.querySelector(`[data-testid="${testId}"]`);
+                    if (element) return element;
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                }
+            };
+            (await find('sidebar-workspace-menu')).click();
+            const trigger = await find('sidebar-support-trigger');
             trigger.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
             trigger.click();
-            await wait(600);
+            await find('sidebar-support-source-code');
             return {
-                links: ['help-center', 'discord', 'feature-requests', 'github']
-                    .map((key) => document.querySelector(`[data-testid="sidebar-support-${key}"]`)?.getAttribute('href')),
+                links: ['source-code'].map((key) => document.querySelector(`[data-testid="sidebar-support-${key}"]`)?.getAttribute('href')),
                 chat: document.querySelector('[data-testid="sidebar-support-chat"]') !== null,
-                status: document.querySelector('[data-testid="sidebar-support-status"] iframe')?.getAttribute('src') ?? null,
-                titles: ['help', 'community', 'status']
-                    .filter((key) => document.querySelector(`[data-testid="sidebar-support-${key}-title"]`) !== null),
+                changelog: document.querySelector('[data-testid="sidebar-support-changelog"]') !== null,
+                titles: ['help'].filter((key) => document.querySelector(`[data-testid="sidebar-support-${key}-title"]`) !== null),
             };
         })();
     JS);
 
-    expect($links['titles'])->toBe($selfHosted ? ['help', 'community'] : ['help', 'community', 'status'])
-        ->and($links['chat'])->toBe(! $selfHosted)
-        ->and($links['status'])->toBe($selfHosted ? null : 'https://status.trypost.it/badge?theme=light')
-        ->and($links['links'])->toBe([
-            'https://docs.trypost.it',
-            'https://trypost.it/discord',
-            'https://github.com/orgs/trypostit/discussions/categories/feature-requests',
-            'https://github.com/trypostit',
-        ]);
+    expect($links['titles'])->toBe(['help'])
+        ->and($links['chat'])->toBeTrue()
+        ->and($links['changelog'])->toBeTrue()
+        ->and($links['links'])->toBe(['https://github.com/rx-roxxit/therxdesk']);
 
     $page->assertNoJavaScriptErrors();
 })->with(['cloud' => false]);

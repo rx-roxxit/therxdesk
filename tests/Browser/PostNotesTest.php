@@ -182,6 +182,15 @@ test('hovering a mention shows who it is, yourself included: photo, name and the
 
     $tokyoTimes = json_encode([now('Asia/Tokyo')->format('H:i'), now('Asia/Tokyo')->addMinute()->format('H:i')]);
 
+    // The hover card builds a grace area when the pointer leaves the mention and
+    // closes on the move after that one, so a single programmatic move away does
+    // not dismiss it.
+    $hoverAway = function () use ($page): void {
+        $page->hover('@note-input');
+        $page->hover('@sidebar-new');
+        waitForGone($page, '@note-mention-card');
+    };
+
     $page->hover('[data-testid=note-mention]:nth-child(1)');
     waitForOpen($page, '@note-mention-card');
     waitFor($page, '@note-mention-card-time');
@@ -189,21 +198,18 @@ test('hovering a mention shows who it is, yourself included: photo, name and the
     waitForText($page, '@note-mention-card-name', 'Ana Souza');
     waitForState($page, '@note-mention-card-time', "{$tokyoTimes}.some((time) => element.textContent.includes(time + ' local time'))");
 
-    $page->hover('@note-body');
-    waitForGone($page, '@note-mention-card');
+    $hoverAway();
     $page->hover('[data-testid=note-mention]:nth-child(2)');
     waitForText($page, '@note-mention-card-name', 'Bia Lima');
     waitFor($page, '@note-mention-card-time');
     $page->assertMissing('@note-mention-card img');
 
-    $page->hover('@note-body');
-    waitForGone($page, '@note-mention-card');
+    $hoverAway();
     $page->hover('[data-testid=note-mention]:nth-child(3)');
     waitForText($page, '@note-mention-card-name', 'Caio Former');
     $page->assertMissing('@note-mention-card-time');
 
-    $page->hover('@note-body');
-    waitForGone($page, '@note-mention-card');
+    $hoverAway();
     $page->hover('[data-testid=note-mention]:nth-child(4)');
     waitForText($page, '@note-mention-card-name', 'Paulo Castellano');
     waitForState($page, '@note-mention-card img', "element.getAttribute('src') === {$myPhotoUrl}");
@@ -587,7 +593,6 @@ test('a note repeated by an older page after a new one disappears when deleted, 
     waitForOpen($page, '[data-slot=popover-content]:has(@emoji-picker-option)');
     $page->click('@emoji-picker-option');
     waitForText($page, '@note-error-toast', __('notes.errors.not_reacted'));
-    $page->keys('@emoji-picker-option', 'Escape');
     waitForGone($page, '[data-slot=popover-content]:has(@emoji-picker-option)');
 
     $page->hover($goneNote)->click("{$goneNote} [data-testid=note-actions]");

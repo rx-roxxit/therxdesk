@@ -487,7 +487,7 @@ test('a failed google drive sign-in opens no picker and shows the popup message'
         }));
         true;
     JS);
-    waitForCondition($page, "document.body.innerText.includes('TryPost needs access to the file you pick')");
+    waitForCondition($page, 'document.body.innerText.includes('.json_encode($message).')');
 
     $page->assertSee($message)
         ->assertNotPresent('@composer-media-item')

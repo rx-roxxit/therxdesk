@@ -171,7 +171,7 @@ test('the plan step shows the free trial offer, what is included and the G2 rati
 
     $page = visit(route('app.welcome.plan'));
 
-    waitFor($page, '@plan-card-socials');
+    waitFor($page, '@plan-card-mini');
     waitForWebFonts($page);
     waitFor($page, '@welcome-plan-reviews');
     waitForWebFonts($page);
@@ -181,14 +181,14 @@ test('the plan step shows the free trial offer, what is included and the G2 rati
     $page->assertRoute('app.welcome.plan')
         ->assertSee('Activate your account')
         ->assertSee('Connect your channels and schedule your first post today.')
-        ->assertMissing('@plan-card-workspaces')
-        ->assertSeeIn('@plan-price-socials', 'Free')
-        ->assertSeeIn('@plan-price-suffix-socials', 'for 7 days')
-        ->assertSeeIn('@plan-price-original-socials', '$19/month')
-        ->assertMissing('@plan-price-unit-socials')
-        ->assertVisible('@plan-networks-info-socials')
+        ->assertMissing('@plan-card-standard')
+        ->assertSeeIn('@plan-price-mini', 'Free')
+        ->assertSeeIn('@plan-price-suffix-mini', 'for 7 days')
+        ->assertSeeIn('@plan-price-original-mini', '$11.90/month')
+        ->assertMissing('@plan-price-unit-mini')
+        ->assertVisible('@plan-networks-info-mini')
         ->assertSeeIn('@welcome-plan-continue', 'Start free trial')
-        ->assertSeeIn('@welcome-plan-terms', 'Then $19/month. Cancel anytime')
+        ->assertSeeIn('@welcome-plan-terms', 'Then $11.90/month. Cancel anytime')
         ->assertMissing('@welcome-plan-offer')
         ->assertVisible('@welcome-step-plan')
         ->assertNoJavaScriptErrors();
@@ -196,20 +196,20 @@ test('the plan step shows the free trial offer, what is included and the G2 rati
     $page->assertCount('[data-testid^="welcome-plan-reviewer-"]', 5);
 
     $features = array_map(
-        fn (string $testId): string => Str::after($testId, 'plan-feature-label-socials-'),
-        welcomePlanTestIdsStartingWith($page, 'plan-feature-label-socials-'),
+        fn (string $testId): string => Str::after($testId, 'plan-feature-label-mini-'),
+        welcomePlanTestIdsStartingWith($page, 'plan-feature-label-mini-'),
     );
 
-    expect(welcomePlanFeatureIconClasses($page, 'plan-feature-label-socials-analytics'))->toContain('tabler-icon-trending-up')
-        ->and(welcomePlanFeatureIconClasses($page, 'plan-feature-label-socials-mcp'))->toContain('tabler-icon-settings-ai')
-        ->and(welcomePlanFeatureIconWidths($page, 'plan-feature-list-socials'))->each->toBe(20)
+    expect(welcomePlanFeatureIconClasses($page, 'plan-feature-label-mini-analytics'))->toContain('tabler-icon-trending-up')
+        ->and(welcomePlanFeatureIconClasses($page, 'plan-feature-label-mini-mcp'))->toContain('tabler-icon-settings-ai')
+        ->and(welcomePlanFeatureIconWidths($page, 'plan-feature-list-mini'))->each->toBe(20)
         ->and($features)->toBe(['networks_all', 'accounts_unlimited', 'ideas', 'ai', 'calendar', 'analytics', 'mcp', 'repurpose', 'team']);
 
-    $page->assertSeeIn('@plan-feature-label-socials-team', 'Unlimited team members')
-        ->assertSeeIn('@plan-feature-label-socials-networks_all', 'All social networks included')
-        ->assertSeeIn('@plan-feature-label-socials-analytics', 'Advanced analytics')
-        ->assertSeeIn('@plan-feature-label-socials-ideas', 'Content planning')
-        ->assertVisible('@plan-feature-info-socials-ideas');
+    $page->assertSeeIn('@plan-feature-label-mini-team', 'Unlimited team members')
+        ->assertSeeIn('@plan-feature-label-mini-networks_all', 'All social networks included')
+        ->assertSeeIn('@plan-feature-label-mini-analytics', 'Advanced analytics')
+        ->assertSeeIn('@plan-feature-label-mini-ideas', 'Content planning')
+        ->assertVisible('@plan-feature-info-mini-ideas');
 });
 
 test('the plan step shows the full price without an offer, even when a trial offer exists', function () {
@@ -222,16 +222,16 @@ test('the plan step shows the full price without an offer, even when a trial off
     waitFor($page, '@welcome-plan-continue');
     waitForWebFonts($page);
 
-    $page->assertSeeIn('@plan-price-socials', '$19')
-        ->assertSeeIn('@plan-price-unit-socials', '/month')
-        ->assertMissing('@plan-price-original-socials')
-        ->assertMissing('@plan-price-suffix-socials')
+    $page->assertSeeIn('@plan-price-mini', '$11.90')
+        ->assertSeeIn('@plan-price-unit-mini', '/month')
+        ->assertMissing('@plan-price-original-mini')
+        ->assertMissing('@plan-price-suffix-mini')
         ->assertSeeIn('@welcome-plan-continue', 'Activate my account')
         ->assertSeeIn('@welcome-plan-terms', 'Cancel anytime')
         ->assertDontSee('7 days')
         ->assertNoJavaScriptErrors();
 
-    expect(trim((string) $page->text('@plan-price-socials')))->toBe('$19')
+    expect(trim((string) $page->text('@plan-price-mini')))->toBe('$11.90')
         ->and(trim((string) $page->text('@welcome-plan-terms')))->toBe('Cancel anytime');
 });
 
@@ -241,13 +241,13 @@ test('the plan step does not list the workspace limit, so team members close the
     $this->actingAs(welcomeOwnerOnPlanStep());
 
     $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@plan-feature-list-socials');
+    waitFor($page, '@plan-feature-list-mini');
     waitForWebFonts($page);
 
-    expect(welcomePlanLastFeatureLabelTestId($page, 'plan-feature-list-socials'))->toBe('plan-feature-label-socials-team');
+    expect(welcomePlanLastFeatureLabelTestId($page, 'plan-feature-list-mini'))->toBe('plan-feature-label-mini-team');
 
-    $page->assertMissing('@plan-highlight-socials')
-        ->assertMissing('@plan-workspaces-info-socials')
+    $page->assertMissing('@plan-highlight-mini')
+        ->assertMissing('@plan-workspaces-info-mini')
         ->assertNoJavaScriptErrors();
 });
 
@@ -291,7 +291,7 @@ test('the plan step fits a phone without scrolling and hides the quotes there', 
     $this->actingAs(welcomeOwnerOnPlanStep());
 
     $page = visit(route('app.welcome.plan'))->resize(390, 844);
-    waitFor($page, '@plan-card-socials');
+    waitFor($page, '@plan-card-mini');
     waitForWebFonts($page);
 
     expect(welcomePlanPhoneLayout($page))->toBe(['scrolls' => false, 'quoteVisible' => false]);
@@ -306,22 +306,22 @@ test('the feature info opens on a tap or click', function (int $width, int $heig
     $this->actingAs(welcomeOwnerOnPlanStep());
 
     $page = visit(route('app.welcome.plan'))->resize($width, $height);
-    waitFor($page, '@plan-feature-info-socials-team');
+    waitFor($page, '@plan-feature-info-mini-team');
     waitForWebFonts($page);
 
-    $page->click('@plan-feature-info-socials-team');
-    waitFor($page, '@plan-feature-info-socials-team');
+    $page->click('@plan-feature-info-mini-team');
+    waitFor($page, '@plan-feature-info-mini-team');
     waitForWebFonts($page);
 
     waitFor($page, '[data-slot="popover-content"]');
 
     expect(trim((string) $page->text('[data-slot="popover-content"]')))->toStartWith('Invite as many people as you want');
 
-    $page->click('@plan-networks-info-socials');
-    waitFor($page, '@plan-networks-socials');
+    $page->click('@plan-networks-info-mini');
+    waitFor($page, '@plan-networks-mini');
     waitForWebFonts($page);
 
-    $page->assertVisible('@plan-networks-socials')
+    $page->assertVisible('@plan-networks-mini')
         ->assertNoJavaScriptErrors();
 })->with([
     'desktop' => [1440, 900],
@@ -334,16 +334,16 @@ test('the feature info opens from the keyboard and closes with Escape', function
     $this->actingAs(welcomeOwnerOnPlanStep());
 
     $page = visit(route('app.welcome.plan'))->resize(1440, 900);
-    waitFor($page, '@plan-feature-info-socials-team');
+    waitFor($page, '@plan-feature-info-mini-team');
     waitForWebFonts($page);
 
-    welcomePlanFocus($page, 'plan-feature-info-socials-team');
-    $page->keys('@plan-feature-info-socials-team', 'Enter');
+    welcomePlanFocus($page, 'plan-feature-info-mini-team');
+    $page->keys('@plan-feature-info-mini-team', 'Enter');
 
     waitFor($page, '[data-slot="popover-content"]');
     $page->assertVisible('[data-slot="popover-content"]');
 
-    $page->keys('@plan-feature-info-socials-team', 'Escape');
+    $page->keys('@plan-feature-info-mini-team', 'Escape');
     waitForGone($page, '[data-slot="popover-content"]');
 
     $page->assertMissing('[data-slot="popover-content"]');
@@ -378,17 +378,17 @@ test('the plan step shows an offer\'s banner and price', function (string $offer
 
     $page->assertSeeIn('@welcome-plan-offer-name', $name)
         ->assertSeeIn('@welcome-plan-offer-headline', $headline)
-        ->assertSeeIn('@plan-price-original-socials', '$19/month')
-        ->assertSeeIn('@plan-price-socials', $price)
-        ->assertSeeIn('@plan-price-suffix-socials', $period)
+        ->assertSeeIn('@plan-price-original-mini', '$11.90/month')
+        ->assertSeeIn('@plan-price-mini', $price)
+        ->assertSeeIn('@plan-price-suffix-mini', $period)
         ->assertSeeIn('@welcome-plan-continue', 'Activate my account')
-        ->assertSeeIn('@welcome-plan-terms', 'Then $19/month. Cancel anytime')
+        ->assertSeeIn('@welcome-plan-terms', 'Then $11.90/month. Cancel anytime')
         ->assertNoJavaScriptErrors();
 
     if ($unit === null) {
-        $page->assertMissing('@plan-price-unit-socials');
+        $page->assertMissing('@plan-price-unit-mini');
     } else {
-        $page->assertSeeIn('@plan-price-unit-socials', $unit);
+        $page->assertSeeIn('@plan-price-unit-mini', $unit);
     }
 })->with([
     'black friday shows its unit' => ['blackFriday', 'Black Friday', '50% off your first 3 months', '$9.50', '/month', 'for your first 3 months'],
@@ -403,10 +403,10 @@ test('the plan step keeps an offer\'s price but hides its banner when the offer 
     $this->actingAs($user);
 
     $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@plan-price-socials');
+    waitFor($page, '@plan-price-mini');
 
     $page->assertMissing('@welcome-plan-offer')
-        ->assertSeeIn('@plan-price-socials', '$9.50')
+        ->assertSeeIn('@plan-price-mini', '$9.50')
         ->assertNoJavaScriptErrors();
 });
 
@@ -418,15 +418,15 @@ test('the plan step shows neither a banner nor an offer price for an offer witho
     $this->actingAs($user);
 
     $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@plan-price-socials');
+    waitFor($page, '@plan-price-mini');
 
     $page->assertMissing('@welcome-plan-offer')
-        ->assertSeeIn('@plan-price-unit-socials', '/month')
-        ->assertMissing('@plan-price-original-socials')
+        ->assertSeeIn('@plan-price-unit-mini', '/month')
+        ->assertMissing('@plan-price-original-mini')
         ->assertDontSee('offers.')
         ->assertNoJavaScriptErrors();
 
-    expect(trim((string) $page->text('@plan-price-socials')))->toBe('$19');
+    expect(trim((string) $page->text('@plan-price-mini')))->toBe('$11.90');
 });
 
 test('a trial without a card says so under the button', function () {
@@ -439,10 +439,10 @@ test('a trial without a card says so under the button', function () {
     $page = visit(route('app.welcome.plan'));
     waitFor($page, '@welcome-plan-terms');
 
-    $page->assertSeeIn('@plan-price-socials', 'Free')
+    $page->assertSeeIn('@plan-price-mini', 'Free')
         ->assertSeeIn('@welcome-plan-continue', 'Start free trial')
         ->assertSeeIn('@welcome-plan-terms', 'No credit card required')
         ->assertDontSee('Cancel anytime')
-        ->assertDontSee('Then $19/month')
+        ->assertDontSee('Then $11.90/month')
         ->assertNoJavaScriptErrors();
 });

@@ -99,8 +99,8 @@ test('opening the sidebar card shows the newest entry, records the view, hides t
         ->toBe([$newest->id]);
 
     $page->click('@changelog-back');
-    waitForState($page, '@changelog-item-2026-10-13-older', 'true');
-    $page->assertPresent('@changelog-unseen-2026-10-13-older')
+    waitFor($page, '@changelog-item-2026-10-13-older');
+    $page->assertVisible('@changelog-unseen-2026-10-13-older')
         ->assertMissing('@changelog-unseen-2026-10-14-newest');
 
     $page->click('@changelog-item-2026-10-13-older');
@@ -302,11 +302,11 @@ test('nothing of the changelog shows when it is turned off', function () {
             const trigger = await find('sidebar-support-trigger');
             trigger.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
             trigger.click();
-            await find('sidebar-support-community-title');
+            await find('sidebar-support-source-code');
         })();
     JS);
 
-    $page->assertPresent('@sidebar-support-community-title')
+    $page->assertPresent('@sidebar-support-help-title')
         ->assertMissing('@sidebar-support-changelog')
         ->assertMissing('@changelog-card')
         ->assertNoJavaScriptErrors();
