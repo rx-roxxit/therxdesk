@@ -6,7 +6,7 @@ description: Drive The RX Desk web app (the Laravel + Inertia/Vue dev stack on l
 # Verify The RX Desk
 
 Proves behavior in the running dev app: sign in as a throwaway Owner, click through a feature in Chromium
-(Playwright 1.61.1 in its official image), and keep the screenshots, trace and database rows as evidence. Tests
+(Playwright 1.65.1 in its official image), and keep the screenshots, trace and database rows as evidence. Tests
 (`tests/Browser`, Pest + Playwright) prove code paths in isolation; this proves the assembled app a user opens.
 
 Every helper lives in `scripts/` and runs from anywhere in the checkout. Set `V=.claude/skills/verify-therxdesk/scripts`
@@ -116,7 +116,7 @@ $V/drive.sh <journey> <folder>     # evidence in <folder>
 ```
 
 A journey is a key of `JOURNEYS` in `scripts/drive.ts`. `drive.sh` runs it with `node` in
-`mcr.microsoft.com/playwright:v1.61.1-noble` on the host network, against `http://localhost:8000`, with the repo
+`mcr.microsoft.com/playwright:v1.65.1-noble` on the host network, against `http://localhost:8000`, with the repo
 mounted read-only, the dev `node_modules` volume for `playwright`, and the fixture in `VERIFY_FIXTURE`. It prints
 `ok`/`FAIL` per check and exits non-zero when the journey fails.
 
