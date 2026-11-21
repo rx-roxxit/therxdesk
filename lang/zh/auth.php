@@ -25,31 +25,7 @@ return [
     ],
 
     'legal' => '继续即表示你同意我们的<a href=":terms_url" target="_blank">服务条款</a>和<a href=":privacy_url" target="_blank">隐私政策</a>。',
-
-    'reviews' => [
-        'eyebrow' => 'G2 上 5/5',
-        'heading' => '每天发布内容的人都爱用',
-        'paulo_dantas' => [
-            'role' => '创始人，chatadv.com.br',
-            'quote' => '在所有社交网络上创建、整理和分发内容都很简单。有了 MCP，我们可以用自己喜欢的 AI，比如 Claude 或 ChatGPT，直接创建内容并安排发布。',
-        ],
-        'diego' => [
-            'role' => 'CEO，Globalfy.com',
-            'quote' => '我喜欢 The RX Desk 的简单。我可以直接在 Claude 里写好帖子，再用 MCP 发布或安排到以后发送。五分钟就配置好了。',
-        ],
-        'luiz' => [
-            'role' => '内容创作者',
-            'quote' => '我很喜欢连接 AI 工具和智能体的过程，几分钟就能把内容安排到 9 个社交平台。',
-        ],
-        'pedro' => [
-            'role' => '创始人，templated.io',
-            'quote' => '使用和集成都非常简单。有了 MCP，我只需要在界面里连接社交账号。',
-        ],
-        'paulo_castellano' => [
-            'role' => '创始人，changelogfy.com',
-            'quote' => '我非常喜欢 MCP 集成，它让我可以在 Claude 或 ChatGPT 里管理所有社交媒体账号。',
-        ],
-    ],
+    'preview_alt' => 'The RX Desk 应用预览',
 
     'or_continue_with' => '或使用以下方式继续',
     'or_continue_with_email' => '或使用邮箱继续',

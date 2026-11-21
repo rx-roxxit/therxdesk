@@ -5,11 +5,8 @@ import { computed } from 'vue';
 
 import AppLogo from '@/components/AppLogo.vue';
 import LanguageSelect from '@/components/LanguageSelect.vue';
-import G2ReviewsLink from '@/components/reviews/G2ReviewsLink.vue';
-import ReviewCard from '@/components/reviews/ReviewCard.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useGuestLocale } from '@/composables/useGuestLocale';
-import { REVIEWS } from '@/lib/reviews';
 import type { Auth } from '@/types';
 
 const widthClass = {
@@ -22,14 +19,12 @@ withDefaults(
         title?: string;
         description?: string;
         status?: string;
-        panel?: boolean;
         width?: keyof typeof widthClass;
     }>(),
     {
         title: undefined,
         description: undefined,
         status: undefined,
-        panel: false,
         width: 'sm',
     },
 );
@@ -38,28 +33,10 @@ const page = usePage();
 
 const isGuest = computed(() => !(page.props.auth as Auth).user);
 const { locale, languages } = useGuestLocale();
-
-const reviews = REVIEWS.map((review, index) => ({
-    ...review,
-    rotation: index % 2 === 0 ? '-rotate-1' : 'rotate-1',
-}));
-
-// The marquee scrolls one full copy of the list, so a second copy fills the gap
-// it leaves behind. Both copies must render identically for the loop to be
-// seamless, hence the rotation living on the review rather than on the index.
-const loopedReviews = [
-    ...reviews.map((review) => ({ ...review, duplicate: false })),
-    ...reviews.map((review) => ({ ...review, duplicate: true })),
-];
 </script>
 
 <template>
-    <div
-        :class="[
-            'grid min-h-svh grid-cols-1 bg-muted',
-            panel ? 'lg:grid-cols-2' : '',
-        ]"
-    >
+    <div class="grid min-h-svh grid-cols-1 bg-muted min-[901px]:grid-cols-2">
         <div
             class="relative flex min-h-svh min-w-0 flex-col items-center px-4 pt-16 pb-8 sm:px-8 sm:py-16"
         >
@@ -75,7 +52,10 @@ const loopedReviews = [
             </div>
 
             <div
-                :class="['my-auto flex w-full flex-col gap-6', widthClass[width]]"
+                :class="[
+                    'my-auto flex w-full flex-col gap-6',
+                    widthClass[width],
+                ]"
                 data-testid="auth-content"
             >
                 <div class="flex flex-col items-center gap-4 text-center">
@@ -126,66 +106,27 @@ const loopedReviews = [
         </div>
 
         <div
-            v-if="panel"
-            class="hidden p-8 ps-0 lg:sticky lg:top-0 lg:block lg:h-svh lg:self-start"
+            class="min-w-0 px-4 pb-8 min-[901px]:sticky min-[901px]:top-0 min-[901px]:h-svh min-[901px]:self-start min-[901px]:p-8 min-[901px]:ps-0 sm:px-8"
+            data-testid="auth-preview"
         >
             <div
-                class="relative flex h-full flex-col items-center overflow-hidden rounded-[20px] bg-primary-subtle px-12 pt-14 text-center xl:px-16"
+                class="motion-auth-fade mx-auto h-auto max-w-sm overflow-hidden rounded-[20px] bg-primary-subtle p-4 min-[901px]:h-full min-[901px]:max-w-none"
             >
-
-                <h2
-                    class="motion-auth-reveal max-w-lg font-heading text-[clamp(30px,3.2vw,48px)] leading-[1.12] font-normal tracking-[-0.03em] text-balance text-foreground"
-                >
-                    {{ $t('auth.reviews.heading') }}
-                </h2>
-
-                <div
-                    class="motion-auth-fade relative mt-10 min-h-0 w-full flex-1 overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_82%,transparent)]"
-                >
-                    <div
-                        class="marquee mx-auto flex w-full max-w-md flex-col gap-4 text-start"
-                        data-testid="auth-reviews"
-                    >
-                        <ReviewCard
-                            v-for="(review, index) in loopedReviews"
-                            :key="`${review.key}-${index}`"
-                            :review="review"
-                            :class="review.rotation"
-                            :aria-hidden="review.duplicate"
-                        />
-                    </div>
-                </div>
-                <G2ReviewsLink
-                    class="motion-auth-fade my-6"
-                    data-testid="auth-reviews-g2-link"
-                />
+                <picture class="block h-full w-full">
+                    <source
+                        media="(max-width: 900px)"
+                        srcset="/images/rxdesk/auth-preview-phone.webp"
+                    />
+                    <img
+                        src="/images/rxdesk/auth-preview.webp"
+                        width="1052"
+                        height="888"
+                        :alt="$t('auth.preview_alt')"
+                        class="h-auto w-full rounded-xl object-contain min-[901px]:h-full"
+                        data-testid="auth-preview-image"
+                    />
+                </picture>
             </div>
         </div>
     </div>
 </template>
-
-<style scoped>
-@keyframes marquee-down {
-    0% {
-        transform: translateY(calc(-50% - 0.5rem));
-    }
-
-    100% {
-        transform: translateY(0);
-    }
-}
-
-.marquee {
-    animation: marquee-down 45s linear infinite;
-}
-
-.marquee:hover {
-    animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .marquee {
-        animation: none;
-    }
-}
-</style>

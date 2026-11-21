@@ -25,31 +25,7 @@ return [
     ],
 
     'legal' => 'Continuando, accetti i nostri <a href=":terms_url" target="_blank">Termini di servizio</a> e la nostra <a href=":privacy_url" target="_blank">Informativa sulla privacy</a>.',
-
-    'reviews' => [
-        'eyebrow' => '5/5 su G2',
-        'heading' => 'Amato da chi pubblica ogni giorno',
-        'paulo_dantas' => [
-            'role' => 'Fondatore, chatadv.com.br',
-            'quote' => 'La semplicità di creare, organizzare e distribuire contenuti su tutti i social. Con l\'MCP possiamo usare l\'IA che preferiamo, come Claude o ChatGPT, per creare i contenuti e programmarli da lì.',
-        ],
-        'diego' => [
-            'role' => 'CEO, Globalfy.com',
-            'quote' => 'Mi piace quanto sia facile usare The RX Desk. Posso creare un post direttamente in Claude e poi usare l\'MCP per pubblicarlo e programmarlo. L\'ho configurato in cinque minuti.',
-        ],
-        'luiz' => [
-            'role' => 'Content creator',
-            'quote' => 'Adoro quanto sia facile collegare i miei strumenti e agenti IA e programmare i post su 9 social in pochi minuti.',
-        ],
-        'pedro' => [
-            'role' => 'Fondatore, templated.io',
-            'quote' => 'Davvero facile da usare e da integrare. Con l\'MCP mi serve l\'interfaccia solo per collegare gli account social.',
-        ],
-        'paulo_castellano' => [
-            'role' => 'Fondatore, changelogfy.com',
-            'quote' => 'Adoro l\'integrazione MCP perché mi permette di gestire tutti i miei account social da Claude o ChatGPT.',
-        ],
-    ],
+    'preview_alt' => 'Un\'anteprima dell\'app The RX Desk',
 
     'or_continue_with' => 'Oppure continua con',
     'or_continue_with_email' => 'Oppure continua con l\'email',

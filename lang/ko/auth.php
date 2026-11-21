@@ -25,31 +25,7 @@ return [
     ],
 
     'legal' => '계속 진행하면 <a href=":terms_url" target="_blank">서비스 약관</a> 및 <a href=":privacy_url" target="_blank">개인정보 처리방침</a>에 동의하는 것입니다.',
-
-    'reviews' => [
-        'eyebrow' => 'G2에서 5/5',
-        'heading' => '매일 게시하는 사람들의 선택',
-        'paulo_dantas' => [
-            'role' => '창업자, chatadv.com.br',
-            'quote' => '모든 소셜 네트워크에 콘텐츠를 만들고 정리하고 배포하는 과정이 단순합니다. MCP 덕분에 Claude나 ChatGPT처럼 원하는 AI로 콘텐츠를 만들고 바로 예약할 수 있습니다.',
-        ],
-        'diego' => [
-            'role' => 'CEO, Globalfy.com',
-            'quote' => 'The RX Desk는 정말 쓰기 쉽습니다. Claude에서 바로 게시물을 만들고 MCP로 발행하거나 예약할 수 있습니다. 설정은 5분 만에 끝났습니다.',
-        ],
-        'luiz' => [
-            'role' => '콘텐츠 크리에이터',
-            'quote' => 'AI 도구와 에이전트를 연결하고 9개 소셜 미디어에 게시물을 몇 분 만에 예약할 수 있어서 정말 좋습니다.',
-        ],
-        'pedro' => [
-            'role' => '창업자, templated.io',
-            'quote' => '사용하고 연동하기가 정말 쉽습니다. MCP 덕분에 소셜 계정을 연결할 때만 화면을 열면 됩니다.',
-        ],
-        'paulo_castellano' => [
-            'role' => '창업자, changelogfy.com',
-            'quote' => 'MCP 연동이 정말 마음에 듭니다. Claude나 ChatGPT에서 모든 소셜 미디어 계정을 관리할 수 있습니다.',
-        ],
-    ],
+    'preview_alt' => 'The RX Desk 앱 미리보기',
 
     'or_continue_with' => '또는 다음으로 계속하기',
     'or_continue_with_email' => '또는 이메일로 계속하기',
