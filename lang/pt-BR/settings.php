@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Ações irreversíveis.',
         'delete_warning' => 'Atenção',
         'delete_title' => 'Excluir este workspace',
-        'delete_description' => 'Exclui este workspace de forma permanente, incluindo posts, contas conectadas e mídia. Você passa a ser cobrado por um workspace a menos.',
         'delete_description_self_hosted' => 'Exclui permanentemente este workspace, seus posts, contas conectadas e mídia.',
         'delete_only_description' => 'Você não pode excluir seu único workspace. Cancele a assinatura na cobrança para parar de pagar, ou exclua sua conta em Autenticação para cancelar a cobrança e remover tudo permanentemente.',
         'delete_go_to_billing' => 'Ir para cobrança',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Excluir workspace',
         'delete_cancel' => 'Cancelar',
         'delete_confirm_title' => 'Excluir workspace?',
-        'delete_confirm_description' => 'Isso exclui permanentemente o workspace e todos os seus dados. Sua cobrança será atualizada para refletir um workspace a menos.',
         'delete_confirm_description_self_hosted' => 'Isso exclui permanentemente o workspace e todos os seus dados.',
     ],
 

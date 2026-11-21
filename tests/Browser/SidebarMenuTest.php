@@ -18,6 +18,29 @@ function waitForSidebarTestId(mixed $page, string $testId): void
     waitForWebFonts($page);
 }
 
+/**
+ * The Help item is a Radix sub-trigger, which opens on a pointer move before the click.
+ */
+function openSidebarHelpMenu(mixed $page): void
+{
+    $page->script(<<<'JS'
+        (async () => {
+            const find = async (testId) => {
+                for (let attempt = 0; attempt < 100; attempt++) {
+                    const element = document.querySelector(`[data-testid="${testId}"]`);
+                    if (element) return element;
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                }
+            };
+            (await find('sidebar-workspace-menu')).click();
+            const trigger = await find('sidebar-support-trigger');
+            trigger.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+            trigger.click();
+            await find('sidebar-support-source-code');
+        })();
+    JS);
+}
+
 test('account owners see settings, channels and plans and billing in the sidebar menu', function () {
     config(['trypost.self_hosted' => false]);
 
@@ -452,3 +475,27 @@ test('on a phone a global bar with the menu button and logo sits above the conte
 
     $page->assertNoJavaScriptErrors();
 })->with(['app.posts.index']);
+
+test('the help menu has no chat support item in selling mode', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = User::factory()->create();
+    $workspace = Workspace::factory()->create([
+        'account_id' => $user->account_id,
+        'user_id' => $user->id,
+    ]);
+    $workspace->members()->attach($user->id, membershipPivot('admin'));
+    $user->update(['current_workspace_id' => $workspace->id]);
+    subscribeAccount($user->account);
+
+    $this->actingAs($user->fresh());
+
+    $page = visit(route('app.calendar'))->resize(1280, 900);
+    waitForSidebarTestId($page, 'sidebar-workspace-menu');
+
+    openSidebarHelpMenu($page);
+
+    $page->assertVisible('@sidebar-support-source-code')
+        ->assertMissing('@sidebar-support-chat')
+        ->assertNoJavaScriptErrors();
+});

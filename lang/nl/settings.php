@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Onomkeerbare acties.',
         'delete_warning' => 'Waarschuwing',
         'delete_title' => 'Deze workspace verwijderen',
-        'delete_description' => 'Verwijdert deze workspace permanent, inclusief posts, gekoppelde accounts en media. Je wordt voor één workspace minder gefactureerd.',
         'delete_description_self_hosted' => 'Verwijdert deze workspace permanent, inclusief posts, gekoppelde accounts en media.',
         'delete_only_description' => 'Je kunt je enige workspace niet verwijderen. Zeg je abonnement op in facturatie om te stoppen met betalen, of verwijder je account bij Authenticatie om de facturatie te annuleren en alles permanent te wissen.',
         'delete_go_to_billing' => 'Naar facturatie',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Workspace verwijderen',
         'delete_cancel' => 'Annuleren',
         'delete_confirm_title' => 'Workspace verwijderen?',
-        'delete_confirm_description' => 'Dit verwijdert de workspace en al zijn gegevens permanent. Je facturatie wordt bijgewerkt met één workspace minder.',
         'delete_confirm_description_self_hosted' => 'Dit verwijdert de workspace en al zijn gegevens permanent.',
     ],
 

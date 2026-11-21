@@ -174,7 +174,6 @@ return [
         'danger_description' => '不可撤销的操作。',
         'delete_warning' => '警告',
         'delete_title' => '删除此工作区',
-        'delete_description' => '永久删除此工作区及其全部内容（帖子、已连接账户和媒体）。之后将按少一个工作区计费。',
         'delete_description_self_hosted' => '永久删除此工作区及其帖子、已连接账户和媒体。',
         'delete_only_description' => '无法删除唯一的工作区。可在账单中取消订阅以停止付费，或在身份验证设置中删除账户以取消计费并永久删除全部数据。',
         'delete_go_to_billing' => '前往账单',
@@ -183,7 +182,6 @@ return [
         'delete_action' => '删除工作区',
         'delete_cancel' => '取消',
         'delete_confirm_title' => '删除工作区？',
-        'delete_confirm_description' => '这将永久删除工作区及其所有数据。账单将更新为少一个工作区。',
         'delete_confirm_description_self_hosted' => '这将永久删除工作区及其所有数据。',
     ],
 

@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Незворотні дії.',
         'delete_warning' => 'Увага',
         'delete_title' => 'Видалити цей workspace',
-        'delete_description' => 'Назавжди видаляє цей workspace разом із постами, підключеними акаунтами та медіа. З вас стягуватиметься оплата на один workspace менше.',
         'delete_description_self_hosted' => 'Назавжди видаляє цей workspace, його пости, підключені акаунти та медіа.',
         'delete_only_description' => 'Ви не можете видалити свій єдиний workspace. Скасуйте підписку в розділі оплати, щоб перестати платити, або видаліть обліковий запис в Автентифікації, щоб скасувати оплату та назавжди видалити все.',
         'delete_go_to_billing' => 'Перейти до оплати',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Видалити workspace',
         'delete_cancel' => 'Скасувати',
         'delete_confirm_title' => 'Видалити workspace?',
-        'delete_confirm_description' => 'Це назавжди видалить workspace і всі його дані. Оплату буде оновлено з урахуванням одного workspace менше.',
         'delete_confirm_description_self_hosted' => 'Це назавжди видалить workspace і всі його дані.',
     ],
 

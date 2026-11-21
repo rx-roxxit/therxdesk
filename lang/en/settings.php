@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Irreversible actions.',
         'delete_warning' => 'Warning',
         'delete_title' => 'Delete this workspace',
-        'delete_description' => 'Permanently deletes this workspace and everything in it — posts, connected accounts, and media. You will be charged for one fewer workspace.',
         'delete_description_self_hosted' => 'Permanently deletes this workspace, its posts, connected accounts, and media.',
         'delete_only_description' => 'You cannot delete your only workspace. Cancel your subscription in billing to stop paying, or delete your account in Authentication settings to cancel billing and permanently remove everything.',
         'delete_go_to_billing' => 'Go to billing',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Delete workspace',
         'delete_cancel' => 'Cancel',
         'delete_confirm_title' => 'Delete workspace?',
-        'delete_confirm_description' => 'This permanently deletes the workspace and all of its data. Your billing will update to reflect one fewer workspace.',
         'delete_confirm_description_self_hosted' => 'This permanently deletes the workspace and all of its data.',
     ],
 
