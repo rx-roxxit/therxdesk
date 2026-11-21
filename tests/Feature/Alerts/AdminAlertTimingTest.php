@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Alerts\AdminAlertKey;
 use App\Enums\Alerts\AlertLevel;
 use App\Mail\AdminAlert as AdminAlertMail;
+use App\Models\AdminAlert;
 use App\Services\Alerts\AdminAlertNotifier;
 use Illuminate\Support\Facades\Mail;
 
@@ -29,6 +30,17 @@ test('a TODAY alert is sent once, quiet for six hours, then sent again', functio
 
     Mail::assertQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->level === AlertLevel::Today
         && $mail->key === AdminAlertKey::CapacityLoad);
+});
+
+test('an URGENT alert that never went out is sent on the next raise', function () {
+    AdminAlert::factory()->open()->create([
+        'key' => AdminAlertKey::DiskGuard->value,
+        'last_notified_at' => null,
+    ]);
+
+    app(AdminAlertNotifier::class)->raise(AdminAlertKey::DiskGuard, ['free' => '2GB', 'threshold' => '10GB']);
+
+    Mail::assertQueuedCount(1);
 });
 
 test('an URGENT alert is sent once, and RESOLVED once when it clears', function () {

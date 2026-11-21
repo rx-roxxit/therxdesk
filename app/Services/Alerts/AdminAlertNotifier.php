@@ -43,8 +43,11 @@ class AdminAlertNotifier
             $alert->save();
 
             if ($key->severity() === AdminAlertSeverity::Urgent) {
-                if (! $wasOpen) {
+                // Re-send only while it has never gone out, so a failed mail
+                // is retried on the next check instead of losing the URGENT.
+                if (! $wasOpen || $alert->last_notified_at === null) {
                     $this->send(AlertLevel::Urgent, $key, $context);
+                    $alert->forceFill(['last_notified_at' => $now])->save();
                 }
 
                 return;
@@ -101,6 +104,10 @@ class AdminAlertNotifier
     private function send(AlertLevel $level, ?AdminAlertKey $key, array $context, array $items = [], bool $isResolved = false): void
     {
         $recipient = (string) config('rxdesk.alerts.recipient');
+
+        if (blank($recipient)) {
+            return;
+        }
 
         Mail::to($recipient)
             ->locale((string) config('app.locale'))

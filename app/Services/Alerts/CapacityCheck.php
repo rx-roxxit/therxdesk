@@ -7,10 +7,12 @@ namespace App\Services\Alerts;
 use App\Enums\Alerts\AdminAlertKey;
 use App\Models\NightwatchIssue;
 use App\Services\Metrics\HostMetrics;
+use App\Services\Metrics\QueueHealth;
 use App\Services\Metrics\QueueMetrics;
 use App\Services\Storage\AccountStorage;
 use App\Services\Storage\DiskStatus;
 use App\Support\ByteSize;
+use InvalidArgumentException;
 
 /**
  * Reads the host, the queue, the disk and Nightwatch once and raises or clears
@@ -29,7 +31,7 @@ class CapacityCheck
     {
         $this->checkRam($this->host->usedMemoryPercent());
         $this->checkLoad($this->host->loadAverage5());
-        $this->checkWait($this->queues->health()->maxWaitSeconds());
+        $this->checkWait($this->queues->health());
         $this->checkDisk($this->storage->diskStatus());
         $this->checkNightwatchBurst();
     }
@@ -66,8 +68,13 @@ class CapacityCheck
         $this->notifier->clear(AdminAlertKey::CapacityLoad);
     }
 
-    private function checkWait(float $seconds): void
+    private function checkWait(QueueHealth $queue): void
     {
+        if (! $queue->available) {
+            return;
+        }
+
+        $seconds = $queue->maxWaitSeconds();
         $threshold = (int) config('rxdesk.alerts.capacity.wait_seconds');
 
         if ($seconds > $threshold) {
@@ -84,7 +91,7 @@ class CapacityCheck
 
     private function checkDisk(DiskStatus $disk): void
     {
-        $margin = ByteSize::parse((string) config('rxdesk.alerts.capacity.disk_urgent_margin')) ?? 0;
+        $margin = $this->size('disk_urgent_margin');
 
         // Near the guard threshold is URGENT, and suppresses the lower alert.
         if ($disk->free < $disk->threshold + $margin) {
@@ -99,7 +106,7 @@ class CapacityCheck
 
         $this->notifier->clear(AdminAlertKey::DiskGuard);
 
-        $lowFree = ByteSize::parse((string) config('rxdesk.alerts.capacity.disk_free')) ?? 0;
+        $lowFree = $this->size('disk_free');
 
         if ($disk->free < $lowFree) {
             $this->notifier->raise(AdminAlertKey::CapacityDiskFree, [
@@ -111,6 +118,14 @@ class CapacityCheck
         }
 
         $this->notifier->clear(AdminAlertKey::CapacityDiskFree);
+    }
+
+    private function size(string $key): int
+    {
+        $configured = (string) config("rxdesk.alerts.capacity.{$key}");
+
+        return ByteSize::parse($configured)
+            ?? throw new InvalidArgumentException("rxdesk.alerts.capacity.{$key} \"{$configured}\" is not a size such as 30GB.");
     }
 
     private function checkNightwatchBurst(): void

@@ -19,7 +19,13 @@
         <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.issues') }}</p>
         <x-list>
           @foreach($items['issues'] as $issue)
-            <li>@{{ $issue['title'] }}</li>
+            <li>
+              @if($issue['url'])
+                <a href="@{{ $issue['url'] }}">@{{ $issue['title'] }}</a>
+              @else
+                @{{ $issue['title'] }}
+              @endif
+            </li>
           @endforeach
         </x-list>
       @endif
@@ -29,13 +35,13 @@
         <p class="m-0 mt-1 leading-6">@{{ trans_choice('rxdesk.alerts.digest.failed_jobs_line', $items['failed_jobs']) }}</p>
       @endif
     @else
-      <p class="m-0 leading-6">
-        @{{ __('rxdesk.alerts.messages.' . $key->value, $context) }}
-      </p>
-
       @if($isResolved)
-        <p class="m-0 mt-6 leading-6">
+        <p class="m-0 leading-6">
           @{{ __('rxdesk.alerts.resolved_body') }}
+        </p>
+      @else
+        <p class="m-0 leading-6">
+          @{{ __('rxdesk.alerts.messages.' . $key->value, $context) }}
         </p>
       @endif
     @endif

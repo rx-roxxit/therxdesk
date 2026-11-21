@@ -60,7 +60,7 @@ receiver, so the heartbeat pings `http://heartbeat:8080/hb`, never Better Stack.
 
    `$V/mail.sh wait --to admin@therxdesk.com --subject '[RESOLVED]'`.
 4. Health: `$V/internal.sh GET /health --token admin`. It answers `HTTP 200` with `queue`,
-   `backup` (always `null` until #52 fills it), `disk` and `nightwatch` figures.
+   `backup` (always `null` until the hourly backup job fills it), `disk` and `nightwatch` figures.
 5. Heartbeat from the queue. Dispatch the job, run one worker, and read the receiver's log:
 
    ```sh

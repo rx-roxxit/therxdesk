@@ -27,7 +27,7 @@ class HealthReport
     {
         return [
             'queue' => $this->queue(),
-            // #52 (hourly backups) fills this; until it exists there is no honest value.
+            // The hourly backup job fills this once it exists; until then there is no honest value.
             'backup' => null,
             'disk' => $this->disk(),
             'nightwatch' => $this->nightwatch(),

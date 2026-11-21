@@ -49,7 +49,7 @@ class RecordNightwatchEvent
                 'status' => data_get($issue, 'status'),
                 'priority' => data_get($issue, 'priority'),
                 'url' => data_get($issue, 'url'),
-                'environment' => data_get($issue, 'environment', data_get($payload, 'environment')),
+                'environment' => $this->environment($issue, $payload),
                 'details' => $issue,
                 'opened_at' => now(),
                 'resolved_at' => null,
@@ -64,6 +64,30 @@ class RecordNightwatchEvent
         if ($threshold > 0 && $count >= $threshold) {
             $this->notifier->raise(AdminAlertKey::NightwatchBurst, ['count' => $count]);
         }
+    }
+
+    /**
+     * Nightwatch sends the environment as an object beside the issue, but an
+     * older payload may carry a plain string.
+     *
+     * @param  array<string, mixed>  $issue
+     * @param  array<string, mixed>  $payload
+     */
+    private function environment(array $issue, array $payload): ?string
+    {
+        $environment = data_get($issue, 'environment', data_get($payload, 'environment'));
+
+        if (is_string($environment)) {
+            return $environment;
+        }
+
+        if (is_array($environment)) {
+            $name = data_get($environment, 'name');
+
+            return is_string($name) ? $name : null;
+        }
+
+        return null;
     }
 
     /**

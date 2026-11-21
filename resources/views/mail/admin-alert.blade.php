@@ -73,7 +73,13 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 @if(! empty($items['issues']))
                 <p style="margin: 24px 0 0; font-weight: 600; line-height: 24px">{{ __('rxdesk.alerts.digest.issues') }}</p>
                 <ul style="margin: 8px 0 0; padding-left: 20px; padding-right: 20px; line-height: 24px"> @foreach($items['issues'] as $issue)
-                  <li>{{ $issue['title'] }}</li>
+                  <li>
+                    @if($issue['url'])
+                    <a href="{{ $issue['url'] }}">{{ $issue['title'] }}</a>
+                    @else
+                    {{ $issue['title'] }}
+                    @endif
+                  </li>
                   @endforeach
                 </ul>
                 @endif
@@ -82,12 +88,13 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 <p style="margin: 4px 0 0; line-height: 24px">{{ trans_choice('rxdesk.alerts.digest.failed_jobs_line', $items['failed_jobs']) }}</p>
                 @endif
                 @else
+                @if($isResolved)
+                <p style="margin: 0; line-height: 24px">
+                  {{ __('rxdesk.alerts.resolved_body') }}
+                </p>
+                @else
                 <p style="margin: 0; line-height: 24px">
                   {{ __('rxdesk.alerts.messages.' . $key->value, $context) }}
-                </p>
-                @if($isResolved)
-                <p style="margin: 24px 0 0; line-height: 24px">
-                  {{ __('rxdesk.alerts.resolved_body') }}
                 </p>
                 @endif
                 @endif

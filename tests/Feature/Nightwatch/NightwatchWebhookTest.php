@@ -60,6 +60,24 @@ test('a signed issue.opened records the issue', function () {
     ]);
 });
 
+test('the real payload shape stores the environment name', function () {
+    $body = (string) json_encode([
+        'event' => 'issue.opened',
+        'payload' => [
+            'issue' => ['id' => 'issue-real', 'title' => 'Boom'],
+            'environment' => ['id' => 'env-1', 'name' => 'production'],
+        ],
+    ]);
+
+    $this->call('POST', route('webhooks.nightwatch'), [], [], [], $this->transformHeadersToServerVars([
+        'Content-Type' => 'application/json',
+        'Accept' => 'application/json',
+        'Nightwatch-Signature' => hash_hmac('sha256', $body, 'nightwatch-secret'),
+    ]), $body)->assertOk();
+
+    expect(NightwatchIssue::query()->where('issue_id', 'issue-real')->firstOrFail()->environment)->toBe('production');
+});
+
 test('an unsigned call is refused and records nothing', function () {
     ($this->nightwatch)('issue.opened', ['id' => 'issue-1', 'title' => 'Boom'], null)
         ->assertUnauthorized();

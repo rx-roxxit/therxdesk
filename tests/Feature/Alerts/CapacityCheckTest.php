@@ -82,6 +82,16 @@ test('an URGENT disk alert clears the 30 GB TODAY alert', function () {
     Mail::assertNotQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->key === AdminAlertKey::CapacityDiskFree);
 });
 
+test('an unreadable queue leaves the wait alert as it is', function () {
+    AdminAlert::factory()->open()->create(['key' => AdminAlertKey::CapacityWait->value]);
+    FakeQueueMetrics::bind([], available: false);
+
+    app(CapacityCheck::class)->run();
+
+    expect(AdminAlert::query()->where('key', AdminAlertKey::CapacityWait->value)->first()->is_open)->toBeTrue();
+    Mail::assertNothingQueued();
+});
+
 test('healthy metrics send nothing', function () {
     FakeHostMetrics::bind(memoryPercent: 10.0, load: 0.5);
     FakeQueueMetrics::bind(['redis:default' => 5.0]);

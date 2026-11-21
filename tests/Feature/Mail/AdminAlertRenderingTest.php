@@ -24,6 +24,21 @@ test('the alert email renders in every locale', function (string $locale) {
         ->and($html)->toContain(e(__('rxdesk.alerts.conditions.capacity_ram')));
 })->with(Locale::values());
 
+test('a resolved alert shows only the cleared copy', function () {
+    app()->setLocale('en');
+
+    $html = (new AdminAlertMail(
+        AlertLevel::Resolved,
+        AdminAlertKey::DiskGuard,
+        ['free' => '2GB', 'threshold' => '10GB'],
+        [],
+        true,
+    ))->render();
+
+    expect($html)->toContain(__('rxdesk.alerts.resolved_body'))
+        ->and($html)->not->toContain('2GB');
+});
+
 test('the subject carries the level and the title', function (AlertLevel $level, string $prefix) {
     app()->setLocale('en');
 
