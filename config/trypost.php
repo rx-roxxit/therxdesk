@@ -67,8 +67,8 @@ return [
     */
 
     'legal' => [
-        'terms_url' => $url('LEGAL_TERMS_URL', 'https://trypost.it/terms'),
-        'privacy_url' => $url('LEGAL_PRIVACY_URL', 'https://trypost.it/privacy'),
+        'terms_url' => $url('LEGAL_TERMS_URL', 'https://therxdesk.com/terms'),
+        'privacy_url' => $url('LEGAL_PRIVACY_URL', 'https://therxdesk.com/privacy'),
     ],
 
     /*
