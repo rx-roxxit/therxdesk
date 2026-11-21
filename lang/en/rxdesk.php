@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'High memory use',
+            'capacity_load' => 'High server load',
+            'capacity_wait' => 'Long queue wait',
+            'capacity_disk_free' => 'Low free disk space',
+            'disk_guard' => 'Disk space nearly exhausted',
+            'nightwatch_burst' => 'Burst of new issues',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Server memory is at :percent%, over the :threshold% alert level.',
+            'capacity_load' => 'The 5-minute load average is :load, over the alert level of :threshold.',
+            'capacity_wait' => 'The longest queue wait is :minutes minutes, over the alert level of :threshold_minutes minutes.',
+            'capacity_disk_free' => 'Free disk space is :free, under the alert level of :threshold.',
+            'disk_guard' => 'Free disk space is :free, near the Disk guard threshold of :threshold. Uploads will stop soon.',
+            'nightwatch_burst' => ':count issues opened in Nightwatch within the last hour.',
+        ],
+        'resolved_body' => 'This alert cleared. It will be raised again if the condition returns.',
+        'digest' => [
+            'title' => 'Daily digest',
+            'cleared' => 'Alerts cleared',
+            'cleared_line' => 'These alerts cleared in the last 24 hours.',
+            'issues' => 'New issues',
+            'failed_jobs' => 'Failed jobs',
+            'failed_jobs_line' => '{1} One failed job yesterday|[0,*] :count failed jobs yesterday',
+        ],
+        'preview' => [
+            'urgent' => 'A problem needs attention now.',
+            'today' => 'A problem needs attention today.',
+            'resolved' => 'An alert cleared.',
+            'digest' => 'Your daily summary.',
+        ],
+        'sent_at' => 'Sent :time',
     ],
 ];

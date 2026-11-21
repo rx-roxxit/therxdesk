@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Υψηλή χρήση μνήμης',
+            'capacity_load' => 'Υψηλό φορτίο διακομιστή',
+            'capacity_wait' => 'Μεγάλη αναμονή στην ουρά',
+            'capacity_disk_free' => 'Λίγος ελεύθερος χώρος δίσκου',
+            'disk_guard' => 'Ο χώρος δίσκου σχεδόν εξαντλήθηκε',
+            'nightwatch_burst' => 'Έξαρση νέων ζητημάτων',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Η μνήμη του διακομιστή είναι στο :percent%, πάνω από το όριο ειδοποίησης του :threshold%.',
+            'capacity_load' => 'Το μέσο φορτίο 5 λεπτών είναι :load, πάνω από το όριο ειδοποίησης :threshold.',
+            'capacity_wait' => 'Η μεγαλύτερη αναμονή στην ουρά είναι :minutes λεπτά, πάνω από το όριο ειδοποίησης :threshold_minutes λεπτά.',
+            'capacity_disk_free' => 'Ο ελεύθερος χώρος δίσκου είναι :free, κάτω από το όριο ειδοποίησης :threshold.',
+            'disk_guard' => 'Ο ελεύθερος χώρος δίσκου είναι :free, κοντά στο όριο προστασίας δίσκου :threshold. Οι μεταφορτώσεις θα σταματήσουν σύντομα.',
+            'nightwatch_burst' => 'Την τελευταία ώρα άνοιξαν :count ζητήματα στο Nightwatch.',
+        ],
+        'resolved_body' => 'Αυτή η ειδοποίηση έκλεισε. Θα σταλεί ξανά αν η συνθήκη επανέλθει.',
+        'digest' => [
+            'title' => 'Ημερήσια σύνοψη',
+            'cleared' => 'Ειδοποιήσεις που έκλεισαν',
+            'cleared_line' => 'Αυτές οι ειδοποιήσεις έκλεισαν τις τελευταίες 24 ώρες.',
+            'issues' => 'Νέα ζητήματα',
+            'failed_jobs' => 'Αποτυχημένες εργασίες',
+            'failed_jobs_line' => '{1} Μία εργασία απέτυχε χθες|[0,*] :count εργασίες απέτυχαν χθες',
+        ],
+        'preview' => [
+            'urgent' => 'Ένα πρόβλημα χρειάζεται προσοχή τώρα.',
+            'today' => 'Ένα πρόβλημα χρειάζεται προσοχή σήμερα.',
+            'resolved' => 'Μια ειδοποίηση έκλεισε.',
+            'digest' => 'Η ημερήσια σύνοψή σας.',
+        ],
+        'sent_at' => 'Στάλθηκε :time',
     ],
 ];

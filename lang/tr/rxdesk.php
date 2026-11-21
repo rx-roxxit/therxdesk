@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Yüksek bellek kullanımı',
+            'capacity_load' => 'Yüksek sunucu yükü',
+            'capacity_wait' => 'Uzun kuyruk beklemesi',
+            'capacity_disk_free' => 'Az boş disk alanı',
+            'disk_guard' => 'Disk alanı neredeyse tükendi',
+            'nightwatch_burst' => 'Yeni sorunlarda artış',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Sunucu belleği %:percent seviyesinde, %:threshold uyarı eşiğinin üzerinde.',
+            'capacity_load' => '5 dakikalık ortalama yük :load, :threshold uyarı eşiğinin üzerinde.',
+            'capacity_wait' => 'Kuyruktaki en uzun bekleme :minutes dakika, :threshold_minutes dakika uyarı eşiğinin üzerinde.',
+            'capacity_disk_free' => 'Boş disk alanı :free, :threshold uyarı eşiğinin altında.',
+            'disk_guard' => 'Boş disk alanı :free, :threshold disk koruma eşiğine yakın. Yüklemeler yakında duracak.',
+            'nightwatch_burst' => 'Son bir saatte Nightwatch\'ta :count sorun açıldı.',
+        ],
+        'resolved_body' => 'Bu uyarı kapandı. Koşul tekrarlarsa yeniden gönderilecek.',
+        'digest' => [
+            'title' => 'Günlük özet',
+            'cleared' => 'Kapanan uyarılar',
+            'cleared_line' => 'Bu uyarılar son 24 saatte kapandı.',
+            'issues' => 'Yeni sorunlar',
+            'failed_jobs' => 'Başarısız işler',
+            'failed_jobs_line' => '{1} Dün bir iş başarısız oldu|[0,*] Dün :count iş başarısız oldu',
+        ],
+        'preview' => [
+            'urgent' => 'Bir sorun hemen ilgi bekliyor.',
+            'today' => 'Bir sorun bugün ilgi bekliyor.',
+            'resolved' => 'Bir uyarı kapandı.',
+            'digest' => 'Günlük özetiniz.',
+        ],
+        'sent_at' => 'Gönderildi :time',
     ],
 ];

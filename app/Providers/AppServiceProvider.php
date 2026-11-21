@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Mcp\ListChatGptEgressRanges;
 use App\Models\AccessToken;
 use App\Models\Account;
+use App\Models\AdminAlert;
 use App\Models\AnalyticsAccountDailySnapshot;
 use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
@@ -20,6 +21,7 @@ use App\Models\IdeaStage;
 use App\Models\Invite;
 use App\Models\Media;
 use App\Models\MediaSourceConnection;
+use App\Models\NightwatchIssue;
 use App\Models\NotificationPreference;
 use App\Models\Offer;
 use App\Models\Plan;
@@ -43,6 +45,10 @@ use App\Models\WebhookLog;
 use App\Models\Workspace;
 use App\Models\WorkspaceLabel;
 use App\Models\WorkspaceSignature;
+use App\Services\Metrics\HorizonQueueMetrics;
+use App\Services\Metrics\HostMetrics;
+use App\Services\Metrics\ProcHostMetrics;
+use App\Services\Metrics\QueueMetrics;
 use App\Services\PostHogService;
 use App\Services\Storage\DiskSpace;
 use App\Services\Storage\LocalDiskSpace;
@@ -86,6 +92,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(DiskSpace::class, LocalDiskSpace::class);
+        $this->app->bind(HostMetrics::class, ProcHostMetrics::class);
+        $this->app->bind(QueueMetrics::class, HorizonQueueMetrics::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
@@ -133,6 +141,7 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'accessToken' => AccessToken::class,
             'account' => Account::class,
+            'adminAlert' => AdminAlert::class,
             'analyticsAccountDailySnapshot' => AnalyticsAccountDailySnapshot::class,
             'analyticsPublication' => AnalyticsPublication::class,
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,
@@ -145,6 +154,7 @@ class AppServiceProvider extends ServiceProvider
             'invite' => Invite::class,
             'media' => Media::class,
             'mediaSourceConnection' => MediaSourceConnection::class,
+            'nightwatchIssue' => NightwatchIssue::class,
             'notificationPreference' => NotificationPreference::class,
             'offer' => Offer::class,
             'plan' => Plan::class,

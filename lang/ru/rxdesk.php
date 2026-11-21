@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Высокое использование памяти',
+            'capacity_load' => 'Высокая нагрузка на сервер',
+            'capacity_wait' => 'Долгое ожидание в очереди',
+            'capacity_disk_free' => 'Мало свободного места на диске',
+            'disk_guard' => 'Место на диске почти исчерпано',
+            'nightwatch_burst' => 'Всплеск новых проблем',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Память сервера занята на :percent%, выше порога оповещения :threshold%.',
+            'capacity_load' => 'Средняя нагрузка за 5 минут — :load, выше порога оповещения :threshold.',
+            'capacity_wait' => 'Самое долгое ожидание в очереди — :minutes мин, выше порога оповещения :threshold_minutes мин.',
+            'capacity_disk_free' => 'Свободно :free на диске, меньше порога оповещения :threshold.',
+            'disk_guard' => 'Свободно :free на диске, близко к порогу защиты диска :threshold. Загрузки скоро остановятся.',
+            'nightwatch_burst' => 'За последний час в Nightwatch открыто проблем: :count.',
+        ],
+        'resolved_body' => 'Это оповещение снято. Оно вернётся, если условие повторится.',
+        'digest' => [
+            'title' => 'Ежедневная сводка',
+            'cleared' => 'Оповещения сняты',
+            'cleared_line' => 'Эти оповещения сняты за последние 24 часа.',
+            'issues' => 'Новые проблемы',
+            'failed_jobs' => 'Неудачные задания',
+            'failed_jobs_line' => '{1} Вчера одно задание завершилось ошибкой|[2,4] Вчера :count задания завершились ошибкой|[0,*] Вчера :count заданий завершились ошибкой',
+        ],
+        'preview' => [
+            'urgent' => 'Проблема требует немедленного внимания.',
+            'today' => 'Проблема требует внимания сегодня.',
+            'resolved' => 'Оповещение снято.',
+            'digest' => 'Ваша ежедневная сводка.',
+        ],
+        'sent_at' => 'Отправлено :time',
     ],
 ];

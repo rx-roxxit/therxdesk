@@ -1,0 +1,47 @@
+<x-main>
+  <x-message>
+    <x-heading>
+      @{{ $title }}
+    </x-heading>
+
+    @if($isDigest)
+      @if(! empty($items['cleared']))
+        <p class="m-0 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.cleared') }}</p>
+        <p class="m-0 mt-1 leading-6">@{{ __('rxdesk.alerts.digest.cleared_line') }}</p>
+        <x-list>
+          @foreach($items['cleared'] as $clearedKey)
+            <li>@{{ __('rxdesk.alerts.conditions.' . $clearedKey) }}</li>
+          @endforeach
+        </x-list>
+      @endif
+
+      @if(! empty($items['issues']))
+        <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.issues') }}</p>
+        <x-list>
+          @foreach($items['issues'] as $issue)
+            <li>@{{ $issue['title'] }}</li>
+          @endforeach
+        </x-list>
+      @endif
+
+      @if(! empty($items['failed_jobs']))
+        <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.failed_jobs') }}</p>
+        <p class="m-0 mt-1 leading-6">@{{ trans_choice('rxdesk.alerts.digest.failed_jobs_line', $items['failed_jobs']) }}</p>
+      @endif
+    @else
+      <p class="m-0 leading-6">
+        @{{ __('rxdesk.alerts.messages.' . $key->value, $context) }}
+      </p>
+
+      @if($isResolved)
+        <p class="m-0 mt-6 leading-6">
+          @{{ __('rxdesk.alerts.resolved_body') }}
+        </p>
+      @endif
+    @endif
+
+    <p class="m-0 mt-6 text-sm leading-5">
+      @{{ __('rxdesk.alerts.sent_at', ['time' => $sentAt]) }}
+    </p>
+  </x-message>
+</x-main>

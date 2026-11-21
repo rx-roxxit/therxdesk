@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => '内存使用率高',
+            'capacity_load' => '服务器负载高',
+            'capacity_wait' => '队列等待时间长',
+            'capacity_disk_free' => '磁盘可用空间不足',
+            'disk_guard' => '磁盘空间即将耗尽',
+            'nightwatch_burst' => '新问题激增',
+        ],
+        'messages' => [
+            'capacity_ram' => '服务器内存使用率为 :percent%，超过 :threshold% 的告警阈值。',
+            'capacity_load' => '5 分钟平均负载为 :load，超过 :threshold 的告警阈值。',
+            'capacity_wait' => '队列最长等待时间为 :minutes 分钟，超过 :threshold_minutes 分钟的告警阈值。',
+            'capacity_disk_free' => '磁盘可用空间为 :free，低于 :threshold 的告警阈值。',
+            'disk_guard' => '磁盘可用空间为 :free，接近 :threshold 的磁盘保护阈值。上传即将停止。',
+            'nightwatch_burst' => '过去一小时内 Nightwatch 新增了 :count 个问题。',
+        ],
+        'resolved_body' => '此告警已解除。如果该情况再次出现，会再次通知。',
+        'digest' => [
+            'title' => '每日摘要',
+            'cleared' => '已解除的告警',
+            'cleared_line' => '这些告警在过去 24 小时内解除。',
+            'issues' => '新问题',
+            'failed_jobs' => '失败的任务',
+            'failed_jobs_line' => '{1} 昨天有 1 个任务失败|[0,*] 昨天有 :count 个任务失败',
+        ],
+        'preview' => [
+            'urgent' => '有问题需要立即处理。',
+            'today' => '有问题需要今天处理。',
+            'resolved' => '告警已解除。',
+            'digest' => '你的每日摘要。',
+        ],
+        'sent_at' => '发送时间 :time',
     ],
 ];

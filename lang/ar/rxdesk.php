@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'استخدام مرتفع للذاكرة',
+            'capacity_load' => 'حمل مرتفع على الخادم',
+            'capacity_wait' => 'انتظار طويل في قائمة الانتظار',
+            'capacity_disk_free' => 'مساحة قرص حرة منخفضة',
+            'disk_guard' => 'مساحة القرص على وشك النفاد',
+            'nightwatch_burst' => 'اندفاع في مشكلات جديدة',
+        ],
+        'messages' => [
+            'capacity_ram' => 'ذاكرة الخادم عند :percent%، أعلى من حد التنبيه :threshold%.',
+            'capacity_load' => 'متوسط الحمل خلال 5 دقائق هو :load، أعلى من حد التنبيه :threshold.',
+            'capacity_wait' => 'أطول انتظار في قائمة الانتظار هو :minutes دقيقة، أعلى من حد التنبيه :threshold_minutes دقيقة.',
+            'capacity_disk_free' => 'المساحة الحرة على القرص هي :free، أقل من حد التنبيه :threshold.',
+            'disk_guard' => 'المساحة الحرة على القرص هي :free، قريبة من حد حماية القرص :threshold. ستتوقف عمليات الرفع قريبًا.',
+            'nightwatch_burst' => 'فُتحت :count مشكلات في Nightwatch خلال الساعة الأخيرة.',
+        ],
+        'resolved_body' => 'تم رفع هذا التنبيه. سيُرسل مجددًا إذا تكرر الشرط.',
+        'digest' => [
+            'title' => 'الملخص اليومي',
+            'cleared' => 'تنبيهات تم رفعها',
+            'cleared_line' => 'تم رفع هذه التنبيهات خلال آخر 24 ساعة.',
+            'issues' => 'مشكلات جديدة',
+            'failed_jobs' => 'مهام فاشلة',
+            'failed_jobs_line' => '{1} فشلت مهمة واحدة أمس|[0,*] فشلت :count مهام أمس',
+        ],
+        'preview' => [
+            'urgent' => 'هناك مشكلة تحتاج إلى انتباه فوري.',
+            'today' => 'هناك مشكلة تحتاج إلى انتباه اليوم.',
+            'resolved' => 'تم رفع تنبيه.',
+            'digest' => 'ملخصك اليومي.',
+        ],
+        'sent_at' => 'أُرسل :time',
     ],
 ];

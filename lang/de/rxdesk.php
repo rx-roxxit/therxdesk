@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Hohe Speicherauslastung',
+            'capacity_load' => 'Hohe Serverlast',
+            'capacity_wait' => 'Lange Wartezeit in der Warteschlange',
+            'capacity_disk_free' => 'Wenig freier Speicherplatz',
+            'disk_guard' => 'Speicherplatz fast erschöpft',
+            'nightwatch_burst' => 'Viele neue Probleme auf einmal',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Der Arbeitsspeicher des Servers liegt bei :percent %, über dem Alarmschwellenwert von :threshold %.',
+            'capacity_load' => 'Die durchschnittliche Last der letzten 5 Minuten ist :load, über dem Alarmschwellenwert von :threshold.',
+            'capacity_wait' => 'Die längste Wartezeit in der Warteschlange beträgt :minutes Minuten, über dem Alarmschwellenwert von :threshold_minutes Minuten.',
+            'capacity_disk_free' => 'Der freie Speicherplatz beträgt :free, unter dem Alarmschwellenwert von :threshold.',
+            'disk_guard' => 'Der freie Speicherplatz beträgt :free, nahe der Schutzschwelle von :threshold. Uploads werden bald gestoppt.',
+            'nightwatch_burst' => 'In der letzten Stunde wurden :count Probleme in Nightwatch geöffnet.',
+        ],
+        'resolved_body' => 'Dieser Alarm hat sich erledigt. Er wird erneut gesendet, wenn die Bedingung wieder auftritt.',
+        'digest' => [
+            'title' => 'Tägliche Zusammenfassung',
+            'cleared' => 'Alarme aufgehoben',
+            'cleared_line' => 'Diese Alarme wurden in den letzten 24 Stunden aufgehoben.',
+            'issues' => 'Neue Probleme',
+            'failed_jobs' => 'Fehlgeschlagene Jobs',
+            'failed_jobs_line' => '{1} Ein fehlgeschlagener Job gestern|[0,*] :count fehlgeschlagene Jobs gestern',
+        ],
+        'preview' => [
+            'urgent' => 'Ein Problem braucht jetzt Aufmerksamkeit.',
+            'today' => 'Ein Problem braucht heute Aufmerksamkeit.',
+            'resolved' => 'Ein Alarm hat sich erledigt.',
+            'digest' => 'Ihre tägliche Zusammenfassung.',
+        ],
+        'sent_at' => 'Gesendet :time',
     ],
 ];

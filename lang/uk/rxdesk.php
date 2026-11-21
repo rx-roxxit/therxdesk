@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Високе використання пам\'яті',
+            'capacity_load' => 'Високе навантаження сервера',
+            'capacity_wait' => 'Довге очікування в черзі',
+            'capacity_disk_free' => 'Мало вільного місця на диску',
+            'disk_guard' => 'Місце на диску майже вичерпано',
+            'nightwatch_burst' => 'Сплеск нових проблем',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Пам\'ять сервера на рівні :percent%, що перевищує поріг :threshold%.',
+            'capacity_load' => 'Середнє навантаження за 5 хвилин становить :load, що перевищує поріг :threshold.',
+            'capacity_wait' => 'Найдовше очікування в черзі — :minutes хв, що перевищує поріг :threshold_minutes хв.',
+            'capacity_disk_free' => 'Вільно :free на диску, що менше за поріг :threshold.',
+            'disk_guard' => 'Вільно :free на диску — близько до порогу захисту диска :threshold. Завантаження скоро зупиняться.',
+            'nightwatch_burst' => 'За останню годину в Nightwatch з\'явилося проблем: :count.',
+        ],
+        'resolved_body' => 'Це попередження знято. Його буде надіслано знову, якщо умова повториться.',
+        'digest' => [
+            'title' => 'Щоденний звіт',
+            'cleared' => 'Попередження знято',
+            'cleared_line' => 'Ці попередження знято за останні 24 години.',
+            'issues' => 'Нові проблеми',
+            'failed_jobs' => 'Невдалі завдання',
+            'failed_jobs_line' => '{1} Одне невдале завдання вчора|[0,*] Невдалих завдань учора: :count',
+        ],
+        'preview' => [
+            'urgent' => 'Проблема потребує негайної уваги.',
+            'today' => 'Проблема потребує уваги сьогодні.',
+            'resolved' => 'Попередження знято.',
+            'digest' => 'Ваш щоденний підсумок.',
+        ],
+        'sent_at' => 'Надіслано :time',
     ],
 ];

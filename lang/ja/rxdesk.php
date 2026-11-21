@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'メモリ使用率が高い',
+            'capacity_load' => 'サーバー負荷が高い',
+            'capacity_wait' => 'キューの待ち時間が長い',
+            'capacity_disk_free' => 'ディスクの空き容量が少ない',
+            'disk_guard' => 'ディスク容量がほぼ限界',
+            'nightwatch_burst' => '新しい問題が急増',
+        ],
+        'messages' => [
+            'capacity_ram' => 'サーバーのメモリ使用率は :percent% で、アラートしきい値の :threshold% を超えています。',
+            'capacity_load' => '5分間の平均負荷は :load で、アラートしきい値の :threshold を超えています。',
+            'capacity_wait' => 'キューの最も長い待ち時間は :minutes 分で、アラートしきい値の :threshold_minutes 分を超えています。',
+            'capacity_disk_free' => 'ディスクの空き容量は :free で、アラートしきい値の :threshold を下回っています。',
+            'disk_guard' => 'ディスクの空き容量は :free で、ディスク保護しきい値の :threshold に近づいています。まもなくアップロードが停止します。',
+            'nightwatch_burst' => '過去1時間に Nightwatch で :count 件の問題が発生しました。',
+        ],
+        'resolved_body' => 'このアラートは解除されました。同じ状態が再発すると再び通知されます。',
+        'digest' => [
+            'title' => '日次ダイジェスト',
+            'cleared' => '解除されたアラート',
+            'cleared_line' => '過去24時間に解除されたアラートです。',
+            'issues' => '新しい問題',
+            'failed_jobs' => '失敗したジョブ',
+            'failed_jobs_line' => '{1} 昨日、1件のジョブが失敗しました|[0,*] 昨日、:count 件のジョブが失敗しました',
+        ],
+        'preview' => [
+            'urgent' => 'すぐに対応が必要な問題があります。',
+            'today' => '今日対応が必要な問題があります。',
+            'resolved' => 'アラートが解除されました。',
+            'digest' => '日次のまとめです。',
+        ],
+        'sent_at' => '送信日時 :time',
     ],
 ];

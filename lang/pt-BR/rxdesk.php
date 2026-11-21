@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Alto uso de memória',
+            'capacity_load' => 'Carga alta no servidor',
+            'capacity_wait' => 'Espera longa na fila',
+            'capacity_disk_free' => 'Pouco espaço livre em disco',
+            'disk_guard' => 'Espaço em disco quase esgotado',
+            'nightwatch_burst' => 'Surto de novos problemas',
+        ],
+        'messages' => [
+            'capacity_ram' => 'A memória do servidor está em :percent%, acima do limite de alerta de :threshold%.',
+            'capacity_load' => 'A carga média de 5 minutos é :load, acima do limite de alerta de :threshold.',
+            'capacity_wait' => 'A maior espera na fila é de :minutes minutos, acima do limite de alerta de :threshold_minutes minutos.',
+            'capacity_disk_free' => 'O espaço livre em disco é :free, abaixo do limite de alerta de :threshold.',
+            'disk_guard' => 'O espaço livre em disco é :free, perto do limite de proteção de disco de :threshold. Os uploads vão parar em breve.',
+            'nightwatch_burst' => ':count problemas foram abertos no Nightwatch na última hora.',
+        ],
+        'resolved_body' => 'Este alerta foi resolvido. Ele será enviado de novo se a condição voltar.',
+        'digest' => [
+            'title' => 'Resumo diário',
+            'cleared' => 'Alertas resolvidos',
+            'cleared_line' => 'Estes alertas foram resolvidos nas últimas 24 horas.',
+            'issues' => 'Novos problemas',
+            'failed_jobs' => 'Falhas de tarefas',
+            'failed_jobs_line' => '{1} Uma tarefa falhou ontem|[0,*] :count tarefas falharam ontem',
+        ],
+        'preview' => [
+            'urgent' => 'Um problema precisa de atenção agora.',
+            'today' => 'Um problema precisa de atenção hoje.',
+            'resolved' => 'Um alerta foi resolvido.',
+            'digest' => 'Seu resumo diário.',
+        ],
+        'sent_at' => 'Enviado em :time',
     ],
 ];

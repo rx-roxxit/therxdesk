@@ -39,4 +39,66 @@ return [
         'disk_guard_threshold' => env('RXDESK_DISK_GUARD_THRESHOLD', '10GB'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin alerts
+    |--------------------------------------------------------------------------
+    |
+    | The System admin gets one alert system by email. `recipient` receives
+    | every level; `today_dedupe_hours` is how long a TODAY alert stays quiet
+    | after it was sent; the digest leaves at `digest_at` in `timezone`.
+    | `capacity` holds the thresholds the 5-minute capacity check reads, and
+    | `nightwatch.burst_threshold` is how many issues opened within an hour
+    | raise a TODAY alert. Sizes are human-readable ("30GB").
+    |
+    */
+
+    'alerts' => [
+        'recipient' => env('RXDESK_ALERT_RECIPIENT', 'admin@therxdesk.com'),
+        'timezone' => env('RXDESK_ALERTS_TIMEZONE', 'Asia/Bangkok'),
+        'digest_at' => env('RXDESK_ALERTS_DIGEST_AT', '08:00'),
+        'today_dedupe_hours' => (int) env('RXDESK_ALERTS_TODAY_DEDUPE_HOURS', 6),
+        'capacity' => [
+            'ram_percent' => (float) env('RXDESK_CAPACITY_RAM_PERCENT', 75),
+            'load' => (float) env('RXDESK_CAPACITY_LOAD', 5),
+            'wait_seconds' => (int) env('RXDESK_CAPACITY_WAIT_SECONDS', 120),
+            'disk_free' => env('RXDESK_CAPACITY_DISK_FREE', '30GB'),
+            'disk_urgent_margin' => env('RXDESK_CAPACITY_DISK_URGENT_MARGIN', '5GB'),
+        ],
+        'nightwatch' => [
+            'burst_threshold' => (int) env('RXDESK_NIGHTWATCH_BURST_THRESHOLD', 5),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Heartbeat
+    |--------------------------------------------------------------------------
+    |
+    | The scheduler dispatches `PingHeartbeat` every five minutes; the job
+    | pings Better Stack at `url` from the queue. A blank URL turns the ping
+    | into a no-op, which is the self-hosted default.
+    |
+    */
+
+    'heartbeat' => [
+        'url' => env('RXDESK_HEARTBEAT_URL'),
+        'timeout' => (int) env('RXDESK_HEARTBEAT_TIMEOUT', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Nightwatch webhook
+    |--------------------------------------------------------------------------
+    |
+    | Nightwatch signs its webhook with this secret in the
+    | `Nightwatch-Signature` header. A blank secret makes the endpoint answer
+    | 404, so nothing reaches it until the secret is configured.
+    |
+    */
+
+    'nightwatch' => [
+        'webhook_secret' => env('NIGHTWATCH_WEBHOOK_SECRET'),
+    ],
+
 ];
