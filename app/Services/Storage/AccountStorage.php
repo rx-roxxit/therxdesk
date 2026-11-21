@@ -283,6 +283,21 @@ class AccountStorage
     }
 
     /**
+     * Whether media is written to a local disk. On object storage the VPS disk
+     * says nothing about how much media fits.
+     */
+    public function storesMediaLocally(): bool
+    {
+        $disk = config('filesystems.default');
+
+        if (blank($disk)) {
+            return false;
+        }
+
+        return config("filesystems.disks.{$disk}.driver") === 'local';
+    }
+
+    /**
      * The disk the media lives on and the Disk guard's threshold.
      */
     public function diskStatus(): DiskStatus
@@ -291,13 +306,18 @@ class AccountStorage
     }
 
     /**
-     * How much the disk can give to media: free space, plus what the Owners
-     * already store (it sits on the same disk), minus the Disk guard's
+     * How much the VPS disk can give to media: free space, plus what the
+     * Owners already store (it sits on the same disk), minus the Disk guard's
      * threshold. Space taken by the system, images, database and logs is
-     * already out of the free space.
+     * already out of the free space. Null when media is on object storage, so
+     * the VPS disk's capacity says nothing about it.
      */
-    public function usableSize(): int
+    public function usableSize(): ?int
     {
+        if (! $this->storesMediaLocally()) {
+            return null;
+        }
+
         $usable = $this->diskStatus()->free + $this->totalUsed() - self::diskGuardThreshold();
 
         return max(0, $usable);

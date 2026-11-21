@@ -30,7 +30,8 @@ return [
     | own. `disk_guard_threshold` is the free disk space under which every
     | upload and import is refused (the Disk guard); `rxdesk:quota` also warns
     | when the Quotas handed out add up to more than free disk plus what the
-    | Owners store, minus that threshold.
+    | Owners store, minus that threshold, but only while media lives on the
+    | local disk: object storage cannot be compared with the VPS disk.
     |
     */
 
