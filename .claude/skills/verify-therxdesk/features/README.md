@@ -13,6 +13,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
+| Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `FILESYSTEM_DISK=r2`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 | The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |
 | Admin alerts, heartbeat, capacity check and health (`selling.sh up`) | [admin-alerts.md](admin-alerts.md) | not a browser journey; selling.sh + internal.sh |
