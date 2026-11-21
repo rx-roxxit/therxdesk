@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Resources\Internal;
+
+use App\Models\Account;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class CustomerDetailResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        $data = $this->resource;
+        $account = $data['account'];
+        $usage = $data['storage'];
+
+        $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
+        $priceRow = $account->plan?->prices?->firstWhere('stripe_price_id', $subscription?->stripe_price);
+
+        return [
+            'id' => $account->id,
+            'name' => $account->name,
+            'created_at' => $account->created_at,
+            'owner' => $account->owner ? [
+                'id' => $account->owner->id,
+                'name' => $account->owner->name,
+                'email' => $account->owner->email,
+                'email_verified_at' => $account->owner->email_verified_at,
+            ] : null,
+            'access_state' => null,
+            'plan' => $account->plan ? [
+                'id' => $account->plan->id,
+                'slug' => $account->plan->slug,
+                'name' => $account->plan->name,
+                'quota_bytes' => $account->plan->quota_bytes,
+                'ai_credits_per_month' => $account->plan->ai_credits_per_month,
+            ] : null,
+            'subscription' => $subscription ? [
+                'status' => $subscription->canceled() ? 'canceled' : $subscription->stripe_status,
+                'interval' => $priceRow?->interval?->value,
+                'amount' => $priceRow?->amount,
+                'trial_ends_at' => $subscription->trial_ends_at,
+                'ends_at' => $subscription->ends_at,
+                'created_at' => $subscription->created_at,
+            ] : null,
+            'storage' => [
+                'used_bytes' => $usage->used,
+                'quota_bytes' => $usage->limit,
+            ],
+            'members_count' => $account->users_count ?? $account->users()->count(),
+            'recent_posts' => collect($data['recent_posts'])->map(fn ($post) => [
+                'id' => $post->id,
+                'platform' => $post->platform,
+                'status' => $post->status,
+                'publish_status' => $post->publish_status,
+                'error_message' => $post->error_message,
+                'scheduled_at' => $post->scheduled_at,
+                'published_at' => $post->published_at,
+                'created_at' => $post->created_at,
+            ])->all(),
+            'lifecycle_emails' => null,
+        ];
+    }
+}

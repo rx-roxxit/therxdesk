@@ -39,6 +39,7 @@ STRIPE_CLI_IMAGE="stripe/stripe-cli:v1.55.14"
 SELLING_OVERLAY="$SKILL_DIR/scripts/compose.selling.yaml"
 SELLING_MARKER="$STATE_DIR/selling"
 SELLING_SECRET_FILE="$STATE_DIR/stripe-webhook.env"
+INTERNAL_SECRET_FILE="$STATE_DIR/internal-api.env"
 
 compose() {
     if [ -f "$SELLING_MARKER" ]; then

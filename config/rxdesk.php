@@ -6,6 +6,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Internal API
+    |--------------------------------------------------------------------------
+    |
+    | Bearer tokens for /internal/v1: the admin app's read-write token and the
+    | website's read-only one. Either empty makes every internal route answer
+    | 404. They are secrets, so they come from env and are never stored.
+    |
+    */
+
+    'internal' => [
+        'admin_token' => env('RXDESK_INTERNAL_ADMIN_TOKEN'),
+        'site_token' => env('RXDESK_INTERNAL_SITE_TOKEN'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage (Quota and Disk guard)
     |--------------------------------------------------------------------------
     |

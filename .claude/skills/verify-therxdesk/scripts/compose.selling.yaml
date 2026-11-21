@@ -17,6 +17,8 @@ services:
         env_file:
             - path: ${HOME}/.cache/verify-therxdesk/state/stripe-webhook.env
               required: true
+            - path: ${HOME}/.cache/verify-therxdesk/state/internal-api.env
+              required: true
 
     stripe:
         image: stripe/stripe-cli:v1.55.14

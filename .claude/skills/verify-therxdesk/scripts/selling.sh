@@ -118,6 +118,21 @@ write_webhook_secret() {
     echo "[selling] webhook signing secret written to $SELLING_SECRET_FILE (mode 600, not shown)"
 }
 
+write_internal_tokens() {
+    if [ -s "$INTERNAL_SECRET_FILE" ]; then
+        echo "[selling] internal API tokens already present ($INTERNAL_SECRET_FILE)"
+        return
+    fi
+
+    mkdir -p "$STATE_DIR"
+    local admin site
+    admin="$(python3 -I -c 'import secrets;print(secrets.token_hex(32))')"
+    site="$(python3 -I -c 'import secrets;print(secrets.token_hex(32))')"
+    (umask 077 && printf 'RXDESK_INTERNAL_ADMIN_TOKEN=%s\nRXDESK_INTERNAL_SITE_TOKEN=%s\n' "$admin" "$site" >"$INTERNAL_SECRET_FILE")
+    unset admin site
+    echo "[selling] internal API tokens written to $INTERNAL_SECRET_FILE (mode 600, not shown)"
+}
+
 # grep reads the whole log (no -q): with pipefail, -q closing the pipe early
 # would fail the pipeline on SIGPIPE.
 listener_ready() {
@@ -138,6 +153,7 @@ up() {
     write_webhook_secret
 
     touch "$SELLING_MARKER"
+    write_internal_tokens
     echo "[selling] recreating app in selling mode and starting the Stripe listener"
     compose up -d app stripe
 
@@ -160,6 +176,7 @@ down() {
     echo "[selling] recreating app from .env"
     compose up -d app
     rm -f "$SELLING_SECRET_FILE"
+    rm -f "$INTERNAL_SECRET_FILE"
 
     wait_until_usable
     echo "[selling] php-fpm serves: $(served_mode)"
@@ -168,6 +185,7 @@ down() {
 status() {
     local app_id listener container_mode
     if [ -f "$SELLING_MARKER" ]; then echo "marker    selling ($SELLING_MARKER)"; else echo "marker    none (self-hosted per .env)"; fi
+    if [ -f "$INTERNAL_SECRET_FILE" ]; then echo "internal  token file present"; else echo "internal  no token file"; fi
 
     app_id="$(compose ps --status running -q app 2>/dev/null)"
     if [ -n "$app_id" ]; then
