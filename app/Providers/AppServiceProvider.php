@@ -13,6 +13,7 @@ use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
 use App\Models\AuditLog;
+use App\Models\BackupRun;
 use App\Models\ChangelogEntry;
 use App\Models\ChangelogEntryView;
 use App\Models\CoverOutcome;
@@ -32,6 +33,7 @@ use App\Models\PostNoteReaction;
 use App\Models\PostTemplate;
 use App\Models\Repurpose;
 use App\Models\RepurposeItem;
+use App\Models\RestoreDrill;
 use App\Models\RssFeed;
 use App\Models\RssFeedCollection;
 use App\Models\RssFeedItem;
@@ -147,6 +149,7 @@ class AppServiceProvider extends ServiceProvider
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,
             'analyticsSyncState' => AnalyticsSyncState::class,
             'auditLog' => AuditLog::class,
+            'backupRun' => BackupRun::class,
             'changelogEntry' => ChangelogEntry::class,
             'changelogEntryView' => ChangelogEntryView::class,
             'idea' => Idea::class,
@@ -162,6 +165,7 @@ class AppServiceProvider extends ServiceProvider
             'post' => Post::class,
             'repurpose' => Repurpose::class,
             'repurposeItem' => RepurposeItem::class,
+            'restoreDrill' => RestoreDrill::class,
             'rssFeed' => RssFeed::class,
             'rssFeedCollection' => RssFeedCollection::class,
             'rssFeedItem' => RssFeedItem::class,
