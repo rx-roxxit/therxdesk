@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * The verification fixture on the DEV database: one Owner with one Workspace
+ * and one made-up LinkedIn channel, nothing else. Never run it against
+ * production. Run it through fixture.sh, which runs it in the app image.
+ *
+ *   php fixture.php up     replace any previous fixture with a fresh one, print it as JSON
+ *   php fixture.php show   print the current fixture as JSON (read-only), or exit 1
+ *   php fixture.php down   remove the fixture and everything it owns
+ */
+
+use App\Actions\Workspace\PurgeWorkspace;
+use App\Models\Account;
+use App\Models\SocialAccount;
+use App\Models\User;
+use App\Models\Workspace;
+use Illuminate\Contracts\Console\Kernel;
+
+$root = '/var/www/html';
+require "{$root}/vendor/autoload.php";
+$app = require "{$root}/bootstrap/app.php";
+$app->make(Kernel::class)->bootstrap();
+
+const OWNER_EMAIL = 'verify-agent@example.com';
+const OWNER_PASSWORD = 'password';
+
+function forget(): void
+{
+    $owners = User::query()->where('email', OWNER_EMAIL)->get();
+
+    Workspace::query()
+        ->whereIn('account_id', $owners->pluck('account_id'))
+        ->get()
+        ->each(fn (Workspace $workspace) => PurgeWorkspace::execute($workspace));
+
+    $accountIds = $owners->pluck('account_id')->unique();
+    User::query()->whereIn('id', $owners->pluck('id'))->delete();
+    Account::query()->whereIn('id', $accountIds)->delete();
+}
+
+function describe(): ?array
+{
+    $owner = User::query()->where('email', OWNER_EMAIL)->first();
+
+    if (blank($owner)) {
+        return null;
+    }
+
+    $workspace = Workspace::query()->find($owner->current_workspace_id);
+    $channel = $workspace?->socialAccounts()->first();
+
+    return [
+        'email' => OWNER_EMAIL,
+        'password' => OWNER_PASSWORD,
+        'userId' => $owner->id,
+        'accountId' => $owner->account_id,
+        'workspaceId' => $workspace?->id,
+        'channelId' => $channel?->id,
+        'channelPlatform' => $channel?->platform->value,
+    ];
+}
+
+function seed(): void
+{
+    forget();
+
+    $owner = User::factory()->create([
+        'name' => 'Verify Agent',
+        'email' => OWNER_EMAIL,
+        'timezone' => 'UTC',
+    ]);
+
+    $workspace = Workspace::factory()->create([
+        'name' => 'Verify Desk',
+        'user_id' => $owner->id,
+        'account_id' => $owner->account_id,
+    ]);
+    $workspace->members()->attach($owner->id, ['is_admin' => true, 'requires_approval' => false]);
+    $owner->update(['current_workspace_id' => $workspace->id]);
+
+    // Without events: a created channel queues analytics reads, which would
+    // call LinkedIn with the factory's made-up token.
+    SocialAccount::withoutEvents(fn (): SocialAccount => SocialAccount::factory()->linkedin()->create([
+        'workspace_id' => $workspace->id,
+        'position' => 0,
+        'display_name' => 'Verify Desk',
+        'username' => 'verifydesk',
+        'timezone' => 'UTC',
+    ]));
+}
+
+$command = $argv[1] ?? '';
+
+if ($command === 'up') {
+    seed();
+    echo json_encode(describe(), JSON_PRETTY_PRINT), PHP_EOL;
+    exit(0);
+}
+
+if ($command === 'show') {
+    $fixture = describe();
+
+    if (blank($fixture)) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    echo json_encode($fixture, JSON_PRETTY_PRINT), PHP_EOL;
+    exit(0);
+}
+
+if ($command === 'down') {
+    forget();
+    echo "fixture removed\n";
+    exit(0);
+}
+
+fwrite(STDERR, "usage: fixture.php up|show|down\n");
+exit(2);
