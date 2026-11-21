@@ -21,6 +21,7 @@ docker run --rm --network host --ipc=host \
     -u "$(id -u):$(id -g)" -e HOME=/tmp \
     -e VERIFY_BASE_URL="$BASE_URL" \
     -e VERIFY_FIXTURE="$fixture" \
+    -e VERIFY_GUEST_EMAIL_LIKE="$GUEST_EMAIL_LIKE" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

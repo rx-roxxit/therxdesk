@@ -10,6 +10,7 @@ declare(strict_types=1);
  *   php fixture.php up     replace any previous fixture with a fresh one, print it as JSON
  *   php fixture.php show   print the current fixture as JSON (read-only), or exit 1
  *   php fixture.php down   remove the fixture and everything it owns
+ *   php fixture.php guests remove the Owners the register journey signed up
  */
 
 use App\Actions\Workspace\PurgeWorkspace;
@@ -18,6 +19,7 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\Eloquent\Collection;
 use Laravel\Cashier\Cashier;
 
 $root = '/var/www/html';
@@ -28,10 +30,13 @@ $app->make(Kernel::class)->bootstrap();
 const OWNER_EMAIL = 'verify-agent@example.com';
 const OWNER_PASSWORD = 'password';
 
-function forget(): void
-{
-    $owners = User::query()->where('email', OWNER_EMAIL)->get();
+$guestEmailLike = (string) getenv('VERIFY_GUEST_EMAIL_LIKE');
 
+/**
+ * @param  Collection<int, User>  $owners
+ */
+function purge(Collection $owners): void
+{
     Workspace::query()
         ->whereIn('account_id', $owners->pluck('account_id'))
         ->get()
@@ -53,6 +58,16 @@ function forget(): void
 
     User::query()->whereIn('id', $owners->pluck('id'))->delete();
     Account::query()->whereIn('id', $accountIds)->delete();
+}
+
+function forget(): void
+{
+    purge(User::query()->where('email', OWNER_EMAIL)->get());
+}
+
+function forgetGuests(string $emailLike): void
+{
+    purge(User::query()->whereLike('email', $emailLike)->get());
 }
 
 function describe(): ?array
@@ -132,5 +147,16 @@ if ($command === 'down') {
     exit(0);
 }
 
-fwrite(STDERR, "usage: fixture.php up|show|down\n");
+if ($command === 'guests') {
+    if (blank($guestEmailLike)) {
+        fwrite(STDERR, "VERIFY_GUEST_EMAIL_LIKE is empty: run fixture.sh, not php directly\n");
+        exit(2);
+    }
+
+    forgetGuests($guestEmailLike);
+    echo "guest signups removed\n";
+    exit(0);
+}
+
+fwrite(STDERR, "usage: fixture.php up|show|down|guests\n");
 exit(2);

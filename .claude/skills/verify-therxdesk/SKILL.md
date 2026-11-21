@@ -115,9 +115,9 @@ A journey is a key of `JOURNEYS` in `scripts/drive.ts`. `drive.sh` runs it with 
 mounted read-only, the dev `node_modules` volume for `playwright`, and the fixture in `VERIFY_FIXTURE`. It prints
 `ok`/`FAIL` per check and exits non-zero when the journey fails.
 
-Journeys today: `sign-in`, `compose-draft` (self-hosted mode); `selling-mode`, `welcome-checkout`, `billing`
-(selling mode, listed in `SELLING_JOURNEYS`). Every journey first checks the mode php-fpm serves and stops with
-"run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
+Journeys today: `sign-in`, `compose-draft` (self-hosted mode); `register`, `selling-mode`, `welcome-checkout`,
+`billing` (selling mode, listed in `SELLING_JOURNEYS`). Every journey first checks the mode php-fpm serves and stops
+with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
 journey.
 
 Writing a journey (add it to `JOURNEYS`, then a row and a file in `features/`):
@@ -189,7 +189,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | --- | --- | --- |
 | `launch.sh` | start or reuse the stack, wait until usable, create the fixture | stack, fixture |
 | `doctor.sh` | is this instance worth driving | no |
-| `fixture.sh up\|show\|down` | create, print (JSON), remove the fixture Owner | `up`, `down` |
+| `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `guests` removes register-journey Owners | `up`, `down`, `guests` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
 | `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plans` |

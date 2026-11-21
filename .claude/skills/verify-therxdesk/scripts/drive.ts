@@ -103,6 +103,19 @@ const signedInEmail = async (page: Page): Promise<string | null> => {
 
 type Mode = 'selling' | 'self-hosted';
 
+/** The register journey's address, from env.sh; `%` becomes this run's unique part. */
+const guestEmail = (): string => {
+    const like = process.env.VERIFY_GUEST_EMAIL_LIKE;
+
+    if (like === undefined || like === '') {
+        throw new Error(
+            'VERIFY_GUEST_EMAIL_LIKE is empty: run drive.sh, not node directly',
+        );
+    }
+
+    return like.replace('%', String(Date.now()));
+};
+
 /**
  * The mode php-fpm serves, from the `selfHosted` Inertia prop of the page
  * open now (shared on every page, the login page included).
@@ -140,7 +153,12 @@ const servedMode = async (page: Page): Promise<Mode | null> => {
 };
 
 /** The journeys that need selling mode (selling.sh up); every other one needs self-hosted. */
-const SELLING_JOURNEYS = ['selling-mode', 'welcome-checkout', 'billing'];
+const SELLING_JOURNEYS = [
+    'register',
+    'selling-mode',
+    'welcome-checkout',
+    'billing',
+];
 
 /** The test card Stripe's sandbox always accepts. */
 const TEST_CARD = '4242424242424242';
@@ -246,6 +264,72 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             'signed in as the fixture Owner',
             email === run.fixture.email,
             email,
+        );
+    },
+
+    /** features/registration.md */
+    register: async (run) => {
+        const { page } = run;
+
+        const email = guestEmail();
+        run.note('signupEmail', email);
+
+        await page.goto(`${run.baseUrl}/register`);
+        await page.locator(tid('@register-user-button')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('register-form');
+
+        const codeField = page.locator(tid('@register-signup-code'));
+        const namedCodeField = page.locator('input[name="signup_code"]');
+        const codeCopy = page.getByText('Signup code', { exact: false });
+
+        run.check(
+            'the register form has no Signup code field',
+            (await codeField.count()) === 0 &&
+                (await namedCodeField.count()) === 0,
+            {
+                testId: await codeField.count(),
+                named: await namedCodeField.count(),
+            },
+        );
+        run.check(
+            'the page says nothing about a Signup code',
+            (await codeCopy.count()) === 0,
+            await codeCopy.count(),
+        );
+
+        await page.locator(tid('@register-name')).fill('Verify Signup');
+        await page.locator(tid('@register-email')).fill(email);
+        await page.locator(tid('@register-password')).fill('Tr7#pass-Word-2026');
+        await run.step('register-filled');
+
+        await page.locator(tid('@register-user-button')).click();
+        await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
+            timeout: 30_000,
+        });
+        await page.waitForLoadState('networkidle');
+        await run.step('after-sign-up');
+
+        const signedIn = await signedInEmail(page);
+        run.check('the new Owner is signed in', signedIn === email, signedIn);
+
+        const landedOn = new URL(page.url()).pathname;
+        run.check(
+            'a new Owner lands on Welcome',
+            landedOn.startsWith('/welcome'),
+            landedOn,
+        );
+
+        const hasActiveSubscription = await page.evaluate(() => {
+            return (
+                window.history.state?.page?.props?.auth
+                    ?.hasActiveSubscription ?? null
+            );
+        });
+        run.check(
+            'the new Account has no subscription yet',
+            hasActiveSubscription === false,
+            hasActiveSubscription,
         );
     },
 

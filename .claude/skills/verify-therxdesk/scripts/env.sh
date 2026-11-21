@@ -26,6 +26,10 @@ EVIDENCE_ROOT="${VERIFY_EVIDENCE_ROOT:-$HOME/.cache/verify-therxdesk/runs}"
 # What launch.sh started, so cleanup.sh stops only that.
 STATE_DIR="$HOME/.cache/verify-therxdesk/state"
 
+# The email the register journey signs up, as a LIKE pattern; `%` is the part
+# the run makes unique. fixture.php's `guests` command removes them by it.
+GUEST_EMAIL_LIKE="verify-signup-%@example.com"
+
 # Selling mode (selling.sh): the app runs with SELF_HOSTED=false and a Stripe
 # CLI listener forwards sandbox webhooks to it, through the overlay below.
 # .env is never edited. While SELLING_MARKER exists every script includes the
