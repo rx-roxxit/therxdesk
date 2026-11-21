@@ -66,6 +66,7 @@ import date from '@/date';
 import dayjs from '@/dayjs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { afterHistorySettles, cameFromAppPage } from '@/lib/inAppHistory';
+import { stableItemsElement } from '@/lib/infiniteScroll';
 import { postAttemptAt } from '@/lib/postCard';
 import { grid, settings } from '@/routes/app/channels';
 import { PostStatus, ScheduleMode } from '@/types/post';
@@ -76,12 +77,12 @@ import type {
     PublishChannel,
     PublishCounts,
     PublishQueue,
-    QueueItem,
-    QueueView,
     PublishScope,
     PublishSocialAccount,
     PublishTab,
     QueueDay,
+    QueueItem,
+    QueueView,
     ScrollPostCards,
 } from '@/types/publish';
 
@@ -205,9 +206,7 @@ const groupQueueItems = (items: QueueItem[]): QueueDay[] => {
     return [...groups].map(([key, items]) => ({ date: key, items }));
 };
 
-const hasMorePosts = computed(
-    () => page.scrollProps?.posts?.nextPage != null,
-);
+const hasMorePosts = computed(() => page.scrollProps?.posts?.nextPage != null);
 
 const lastLoadedPostAt = computed<number | null>(() => {
     const times = (props.posts?.data ?? [])
@@ -477,7 +476,9 @@ const withPostInSlot = (
 
     return {
         days: groupQueueItems([
-            ...items.filter((item) => item.post_id !== postId && !isTarget(item)),
+            ...items.filter(
+                (item) => item.post_id !== postId && !isTarget(item),
+            ),
             ...freed,
             {
                 type: 'post',
@@ -561,6 +562,11 @@ const isEmpty = computed(() =>
 const listProps = computed<string[]>(() =>
     props.tab === 'queue' ? ['posts', 'queue'] : ['posts'],
 );
+
+// One lookup per branch: when an empty list unmounts, Inertia's debounced
+// position callback must still resolve the element it left behind.
+const queueItemsElement = stableItemsElement('#posts-body-queue');
+const listItemsElement = stableItemsElement('#posts-body-list');
 
 const showsQueueSlots = computed(
     () => props.tab === 'queue' && (showSlots.value || !props.channel),
@@ -857,7 +863,9 @@ const submitComposition = (
                                 "
                             />
                             <NewPostButton
-                                :social-account-ids="channel ? [channel.id] : []"
+                                :social-account-ids="
+                                    channel ? [channel.id] : []
+                                "
                             />
                         </div>
                     </AppHeaderActions>
@@ -874,7 +882,9 @@ const submitComposition = (
                     <PublishEmptyIllustration />
                 </template>
                 <template v-if="canManageAccounts" #action>
-                    <div class="flex flex-wrap items-center justify-center gap-2">
+                    <div
+                        class="flex flex-wrap items-center justify-center gap-2"
+                    >
                         <Button
                             data-testid="publish-welcome-connect"
                             @click="openConnectDialog()"
@@ -904,7 +914,9 @@ const submitComposition = (
                     <PublishEmptyIllustration />
                 </template>
                 <template #action>
-                    <div class="flex flex-wrap items-center justify-center gap-2">
+                    <div
+                        class="flex flex-wrap items-center justify-center gap-2"
+                    >
                         <Button
                             :data-testid="`publish-empty-new-post-${tab}`"
                             @click="newPost"
@@ -944,11 +956,11 @@ const submitComposition = (
                 >
                     <InfiniteScroll
                         data="posts"
-                        items-element="#posts-body"
+                        :items-element="queueItemsElement"
                         preserve-url
                     >
                         <div
-                            id="posts-body"
+                            id="posts-body-queue"
                             class="mx-auto flex w-full max-w-[900px] flex-col px-4 pt-6 pb-12 md:px-12"
                         >
                             <QueueTimeline
@@ -998,11 +1010,11 @@ const submitComposition = (
                 >
                     <InfiniteScroll
                         data="posts"
-                        items-element="#posts-body"
+                        :items-element="listItemsElement"
                         preserve-url
                     >
                         <div
-                            id="posts-body"
+                            id="posts-body-list"
                             class="mx-auto flex w-full max-w-[900px] flex-col gap-10 px-4 pt-6 pb-12 md:px-12"
                         >
                             <section

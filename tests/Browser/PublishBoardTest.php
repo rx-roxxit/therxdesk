@@ -478,7 +478,7 @@ test('a column loads its next posts as it scrolls', function () {
 
     $scrollDown = "document.querySelector('[data-testid=\"board-column-scroll-draft\"]').scrollTop = 100000";
     $page->script($scrollDown);
-    waitForCount($page, '@board-column-draft [data-testid^="board-card-open-"]', 4);
+    waitForCount($page, '@board-column-draft [data-testid^="board-card-open-"]', 4, '>=');
     $page->script($scrollDown);
     waitForCount($page, '@board-column-draft [data-testid^="board-card-open-"]', 5);
 

@@ -13,19 +13,19 @@ test('login shows the new title without a description and links to register', fu
     $page = visit(route('login'));
     waitFor($page, '@login-sign-up-link');
 
-    $page->assertSeeIn('@auth-title', 'Log in to TryPost')
+    $page->assertSeeIn('@auth-title', __('auth.login.title'))
         ->assertDontSee('Enter your email and password below to log in')
         ->click('@login-sign-up-link');
 
     waitFor($page, '@register-log-in-link');
 
-    $page->assertSeeIn('@auth-title', 'Create a TryPost account')
+    $page->assertSeeIn('@auth-title', __('auth.register.title'))
         ->assertDontSee('Create your account and start scheduling posts across every network.')
         ->click('@register-log-in-link');
 
     waitFor($page, '@login-sign-up-link');
 
-    $page->assertSeeIn('@auth-title', 'Log in to TryPost')->assertNoJavaScriptErrors();
+    $page->assertSeeIn('@auth-title', __('auth.login.title'))->assertNoJavaScriptErrors();
 });
 
 test('typing a password ticks each requirement', function () {
