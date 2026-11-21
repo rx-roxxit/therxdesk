@@ -134,6 +134,9 @@ return [
             'issues' => '새 문제',
             'failed_jobs' => '실패한 작업',
             'failed_jobs_line' => '{1} 어제 작업 1개가 실패했습니다|[0,*] 어제 작업 :count개가 실패했습니다',
+            'restore_drill' => '복원 훈련',
+            'restore_drill_line' => '마지막 복원 훈련은 :date에 진행되었습니다. 지금 진행하세요.',
+            'restore_drill_never' => '아직 복원 훈련 기록이 없습니다. 지금 진행하세요.',
         ],
         'preview' => [
             'urgent' => '지금 주의가 필요한 문제가 있습니다.',

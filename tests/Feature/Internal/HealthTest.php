@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\BackupRun;
 use App\Models\NightwatchIssue;
+use App\Models\RestoreDrill;
 use App\Services\Storage\AccountStorage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -62,6 +64,9 @@ test('the health endpoint returns queue, backup, disk and Nightwatch figures', f
 
     $response->assertOk()
         ->assertJsonPath('backup', null)
+        ->assertJsonPath('restore_drill.last_performed_at', null)
+        ->assertJsonPath('restore_drill.due_at', null)
+        ->assertJsonPath('restore_drill.due', true)
         ->assertJsonPath('queue.available', true)
         ->assertJsonPath('queue.waits.redis:default', 42.5)
         ->assertJsonPath('queue.max_wait_seconds', 42.5)
@@ -74,6 +79,34 @@ test('the health endpoint returns queue, backup, disk and Nightwatch figures', f
         ->assertJsonPath('nightwatch.open', 1)
         ->assertJsonPath('nightwatch.recent.0.id', 'issue-open')
         ->assertJsonCount(2, 'nightwatch.recent');
+});
+
+test('the health endpoint reports the last backup and a current restore drill', function () {
+    $completedAt = now()->startOfSecond();
+    $performedAt = now()->subMonth();
+
+    BackupRun::factory()->create(['completed_at' => $completedAt]);
+    RestoreDrill::factory()->create(['performed_at' => $performedAt]);
+
+    $this->withHeaders($this->adminHeaders)
+        ->getJson(route('internal.health'))
+        ->assertOk()
+        ->assertJsonPath('backup.last_run_at', $completedAt->toIso8601String())
+        ->assertJsonPath('restore_drill.last_performed_at', $performedAt->toIso8601String())
+        ->assertJsonPath('restore_drill.due_at', $performedAt->addMonthsNoOverflow(3)->toIso8601String())
+        ->assertJsonPath('restore_drill.due', false);
+});
+
+test('a restore drill older than the configured months is due', function () {
+    $performedAt = now()->subMonthsNoOverflow(4);
+
+    RestoreDrill::factory()->create(['performed_at' => $performedAt]);
+
+    $this->withHeaders($this->adminHeaders)
+        ->getJson(route('internal.health'))
+        ->assertOk()
+        ->assertJsonPath('restore_drill.last_performed_at', $performedAt->toIso8601String())
+        ->assertJsonPath('restore_drill.due', true);
 });
 
 test('the site token cannot read health', function () {

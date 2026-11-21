@@ -134,6 +134,9 @@ return [
             'issues' => 'Nuovi problemi',
             'failed_jobs' => 'Attività non riuscite',
             'failed_jobs_line' => '{1} Un\'attività non è riuscita ieri|[0,*] :count attività non sono riuscite ieri',
+            'restore_drill' => 'Prova di ripristino',
+            'restore_drill_line' => 'L\'ultima prova di ripristino è stata il :date. Eseguine una ora.',
+            'restore_drill_never' => 'Nessuna prova di ripristino è ancora registrata. Eseguine una ora.',
         ],
         'preview' => [
             'urgent' => 'Un problema richiede attenzione subito.',

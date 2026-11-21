@@ -134,6 +134,9 @@ return [
             'issues' => 'Neue Probleme',
             'failed_jobs' => 'Fehlgeschlagene Jobs',
             'failed_jobs_line' => '{1} Ein fehlgeschlagener Job gestern|[0,*] :count fehlgeschlagene Jobs gestern',
+            'restore_drill' => 'Wiederherstellungstest',
+            'restore_drill_line' => 'Der letzte Wiederherstellungstest war am :date. Führen Sie jetzt einen durch.',
+            'restore_drill_never' => 'Es ist noch kein Wiederherstellungstest erfasst. Führen Sie jetzt einen durch.',
         ],
         'preview' => [
             'urgent' => 'Ein Problem braucht jetzt Aufmerksamkeit.',

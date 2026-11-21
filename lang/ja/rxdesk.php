@@ -134,6 +134,9 @@ return [
             'issues' => '新しい問題',
             'failed_jobs' => '失敗したジョブ',
             'failed_jobs_line' => '{1} 昨日、1件のジョブが失敗しました|[0,*] 昨日、:count 件のジョブが失敗しました',
+            'restore_drill' => 'リストア訓練',
+            'restore_drill_line' => '前回のリストア訓練は :date でした。今すぐ実行してください。',
+            'restore_drill_never' => 'リストア訓練はまだ記録されていません。今すぐ実行してください。',
         ],
         'preview' => [
             'urgent' => 'すぐに対応が必要な問題があります。',

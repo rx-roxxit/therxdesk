@@ -8,6 +8,7 @@ use App\Enums\Alerts\AlertLevel;
 use App\Mail\AdminAlert as AdminAlertMail;
 use App\Models\AdminAlert;
 use App\Models\NightwatchIssue;
+use App\Models\RestoreDrill;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -21,9 +22,32 @@ beforeEach(function () {
 test('the digest sends nothing on an empty day', function () {
     $this->travelTo(now('Asia/Bangkok')->startOfDay()->addHours(8));
 
+    RestoreDrill::factory()->create(['performed_at' => now()->subMonth()]);
+
     $this->artisan(DigestCommand::class)->assertExitCode(0);
 
     Mail::assertNothingQueued();
+});
+
+test('a missing restore drill makes the digest ask for one', function () {
+    $this->travelTo(now('Asia/Bangkok')->startOfDay()->addHours(8));
+
+    $this->artisan(DigestCommand::class)->assertExitCode(0);
+
+    Mail::assertQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->items['restore_drill']['due'] === true
+        && $mail->items['restore_drill']['last_performed_at'] === null);
+});
+
+test('a restore drill older than three months makes the digest ask for one', function () {
+    $this->travelTo(now('Asia/Bangkok')->startOfDay()->addHours(8));
+
+    $performedAt = now()->subMonthsNoOverflow(4);
+    RestoreDrill::factory()->create(['performed_at' => $performedAt]);
+
+    $this->artisan(DigestCommand::class)->assertExitCode(0);
+
+    Mail::assertQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->items['restore_drill']['due'] === true
+        && $mail->items['restore_drill']['last_performed_at'] === $performedAt->timezone('Asia/Bangkok')->format('Y-m-d'));
 });
 
 test('the digest sends one mail with cleared alerts, new issues and failed jobs', function () {
