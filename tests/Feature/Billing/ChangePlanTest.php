@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\User\Locale;
 use App\Models\Account;
 use App\Models\Plan;
@@ -18,17 +18,24 @@ use Stripe\PaymentIntent as StripePaymentIntent;
 beforeEach(function () {
     config(['trypost.self_hosted' => false]);
 
-    $this->socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $this->socials->update([
-        'stripe_monthly_price_id' => 'price_socials_monthly',
-        'stripe_yearly_price_id' => 'price_socials_yearly',
-    ]);
+    Plan::query()->delete();
 
-    $this->workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $this->workspaces->update([
-        'stripe_monthly_price_id' => 'price_workspaces_monthly',
-        'stripe_yearly_price_id' => 'price_workspaces_yearly',
+    $this->socials = Plan::factory()->create([
+        'slug' => 'socials',
+        'name' => 'Socials',
+        'workspace_limit' => 1,
+        'sort' => 1,
     ]);
+    givePlanPrice($this->socials, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($this->socials, Interval::Yearly, 'price_socials_yearly');
+
+    $this->workspaces = Plan::factory()->unlimited()->create([
+        'slug' => 'workspaces',
+        'name' => 'Workspaces',
+        'sort' => 2,
+    ]);
+    givePlanPrice($this->workspaces, Interval::Monthly, 'price_workspaces_monthly');
+    givePlanPrice($this->workspaces, Interval::Yearly, 'price_workspaces_yearly');
 });
 
 afterEach(function () {
@@ -69,7 +76,7 @@ test('an archived plan is rejected', function () use ($withWorkspace) {
     $user = User::factory()->create();
     $withWorkspace($user);
     subscribeAccount($user->account);
-    $legacy = Plan::where('slug', Slug::Workspace)->firstOrFail();
+    $legacy = Plan::factory()->archived()->create(['slug' => 'workspace', 'name' => 'Workspace']);
 
     $this->actingAs($user->fresh())
         ->post(route('app.billing.change-plan'), [

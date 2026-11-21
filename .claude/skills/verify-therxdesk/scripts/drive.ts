@@ -300,7 +300,9 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         await page.locator(tid('@register-name')).fill('Verify Signup');
         await page.locator(tid('@register-email')).fill(email);
-        await page.locator(tid('@register-password')).fill('Tr7#pass-Word-2026');
+        await page
+            .locator(tid('@register-password'))
+            .fill('Tr7#pass-Word-2026');
         await run.step('register-filled');
 
         await page.locator(tid('@register-user-button')).click();
@@ -450,15 +452,13 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await run.step('welcome-software');
         await page.locator(tid('@welcome-software-continue')).click();
 
-        await page.locator(tid('@plan-card-socials')).waitFor();
+        await page.locator(tid('@plan-card-mini')).waitFor();
         await run.step('welcome-plan');
 
-        const price = await page
-            .locator(tid('@plan-price-socials'))
-            .innerText();
+        const price = await page.locator(tid('@plan-price-mini')).innerText();
         run.check(
-            'the Plan step shows Socials at $19',
-            price.includes('$19'),
+            'the Plan step shows Mini at $11.90',
+            price.includes('$11.90'),
             price,
         );
 
@@ -490,11 +490,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             props.hasActiveSubscription === true,
             props,
         );
-        run.check(
-            'the Account is on Socials',
-            props.plan === 'Socials',
-            props.plan,
-        );
+        run.check('the Account is on Mini', props.plan === 'Mini', props.plan);
     },
 
     /** features/billing.md (after welcome-checkout, on the subscribed fixture) */
@@ -526,9 +522,9 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 .innerText(),
         };
         run.check(
-            'the current plan is Socials, $19/month, Active',
-            currentPlan.name.includes('Socials') &&
-                currentPlan.price.includes('$19') &&
+            'the current plan is Mini, $11.90/month, Active',
+            currentPlan.name.includes('Mini') &&
+                currentPlan.price.includes('$11.90') &&
                 currentPlan.badge.includes('Active'),
             currentPlan,
         );
@@ -544,30 +540,28 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
 
         await page.locator(tid('@billing-change-plan')).click();
-        await page.locator(tid('@plan-card-workspaces')).waitFor();
+        await page.locator(tid('@plan-card-standard')).waitFor();
         await animationsSettled(page);
         await run.step('plan-dialog');
 
         await page.locator(tid('@plan-interval-yearly')).click();
         await page.locator(tid('@plan-save-two-months')).waitFor();
-        const yearly = await page
-            .locator(tid('@plan-price-socials'))
-            .innerText();
+        const yearly = await page.locator(tid('@plan-price-mini')).innerText();
         run.check(
-            'yearly shows Socials at $15.83 a month',
-            yearly.includes('$15.83'),
+            'yearly shows Mini at $9.92 a month',
+            yearly.includes('$9.92'),
             yearly,
         );
         await run.step('plan-dialog-yearly');
 
         await page.locator(tid('@plan-interval-monthly')).click();
-        await page.locator(tid('@plan-select-workspaces')).click();
+        await page.locator(tid('@plan-select-standard')).click();
         await page
             .locator(tid('@billing-plan-dialog'))
             .waitFor({ state: 'detached' });
         await page
             .locator(tid('@billing-current-plan-name'))
-            .filter({ hasText: 'Workspaces' })
+            .filter({ hasText: 'Standard' })
             .waitFor({
                 timeout: 60_000,
             });
@@ -578,8 +572,8 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             .locator(tid('@billing-current-plan-price'))
             .innerText();
         run.check(
-            'the plan is now Workspaces at $99',
-            upgraded.includes('$99'),
+            'the plan is now Standard at $17.90',
+            upgraded.includes('$17.90'),
             upgraded,
         );
 
@@ -590,11 +584,11 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         });
         // Stripe's portal keeps polling, so it never reaches networkidle:
         // wait for the subscription it shows instead.
-        const portalPlan = page.getByText('$99.00 per month');
+        const portalPlan = page.getByText('$17.90 per month');
         await portalPlan.first().waitFor({ timeout: 60_000 });
         await run.step('stripe-portal');
         run.check(
-            'Manage on Stripe opens the Customer Portal on the Workspaces subscription',
+            'Manage on Stripe opens the Customer Portal on the Standard subscription',
             new URL(page.url()).hostname === 'billing.stripe.com' &&
                 (await portalPlan.count()) > 0,
             new URL(page.url()).hostname,

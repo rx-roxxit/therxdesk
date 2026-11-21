@@ -7,6 +7,7 @@ import PlanFeatureInfo from '@/components/billing/PlanFeatureInfo.vue';
 import PlanFeatureList from '@/components/billing/PlanFeatureList.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatMoney } from '@/lib/utils';
 import {
     PLAN_CHANGE_LABELS,
     planChangeAction,
@@ -38,16 +39,35 @@ const emit = defineEmits<{
     (event: 'select', planId: string): void;
 }>();
 
-const price = (plan: PlanOption): string =>
-    trans(
-        `billing.subscribe.prices.${plan.slug}.${props.interval === 'yearly' ? 'yearly_per_month' : 'monthly'}`,
-    );
+const amountPerMonth = (plan: PlanOption): number | null => {
+    if (props.interval === 'yearly') {
+        if (plan.yearly_amount === null) {
+            return null;
+        }
 
-const yearlyTotal = (plan: PlanOption): string =>
-    trans(`billing.subscribe.prices.${plan.slug}.yearly`);
+        return Math.round(plan.yearly_amount / 12);
+    }
 
-const tagline = (plan: PlanOption): string =>
-    trans(`billing.plans.${plan.slug}_tagline`);
+    return plan.monthly_amount;
+};
+
+const price = (plan: PlanOption): string => {
+    const amount = amountPerMonth(plan);
+
+    if (amount === null) {
+        return '—';
+    }
+
+    return formatMoney(amount);
+};
+
+const yearlyTotal = (plan: PlanOption): string | null => {
+    if (plan.yearly_amount === null) {
+        return null;
+    }
+
+    return formatMoney(plan.yearly_amount);
+};
 
 const isCurrentPlan = (plan: PlanOption): boolean =>
     plan.id === props.currentPlanId;
@@ -67,14 +87,19 @@ const isDisabled = (plan: PlanOption): boolean =>
     isCurrentSelection(plan) ||
     props.disabledPlanIds.includes(plan.id);
 
-const isFeatured = (plan: PlanOption): boolean => plan.slug === 'workspaces';
+const billingNote = (plan: PlanOption): string | null => {
+    if (props.interval !== 'yearly') {
+        return trans('billing.subscribe.billed_monthly');
+    }
 
-const billingNote = (plan: PlanOption): string =>
-    props.interval === 'yearly'
-        ? trans('billing.plans.billed_yearly_total', {
-              price: yearlyTotal(plan),
-          })
-        : trans('billing.subscribe.billed_monthly');
+    const total = yearlyTotal(plan);
+
+    if (total === null) {
+        return null;
+    }
+
+    return trans('billing.plans.billed_yearly_total', { price: total });
+};
 
 const selectLabel = (plan: PlanOption): string => {
     if (isCurrentSelection(plan)) {
@@ -140,10 +165,7 @@ const workspaceLabel = (plan: PlanOption): string =>
             <article
                 v-for="plan in plans"
                 :key="plan.id"
-                class="flex flex-col gap-4 rounded-xl border bg-card p-5 text-start"
-                :class="
-                    isFeatured(plan) ? 'border-primary-strong' : 'border-border'
-                "
+                class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 text-start"
                 :data-testid="`plan-card-${plan.slug}`"
             >
                 <div class="flex flex-col gap-1">
@@ -159,9 +181,6 @@ const workspaceLabel = (plan: PlanOption): string =>
                             {{ $t('billing.plans.current') }}
                         </Badge>
                     </div>
-                    <p class="text-sm text-muted-foreground">
-                        {{ tagline(plan) }}
-                    </p>
                 </div>
 
                 <div class="flex flex-col gap-1">
@@ -186,7 +205,7 @@ const workspaceLabel = (plan: PlanOption): string =>
                 <Button
                     type="button"
                     size="lg"
-                    :variant="isFeatured(plan) ? 'default' : 'outline'"
+                    variant="outline"
                     class="w-full"
                     :disabled="isDisabled(plan)"
                     :data-testid="`plan-select-${plan.slug}`"

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Jobs\PostHog\TrackWorkspaceLimitHit;
 use App\Models\Plan;
 use App\Models\User;
@@ -16,9 +15,12 @@ beforeEach(function () {
         'services.posthog.api_key' => 'phc_test_key',
     ]);
     Queue::fake([TrackWorkspaceLimitHit::class]);
+
+    Plan::factory()->create(['slug' => 'capped', 'name' => 'Capped', 'workspace_limit' => 1]);
+    Plan::factory()->unlimited()->create(['slug' => 'unlimited', 'name' => 'Unlimited', 'sort' => 2]);
 });
 
-$ownerOn = function (Slug $slug): User {
+$ownerOn = function (string $slug): User {
     $user = User::factory()->create();
     $user->account->update(['plan_id' => Plan::where('slug', $slug)->value('id')]);
     $workspace = Workspace::factory()->create(['account_id' => $user->account_id, 'user_id' => $user->id]);
@@ -39,7 +41,7 @@ $clickNewWorkspaceInSidebar = function (mixed $page): void {
 };
 
 test('at the cap, new workspace in the sidebar opens the upgrade dialog in place and tracks limit_hit', function () use ($ownerOn, $clickNewWorkspaceInSidebar) {
-    $user = $ownerOn(Slug::Socials);
+    $user = $ownerOn('capped');
     $this->actingAs($user);
 
     $page = visit(route('app.posts.index'));
@@ -56,7 +58,7 @@ test('at the cap, new workspace in the sidebar opens the upgrade dialog in place
 });
 
 test('below the cap, new workspace in the sidebar opens the create page and creates the workspace', function () use ($ownerOn, $clickNewWorkspaceInSidebar) {
-    $user = $ownerOn(Slug::Workspaces);
+    $user = $ownerOn('unlimited');
     $this->actingAs($user);
 
     $page = visit(route('app.posts.index'));
@@ -77,7 +79,7 @@ test('below the cap, new workspace in the sidebar opens the create page and crea
 });
 
 test('at the cap without a current workspace, submitting the create page opens the upgrade dialog in place', function () use ($ownerOn) {
-    $user = $ownerOn(Slug::Socials);
+    $user = $ownerOn('capped');
     $user->update(['current_workspace_id' => null]);
     $this->actingAs($user->fresh());
 

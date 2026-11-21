@@ -13,10 +13,6 @@ return [
 
     'subscribe' => [
         'billed_monthly' => '按月计费',
-        'prices' => [
-            'socials' => ['monthly' => '$19', 'yearly_per_month' => '$15.83', 'yearly' => '$190'],
-            'workspaces' => ['monthly' => '$99', 'yearly_per_month' => '$82.50', 'yearly' => '$990'],
-        ],
     ],
 
     'plans' => [
@@ -36,8 +32,6 @@ return [
         'upgrade' => '升级到 :plan',
         'downgrade' => '降级到 :plan',
         'billed_yearly_total' => '按年计费 · :price（免两个月）',
-        'socials_tagline' => '适合创作者和小品牌。',
-        'workspaces_tagline' => '适合代理商和大型业务。',
         'everything_included' => '全部包含',
         'features' => [
             'networks_all' => '包含所有社交平台',

@@ -13,10 +13,6 @@ return [
 
     'subscribe' => [
         'billed_monthly' => 'Ежемесячная оплата',
-        'prices' => [
-            'socials' => ['monthly' => '$19', 'yearly_per_month' => '$15.83', 'yearly' => '$190'],
-            'workspaces' => ['monthly' => '$99', 'yearly_per_month' => '$82.50', 'yearly' => '$990'],
-        ],
     ],
 
     'plans' => [
@@ -36,8 +32,6 @@ return [
         'upgrade' => 'Перейти на :plan',
         'downgrade' => 'Понизить до :plan',
         'billed_yearly_total' => 'Оплата раз в год · :price (2 месяца бесплатно)',
-        'socials_tagline' => 'Для авторов и небольших брендов.',
-        'workspaces_tagline' => 'Для агентств и крупного бизнеса.',
         'everything_included' => 'Всё включено',
         'features' => [
             'networks_all' => 'Все соцсети включены',

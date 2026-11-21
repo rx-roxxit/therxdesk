@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Enums\SocialAccount\Platform;
 use App\Enums\SocialAccount\Status;
 use App\Jobs\PostHog\TrackSocialAccountConnected;
@@ -424,7 +423,7 @@ test('a cancelled consent keeps where to return for the retry and connects nothi
 });
 
 test('several channels connect at once on any plan, since channels have no cap', function () {
-    $this->user->account->update(['plan_id' => Plan::query()->where('slug', Slug::Socials)->value('id')]);
+    $this->user->account->update(['plan_id' => Plan::query()->where('slug', 'mini')->value('id')]);
 
     startSocialConnect($this->workspace, Platform::Facebook)->offer([
         offeredFacebookPage('p1', 'One'),

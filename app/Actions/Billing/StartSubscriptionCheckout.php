@@ -6,7 +6,6 @@ namespace App\Actions\Billing;
 
 use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
-use App\Enums\Plan\Slug;
 use App\Enums\PostHog\CheckoutEvent;
 use App\Jobs\PostHog\CaptureAccountEvent;
 use App\Models\Account;
@@ -42,13 +41,17 @@ class StartSubscriptionCheckout
 
         $subscription->withMetadata($offerMetadata);
 
-        $interval = filled($plan) ? Interval::forPrice($plan, $priceId) : Interval::Monthly;
+        $interval = Interval::Monthly;
+
+        if (filled($plan)) {
+            $interval = $plan->intervalFor($priceId) ?? Interval::Monthly;
+        }
 
         $session = $subscription->checkout([
             'success_url' => route('app.billing.processing', ['from' => $origin->value]).'&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => $cancelUrl,
             'metadata' => array_filter([
-                ConfigureSubscriptionCheckout::PLAN_METADATA_KEY => $plan?->slug->value,
+                ConfigureSubscriptionCheckout::PLAN_METADATA_KEY => $plan?->slug,
                 ConfigureSubscriptionCheckout::INTERVAL_METADATA_KEY => $interval->value,
                 ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
             ], filled(...)),
@@ -72,10 +75,17 @@ class StartSubscriptionCheckout
     }
 
     /**
-     * Offers are written for Socials monthly, so no other price gets one.
+     * Offers are written for the Welcome plan, monthly, so no other price gets
+     * one.
      */
     private function qualifiesForOffer(?Plan $plan, string $priceId): bool
     {
-        return $plan?->slug === Slug::Socials && $plan->stripe_monthly_price_id === $priceId;
+        $entryPlan = Plan::entryPlan();
+
+        if ($plan === null || $entryPlan === null || $entryPlan->isNot($plan)) {
+            return false;
+        }
+
+        return $entryPlan->priceFor(Interval::Monthly)?->stripe_price_id === $priceId;
     }
 }

@@ -22,6 +22,7 @@ use App\Models\MediaSourceConnection;
 use App\Models\NotificationPreference;
 use App\Models\Offer;
 use App\Models\Plan;
+use App\Models\PlanPrice;
 use App\Models\Post;
 use App\Models\PostNote;
 use App\Models\PostNoteReaction;
@@ -145,6 +146,7 @@ class AppServiceProvider extends ServiceProvider
             'notificationPreference' => NotificationPreference::class,
             'offer' => Offer::class,
             'plan' => Plan::class,
+            'planPrice' => PlanPrice::class,
             'post' => Post::class,
             'repurpose' => Repurpose::class,
             'repurposeItem' => RepurposeItem::class,

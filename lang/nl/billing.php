@@ -13,10 +13,6 @@ return [
 
     'subscribe' => [
         'billed_monthly' => 'Maandelijks gefactureerd',
-        'prices' => [
-            'socials' => ['monthly' => '$19', 'yearly_per_month' => '$15.83', 'yearly' => '$190'],
-            'workspaces' => ['monthly' => '$99', 'yearly_per_month' => '$82.50', 'yearly' => '$990'],
-        ],
     ],
 
     'plans' => [
@@ -36,8 +32,6 @@ return [
         'upgrade' => 'Upgrade naar :plan',
         'downgrade' => 'Downgrade naar :plan',
         'billed_yearly_total' => 'Jaarlijks gefactureerd · :price (2 maanden gratis)',
-        'socials_tagline' => 'Ideaal voor creators en kleine merken.',
-        'workspaces_tagline' => 'Ideaal voor bureaus en grotere bedrijven.',
         'everything_included' => 'Alles inbegrepen',
         'features' => [
             'networks_all' => 'Alle sociale netwerken inbegrepen',

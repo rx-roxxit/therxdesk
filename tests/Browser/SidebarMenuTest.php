@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Enums\User\Locale;
 use App\Models\Plan;
 use App\Models\SocialAccount;
@@ -22,7 +21,7 @@ function waitForSidebarTestId(mixed $page, string $testId): void
 test('account owners see settings, channels and plans and billing in the sidebar menu', function () {
     config(['trypost.self_hosted' => false]);
 
-    $plan = Plan::query()->where('slug', Slug::Socials)->firstOrFail();
+    $plan = Plan::query()->where('slug', 'mini')->firstOrFail();
     $user = User::factory()->create(['name' => 'Ada Lovelace', 'email' => 'ada@example.com']);
     $user->account->update(['plan_id' => $plan->id]);
     $workspace = Workspace::factory()->create([
@@ -90,7 +89,7 @@ test('account billing is hidden in the sidebar menu when self-hosted', function 
     config(['trypost.self_hosted' => true]);
 
     $user = User::factory()->create();
-    $user->account->update(['plan_id' => Plan::query()->where('slug', Slug::Socials)->value('id')]);
+    $user->account->update(['plan_id' => Plan::query()->where('slug', 'mini')->value('id')]);
     $workspace = Workspace::factory()->create([
         'user_id' => $user->id,
         'account_id' => $user->account_id,

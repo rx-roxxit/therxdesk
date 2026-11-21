@@ -13,10 +13,6 @@ return [
 
     'subscribe' => [
         'billed_monthly' => 'Rozliczane miesięcznie',
-        'prices' => [
-            'socials' => ['monthly' => '$19', 'yearly_per_month' => '$15.83', 'yearly' => '$190'],
-            'workspaces' => ['monthly' => '$99', 'yearly_per_month' => '$82.50', 'yearly' => '$990'],
-        ],
     ],
 
     'plans' => [
@@ -36,8 +32,6 @@ return [
         'upgrade' => 'Przejdź na :plan',
         'downgrade' => 'Zmień na :plan',
         'billed_yearly_total' => 'Rozliczane rocznie · :price (2 miesiące gratis)',
-        'socials_tagline' => 'Dla twórców i małych marek.',
-        'workspaces_tagline' => 'Dla agencji i większych firm.',
         'everything_included' => 'Wszystko w cenie',
         'features' => [
             'networks_all' => 'Wszystkie sieci społecznościowe w cenie',

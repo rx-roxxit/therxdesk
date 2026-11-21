@@ -61,13 +61,18 @@ $V/selling.sh down      # back to .env's mode (self-hosted)
 
 Run `launch.sh` first; `up` needs the stack running. It does four things, each safe to repeat:
 
-1. **Sandbox catalog.** Through `stripe.sh` (the Stripe CLI image `stripe/stripe-cli:v1.55.14`, nothing installed on
-   the host), it finds or creates one Product per Plan and one Price per interval, keyed by lookup keys
-   `rxdesk-verify-<slug>-monthly|yearly`: Socials $19 / $190, Workspaces $99 / $990 (upstream's prices, from
-   `lang/en/billing.php`). A second run creates nothing. `stripe.sh` refuses a key that is not a test key.
-2. **Plans.** It runs `PlanSeeder` once in a one-off container with the price ids as that command's environment
-   (`STRIPE_SOCIALS_MONTHLY`, ...), never written to `.env`. The `plans` rows stay after `down` (harmless in
-   self-hosted mode).
+1. **Plan catalog.** Runs `php artisan migrate --force` and then `Database\Seeders\PlanSeeder` in a one-off
+   container (both idempotent, no env): the seeder writes the four RX Desk Plans and their `plan_prices` rows into
+   the app's own database (Mini $11.90 / $119, Standard $17.90 / $179, Plus $29.90 / $299, Max $49.90 / $499;
+   yearly is 10× monthly) and archives any other Plan. The rows carry no Stripe ids.
+2. **Sandbox prices.** `scripts/plans.php catalog` prints the active Plans' active price rows as JSON. Through
+   `stripe.sh` (the Stripe CLI image `stripe/stripe-cli:v1.55.14`, nothing installed on the host), it finds or
+   creates one Product per Plan and one Price per interval, keyed by lookup keys
+   `rxdesk-verify-<slug>-monthly|yearly`, with the amount from the catalog (never written in bash). A second run
+   creates nothing; a sandbox Price whose amount no longer matches the catalog stops `up`, because a Stripe Price
+   is immutable. `scripts/plans.php attach` then writes each id into that Plan and interval's active `plan_prices`
+   row: the same id is a no-op, and a different id adds an active row and archives the old one (no price row is
+   ever deleted). `stripe.sh` refuses a key that is not a test key.
 3. **Webhook secret.** `stripe listen --print-secret` (stable for the sandbox key) goes into
    `~/.cache/verify-therxdesk/state/stripe-webhook.env`, mode 600, never shown.
 4. **Recreate.** It writes the marker `~/.cache/verify-therxdesk/state/selling` and recreates `app` with
@@ -85,10 +90,10 @@ While the marker exists, every script (`compose` in `env.sh`) includes the overl
 Switching recreates the owner's running `app` container (about a minute; the entrypoint runs again), so the
 owner's open dev browser follows the mode too. `cleanup.sh` runs `selling.sh down`.
 
-The catalog is **temporary**: it seeds upstream's Plans (Socials, Workspaces) because the app has no way to seed its
-own yet. Once Plan prices are data in the app (`plan_prices`, the four RX Desk Plans) and the Catalog syncs to
-Stripe, replace steps 1 and 2 with the app's own seed and sync, update the journeys' Plan names and prices, and
-retire the `rxdesk-verify-*` lookup keys. Do it through `/pstack:maintain-verification-skill`.
+The catalog is **temporary**: `PlanSeeder` writes the four Plans and their prices in code. Ticket #54 has the app
+create every Stripe Product and Price itself from its Catalog; when it lands, `selling.sh` uses that sync instead
+of creating sandbox prices, and the `rxdesk-verify-*` lookup keys go. Do that through
+`/pstack:maintain-verification-skill`.
 
 ## Doctor
 
@@ -192,11 +197,11 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `guests` removes register-journey Owners | `up`, `down`, `guests` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
-| `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plans` |
+| `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plan_prices` |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
 
 `env.sh` holds the shared settings (`VERIFY_BASE_URL`, `VERIFY_VITE_URL`, `VERIFY_EVIDENCE_ROOT` override them),
 `compose` (with the selling overlay while the marker exists), `wait_until_usable` and `served_mode`.
 `compose.selling.yaml` is the selling overlay.
-`fixture.php` runs inside the app image as `app` (UID 1001) through `docker compose run`, never as root.
+`fixture.php` and `plans.php` run inside the app image as `app` (UID 1001) through `docker compose run`, never as root.

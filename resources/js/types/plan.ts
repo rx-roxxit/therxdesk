@@ -9,14 +9,12 @@ export interface PlanOption {
     slug: string;
     name: string;
     workspace_limit: number | null;
+    sort: number;
+    quota_bytes: number | null;
+    ai_credits_per_month: number | null;
+    monthly_amount: number | null;
+    yearly_amount: number | null;
 }
-
-export const PRICED_PLAN_SLUGS = ['socials', 'workspaces'] as const;
-
-export type PricedPlanSlug = (typeof PRICED_PLAN_SLUGS)[number];
-
-export const isPricedPlanSlug = (slug: string): slug is PricedPlanSlug =>
-    (PRICED_PLAN_SLUGS as readonly string[]).includes(slug);
 
 export const deniedPlanIdsFor = (
     plans: PlanOption[],
@@ -43,11 +41,6 @@ export const PLAN_CHANGE_LABELS = {
     `billing.plans.${PlanChangeAction}`
 >;
 
-const workspaceRank = (plan: PlanOption): number =>
-    plan.workspace_limit === null
-        ? Number.POSITIVE_INFINITY
-        : plan.workspace_limit;
-
 export const planChangeAction = (
     current: PlanOption | null | undefined,
     target: PlanOption,
@@ -56,14 +49,11 @@ export const planChangeAction = (
         return 'select';
     }
 
-    const from = workspaceRank(current);
-    const to = workspaceRank(target);
-
-    if (to > from) {
+    if (target.sort > current.sort) {
         return 'upgrade';
     }
 
-    if (to < from) {
+    if (target.sort < current.sort) {
         return 'downgrade';
     }
 

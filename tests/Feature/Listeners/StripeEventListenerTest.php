@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Account\ResolveLifecycleStage;
 use App\Enums\Account\LifecycleStage;
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\BillingEvent;
 use App\Jobs\PostHog\TrackBilling;
 use App\Jobs\PostHog\TrackCheckoutCompleted;
@@ -22,25 +22,19 @@ use Laravel\Cashier\Events\WebhookHandled;
 beforeEach(function () {
     enablePostHog();
 
-    // Use the seeded Workspace plan; set deterministic price ids so the
+    // Use factory plans with deterministic price ids so the
     // assertions don't depend on `.env.testing`.
-    $this->plan = Plan::where('slug', Slug::Workspace)->firstOrFail();
-    $this->plan->update([
-        'stripe_monthly_price_id' => 'price_workspace_monthly',
-        'stripe_yearly_price_id' => 'price_workspace_yearly',
-    ]);
+    $this->plan = Plan::factory()->create(['slug' => 'workspace', 'name' => 'Workspace']);
+    givePlanPrice($this->plan, Interval::Monthly, 'price_workspace_monthly');
+    givePlanPrice($this->plan, Interval::Yearly, 'price_workspace_yearly');
 
-    $this->socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $this->socials->update([
-        'stripe_monthly_price_id' => 'price_socials_monthly',
-        'stripe_yearly_price_id' => 'price_socials_yearly',
-    ]);
+    $this->socials = Plan::factory()->create(['slug' => 'socials', 'name' => 'Socials']);
+    givePlanPrice($this->socials, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($this->socials, Interval::Yearly, 'price_socials_yearly');
 
-    $this->workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $this->workspaces->update([
-        'stripe_monthly_price_id' => 'price_workspaces_monthly',
-        'stripe_yearly_price_id' => 'price_workspaces_yearly',
-    ]);
+    $this->workspaces = Plan::factory()->unlimited()->create(['slug' => 'workspaces', 'name' => 'Workspaces']);
+    givePlanPrice($this->workspaces, Interval::Monthly, 'price_workspaces_monthly');
+    givePlanPrice($this->workspaces, Interval::Yearly, 'price_workspaces_yearly');
 
     $this->account = Account::factory()->create(['stripe_id' => 'cus_test123']);
     $this->user = User::factory()->create([
@@ -326,6 +320,24 @@ test('subscription updated maps the plan by its yearly price id too', function (
             'customer' => 'cus_test123',
             'status' => 'trialing',
             'items' => ['data' => [['price' => ['id' => 'price_workspace_yearly']]]],
+        ]],
+    ]));
+
+    expect($this->account->fresh()->plan_id)->toBe($this->plan->id);
+});
+
+test('subscription updated maps the plan through an old price it no longer sells', function () {
+    $this->account->update(['plan_id' => null]);
+    $this->plan->prices()
+        ->where('stripe_price_id', 'price_workspace_monthly')
+        ->update(['is_active' => false]);
+
+    $this->listener->handle(new WebhookHandled([
+        'type' => 'customer.subscription.updated',
+        'data' => ['object' => [
+            'customer' => 'cus_test123',
+            'status' => 'active',
+            'items' => ['data' => [['price' => ['id' => 'price_workspace_monthly']]]],
         ]],
     ]));
 

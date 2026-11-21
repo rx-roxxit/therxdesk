@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Models\Account;
 use App\Models\Invite;
 use App\Models\Plan;
@@ -49,9 +48,10 @@ test('featureLimits reports the plan workspace limit', function () {
     $user = User::factory()->create();
     $account = $user->account;
 
-    $account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id')]);
+    $limited = Plan::factory()->create(['workspace_limit' => 3]);
+    $account->update(['plan_id' => $limited->id]);
 
-    expect($account->fresh()->featureLimits())->toBe(['workspaceLimit' => 1]);
+    expect($account->fresh()->featureLimits())->toBe(['workspaceLimit' => 3]);
 });
 
 test('featureLimits reports a one-workspace cap when the account has no plan', function () {
@@ -70,7 +70,7 @@ test('featureLimits reports null for an unlimited plan', function () {
     $user = User::factory()->create();
     $account = $user->account;
 
-    $account->update(['plan_id' => Plan::where('slug', Slug::Workspaces)->value('id')]);
+    $account->update(['plan_id' => Plan::where('slug', 'standard')->value('id')]);
 
     expect($account->fresh()->featureLimits())->toBe(['workspaceLimit' => null]);
 });

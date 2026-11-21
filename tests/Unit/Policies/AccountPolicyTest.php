@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
@@ -11,8 +10,14 @@ use App\Policies\AccountPolicy;
 
 beforeEach(function () {
     $this->policy = new AccountPolicy;
+    $this->unlimited = Plan::where('slug', 'plus')->firstOrFail();
+    $this->limited = Plan::factory()->create([
+        'slug' => 'limited',
+        'name' => 'Limited',
+        'workspace_limit' => 1,
+    ]);
     $this->account = Account::factory()->create([
-        'plan_id' => Plan::where('slug', Slug::Workspace)->value('id'),
+        'plan_id' => $this->unlimited->id,
     ]);
     $this->owner = User::factory()->create(['account_id' => $this->account->id]);
     $this->account->update(['owner_id' => $this->owner->id]);
@@ -24,7 +29,7 @@ test('swapPlan allows the account owner', function () {
     $response = $this->policy->swapPlan(
         $this->owner,
         $this->account->fresh(),
-        Plan::where('slug', Slug::Workspaces)->firstOrFail(),
+        $this->unlimited,
     );
 
     expect($response->allowed())->toBeTrue();
@@ -37,7 +42,7 @@ test('swapPlan denies a non-owner', function () {
     $response = $this->policy->swapPlan(
         $member,
         $this->account->fresh(),
-        Plan::where('slug', Slug::Workspaces)->firstOrFail(),
+        $this->unlimited,
     );
 
     expect($response->denied())->toBeTrue();
@@ -48,7 +53,7 @@ test('swapPlan denies when the account is not subscribed', function () {
     $response = $this->policy->swapPlan(
         $this->owner,
         $this->account->fresh(),
-        Plan::where('slug', Slug::Workspaces)->firstOrFail(),
+        $this->unlimited,
     );
 
     expect($response->denied())->toBeTrue();
@@ -65,7 +70,7 @@ test('swapPlan denies when the account holds more workspaces than the target all
     $response = $this->policy->swapPlan(
         $this->owner,
         $this->account->fresh(),
-        Plan::where('slug', Slug::Socials)->firstOrFail(),
+        $this->limited,
     );
 
     expect($response->denied())->toBeTrue();

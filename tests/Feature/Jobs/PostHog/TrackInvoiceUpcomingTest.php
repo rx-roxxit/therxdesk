@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\InvoiceEvent;
 use App\Jobs\PostHog\SendEvent;
 use App\Jobs\PostHog\TrackInvoiceUpcoming;
@@ -16,7 +16,9 @@ beforeEach(function () {
     enablePostHog();
 
     Plan::query()->delete();
-    Plan::factory()->create(['slug' => Slug::Socials, 'stripe_monthly_price_id' => 'price_socials_monthly', 'stripe_yearly_price_id' => 'price_socials_yearly']);
+    $plan = Plan::factory()->create(['slug' => 'socials']);
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($plan, Interval::Yearly, 'price_socials_yearly');
 
     $this->account = Account::factory()->create(['plan_id' => null]);
     $this->user = User::factory()->create(['account_id' => $this->account->id]);

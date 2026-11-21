@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Enums\PostHog\CheckoutEvent;
 use App\Jobs\PostHog\SendEvent;
 use App\Jobs\PostHog\TrackCheckoutExpired;
@@ -27,7 +26,7 @@ beforeEach(function () {
             'mode' => 'subscription',
             'customer' => 'cus_test',
             'metadata' => [
-                'trypost_plan_slug' => 'socials',
+                'trypost_plan_slug' => 'mini',
                 'trypost_interval' => 'monthly',
                 'trypost_offer_slug' => 'bf26',
             ],
@@ -56,7 +55,7 @@ test('captures checkout.expired on the owner with plan and offer', function () {
             && $job->payload['event'] === CheckoutEvent::Expired->value
             && $job->payload['distinctId'] === (string) $this->user->id
             && $properties['$groups']['account'] === (string) $this->account->id
-            && $properties['plan_name'] === Plan::where('slug', Slug::Socials)->value('name')
+            && $properties['plan_name'] === Plan::where('slug', 'mini')->value('name')
             && $properties['interval'] === 'monthly'
             && $properties['offer'] === 'bf26'
             && $properties['checkout_session_id'] === 'cs_test_expired';

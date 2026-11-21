@@ -7,8 +7,10 @@ gives the Account access, and lands on the Schedule.
 
 - Welcome steps: persona (`@welcome-persona-<persona>`, `@welcome-persona-continue`), goals (`@welcome-goal-<goal>`,
   several, `@welcome-goals-continue`), current tool (`@welcome-software-<value>`, `@welcome-software-continue`).
-- Plan step (`/welcome/plan`): the Socials card (`@plan-card-socials`, `@plan-price-socials`), reviews, terms,
-  `@welcome-plan-continue`, which opens Stripe Checkout for Socials monthly. Upstream shows Socials only here.
+- Plan step (`/welcome/plan`): the Mini card (`@plan-card-mini`, `@plan-price-mini`), reviews, terms,
+  `@welcome-plan-continue`, which opens Stripe Checkout for Mini monthly. Welcome shows one Plan; the other three
+  (Standard, Plus, Max) are on billing's change-plan picker. Prices come from `plan_prices` (see
+  `selling-mode.md`).
 - An Offer changes the Plan step: a banner (`@welcome-plan-offer`), a discounted price, a trial, or a no-card trial
   that skips Checkout. The fixture has no Offer; `OfferSeeder` has local ones, but its coupons are upstream's and
   are not in this sandbox.
@@ -30,11 +32,11 @@ the Plan step. On Stripe's page type the test card and press "Subscribe".
   fills card `4242 4242 4242 4242`, an expiry two years ahead, CVC `123` and a name, then presses
   `[data-testid="payment-form-submit-button"]`. The billing country follows the IP (Thailand here); a US country
   adds `#payment-postalCodeInput`, which the helper fills when shown.
-- End state: the path is `/schedule...`, `auth.hasActiveSubscription` is `true`, `auth.plan.name` is `Socials`
+- End state: the path is `/schedule...`, `auth.hasActiveSubscription` is `true`, `auth.plan.name` is `Mini`
   (`08-after-checkout.png`).
 - Side effects, from the host:
   `$V/db.sh "select p.slug, s.stripe_status, s.stripe_price from accounts a left join plans p on p.id = a.plan_id left join subscriptions s on s.account_id = a.id where a.id = '<accountId>'"`
-  shows `socials | active | <the rxdesk-verify-socials-monthly price>`. `$V/selling.sh logs` shows every event
+  shows `mini | active | <the rxdesk-verify-mini-monthly price>`. `$V/selling.sh logs` shows every event
   answered `<-- [200]` (a wrong signing secret answers 403).
 
 ## Gotchas

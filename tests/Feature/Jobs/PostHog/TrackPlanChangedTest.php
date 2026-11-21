@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\PlanEvent;
 use App\Jobs\PostHog\SendEvent;
 use App\Jobs\PostHog\TrackPlanChanged;
@@ -16,9 +16,13 @@ beforeEach(function () {
     enablePostHog();
 
     Plan::query()->delete();
-    $this->legacy = Plan::factory()->create(['slug' => Slug::Workspace, 'name' => 'Workspace', 'stripe_monthly_price_id' => 'price_legacy_monthly']);
-    $this->socials = Plan::factory()->create(['slug' => Slug::Socials, 'stripe_monthly_price_id' => 'price_socials_monthly', 'stripe_yearly_price_id' => 'price_socials_yearly']);
-    $this->workspaces = Plan::factory()->unlimited()->create(['slug' => Slug::Workspaces, 'name' => 'Workspaces', 'stripe_monthly_price_id' => 'price_workspaces_monthly']);
+    $this->legacy = Plan::factory()->create(['slug' => 'workspace', 'name' => 'Workspace']);
+    givePlanPrice($this->legacy, Interval::Monthly, 'price_legacy_monthly');
+    $this->socials = Plan::factory()->create(['slug' => 'socials']);
+    givePlanPrice($this->socials, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($this->socials, Interval::Yearly, 'price_socials_yearly');
+    $this->workspaces = Plan::factory()->unlimited()->create(['slug' => 'workspaces', 'name' => 'Workspaces']);
+    givePlanPrice($this->workspaces, Interval::Monthly, 'price_workspaces_monthly');
 
     $this->account = Account::factory()->create(['plan_id' => $this->workspaces->id]);
     $this->user = User::factory()->create(['account_id' => $this->account->id]);

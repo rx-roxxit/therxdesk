@@ -104,7 +104,7 @@ class HandleInertiaRequests extends Middleware
                 }
 
                 return PlanResource::collection(
-                    Plan::active()->orderBy('sort')->get()
+                    Plan::active()->with('prices')->orderBy('sort')->get()
                 )->resolve();
             },
             'legal' => fn (): array => [

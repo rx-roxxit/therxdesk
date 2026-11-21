@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
@@ -17,7 +16,7 @@ function billingPageOwner(bool $subscribed = true): User
 {
     $user = User::factory()->create();
     $user->account->update([
-        'plan_id' => Plan::query()->where('slug', Slug::Socials)->value('id'),
+        'plan_id' => Plan::query()->where('slug', 'mini')->value('id'),
     ]);
 
     $workspace = Workspace::factory()->create([
@@ -42,8 +41,8 @@ test('the billing page shows the current plan and changes plans in a dialog', fu
     $page = visit(route('app.billing.index'));
     waitFor($page, '@billing-current-plan');
 
-    $page->assertSeeIn('@billing-current-plan-name', 'Socials')
-        ->assertSeeIn('@billing-current-plan-price', '$19')
+    $page->assertSeeIn('@billing-current-plan-name', 'Mini')
+        ->assertSeeIn('@billing-current-plan-price', '$11.90')
         ->assertSeeIn('@billing-current-plan-price', '/month')
         ->assertSeeIn('@billing-current-plan-badge', 'Active')
         ->assertMissing('@billing-current-plan-status')
@@ -51,23 +50,23 @@ test('the billing page shows the current plan and changes plans in a dialog', fu
         ->assertVisible('@settings-nav-billing')
         ->assertMissing('@settings-nav-account')
         ->assertMissing('@billing-details-form')
-        ->assertMissing('@plan-card-socials');
+        ->assertMissing('@plan-card-mini');
 
     $page->click('@billing-change-plan');
-    waitFor($page, '@plan-card-workspaces');
+    waitFor($page, '@plan-card-standard');
 
     $page->assertVisible('@billing-plan-dialog')
-        ->assertVisible('@plan-card-socials')
-        ->assertVisible('@plan-card-workspaces')
-        ->assertSeeIn('@plan-select-socials', 'Current plan')
-        ->assertSeeIn('@plan-select-workspaces', 'Upgrade to Workspaces')
-        ->assertSeeIn('@plan-price-socials', '$19');
+        ->assertVisible('@plan-card-mini')
+        ->assertVisible('@plan-card-standard')
+        ->assertSeeIn('@plan-select-mini', 'Current plan')
+        ->assertSeeIn('@plan-select-standard', 'Upgrade to Standard')
+        ->assertSeeIn('@plan-price-mini', '$11.90');
 
     $page->click('@plan-interval-yearly');
     waitFor($page, '@plan-save-two-months');
 
-    $page->assertSeeIn('@plan-price-socials', '$15.83')
-        ->assertSeeIn('@plan-select-socials', 'Switch to yearly')
+    $page->assertSeeIn('@plan-price-mini', '$9.92')
+        ->assertSeeIn('@plan-select-mini', 'Switch to yearly')
         ->assertVisible('@billing-plan-dialog')
         ->assertRoute('app.billing.index')
         ->assertNoJavaScriptErrors();
@@ -102,7 +101,7 @@ test('the billing page explains a discount and lists every card, the default fir
     $page = visit(route('app.billing.index'));
     waitFor($page, '@billing-card-pm_fake_second');
 
-    $page->assertSeeIn('@billing-current-plan-price', '$19')
+    $page->assertSeeIn('@billing-current-plan-price', '$11.90')
         ->assertSeeIn('@billing-current-plan-discount', '50% off until')
         ->assertSeeIn('@billing-card-pm_fake', 'Visa')
         ->assertSeeIn('@billing-card-pm_fake', '•••• 4242')
@@ -216,7 +215,7 @@ test('a trial without a card shows when it ends and offers to subscribe', functi
     $page = visit(route('app.billing.index'));
     waitFor($page, '@billing-subscribe');
 
-    $page->assertSeeIn('@billing-current-plan-name', 'Socials')
+    $page->assertSeeIn('@billing-current-plan-name', 'Mini')
         ->assertSeeIn('@billing-current-plan-badge', 'Trial')
         ->assertSeeIn('@billing-current-plan-status', 'Trial until '.$endsAt->setTimezone('America/Sao_Paulo')->format('F j, Y g:i A'))
         ->assertVisible('@billing-current-plan-trial-icon')

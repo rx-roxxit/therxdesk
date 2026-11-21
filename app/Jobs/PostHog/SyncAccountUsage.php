@@ -46,7 +46,7 @@ class SyncAccountUsage implements ShouldQueue
         $postHog->groupIdentify('account', (string) $account->id, [
             'name' => $account->name,
             'plan' => $account->plan?->name,
-            'plan_slug' => $account->plan?->slug->value,
+            'plan_slug' => $account->plan?->slug,
             'subscription_status' => $account->subscriptionStatus(),
             'has_active_subscription' => $account->hasActiveSubscription(),
             'is_on_trial' => $account->isOnTrial(),

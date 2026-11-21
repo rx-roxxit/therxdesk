@@ -3,7 +3,7 @@
 # selling mode (SELF_HOSTED=false, Stripe sandbox, webhooks forwarded by the
 # Stripe CLI), without editing .env. See compose.selling.yaml.
 #
-#   selling.sh up       sandbox catalog + Plans, webhook secret, recreate app in selling mode, start the listener
+#   selling.sh up       app catalog + sandbox prices, webhook secret, recreate app in selling mode, start the listener
 #   selling.sh down     stop the listener, recreate app from .env (self-hosted)
 #   selling.sh status   the marker, the app container's SELF_HOSTED, what php-fpm serves, the listener
 #   selling.sh logs     the listener's log, with the signing secret redacted
@@ -13,16 +13,12 @@ source "$(dirname "$0")/env.sh"
 
 STRIPE="$(dirname "$0")/stripe.sh"
 
-# The Plans of the CURRENT code (upstream's Socials and Workspaces, prices
-# from lang/en/billing.php), as "<plan slug> <interval> <amount in cents>".
-# Temporary: once the app's own Plan prices (plan_prices) and Stripe sync
-# ship, seed from those instead (see SKILL.md, "Selling mode").
-CATALOG=(
-    "socials month 1900"
-    "socials year 19000"
-    "workspaces month 9900"
-    "workspaces year 99000"
-)
+# scripts/plans.php reads the app's Plan catalog from the DEV database and
+# writes the sandbox price ids back. The prices themselves live in
+# plan_prices, never in this script.
+plans() {
+    app_run php "$SKILL_IN_APP/scripts/plans.php" "$@"
+}
 
 json_field() {
     python3 -I -c "import json,sys; d=json.load(sys.stdin); print($1)"
@@ -30,19 +26,30 @@ json_field() {
 
 # Prints the id of the sandbox price with this lookup key, creating its
 # product and the price when missing. Idempotent: a second run finds them.
+# A found price whose amount no longer matches the catalog stops the run:
+# Stripe prices are immutable, so silently reusing it would charge the wrong
+# amount.
 ensure_price() {
     local slug="$1" interval="$2" amount="$3"
-    local lookup="rxdesk-verify-${slug}-${interval}ly"
-    local found product
+    local lookup="rxdesk-verify-${slug}-${interval}"
+    local found found_amount product
 
-    found="$("$STRIPE" get /v1/prices -d "lookup_keys[]=$lookup" -d active=true | json_field 'd["data"][0]["id"] if d["data"] else ""')"
+    found="$("$STRIPE" get /v1/prices -d "lookup_keys[]=$lookup" -d active=true \
+        | json_field 'd["data"][0]["id"] + " " + str(d["data"][0]["unit_amount"]) if d["data"] else ""')"
     if [ -n "$found" ]; then
+        found_amount="${found#* }"
+        found="${found%% *}"
+        if [ "$found_amount" != "$amount" ]; then
+            echo "[selling] FAILED: sandbox price $lookup is $found_amount cents, the catalog says $amount." >&2
+            echo "[selling] Deactivate it in the sandbox (or clear its lookup key), then run selling.sh up again." >&2
+            exit 1
+        fi
         echo "$found"
         return
     fi
 
     # Reuse the product a sibling price of the same plan already has.
-    product="$("$STRIPE" get /v1/prices -d "lookup_keys[]=rxdesk-verify-${slug}-monthly" -d "lookup_keys[]=rxdesk-verify-${slug}-yearly" \
+    product="$("$STRIPE" get /v1/prices -d "lookup_keys[]=rxdesk-verify-${slug}-monthly" -d "lookup_keys[]=rxdesk-verify-${slug}-yearly" -d active=true \
         | json_field 'd["data"][0]["product"] if d["data"] else ""')"
     if [ -z "$product" ]; then
         local name
@@ -51,25 +58,53 @@ ensure_price() {
         echo "[selling] created sandbox product $product ($name)" >&2
     fi
 
+    # plan_prices says "monthly" / "yearly"; Stripe wants "month" / "year".
+    local stripe_interval="${interval%ly}"
     found="$("$STRIPE" post /v1/prices -d "product=$product" -d currency=usd -d "unit_amount=$amount" \
-        -d "recurring[interval]=$interval" -d "lookup_key=$lookup" -d "metadata[rxdesk_verify]=true" | json_field 'd["id"]')"
+        -d "recurring[interval]=$stripe_interval" -d "lookup_key=$lookup" -d "metadata[rxdesk_verify]=true" | json_field 'd["id"]')"
     echo "[selling] created sandbox price $found ($lookup)" >&2
     echo "$found"
 }
 
-seed_plans() {
-    local env_args=() line slug interval amount id
-    for line in "${CATALOG[@]}"; do
-        read -r slug interval amount <<<"$line"
+# Seeds the app's own Plan catalog (idempotent, no env), then gives every
+# active plan_prices row a sandbox Price and writes the ids back.
+sync_catalog() {
+    local catalog slug interval amount id
+    local -a attached=()
+
+    echo "[selling] seeding the app's Plan catalog"
+    # The running app may predate the plan_prices migration: migrate first, as
+    # the entrypoint does on every recreate.
+    app_run php artisan migrate --force
+    app_run php artisan db:seed --class='Database\Seeders\PlanSeeder' --force
+
+    catalog="$(plans catalog)"
+    if [ -z "$catalog" ] || [ "$catalog" = "[]" ]; then
+        echo "[selling] FAILED: no active Plan price rows after seeding: check PlanSeeder" >&2
+        exit 1
+    fi
+
+    while read -r slug interval amount; do
         id="$(ensure_price "$slug" "$interval" "$amount")"
         [[ "$id" == price_* ]] || { echo "[selling] FAILED: no sandbox price for $slug $interval" >&2; exit 1; }
-        env_args+=(-e "STRIPE_$(echo "$slug" | tr a-z A-Z)_$(echo "${interval}ly" | tr a-z A-Z)=$id")
-        echo "[selling] price $slug ${interval}ly: $id"
-    done
+        attached+=("$slug $interval $id")
+        echo "[selling] price $slug $interval: $id"
+    done < <(printf '%s' "$catalog" | python3 -I -c '
+import json, sys
+for row in json.load(sys.stdin):
+    print(row["slug"], row["interval"], row["amount"])
+')
 
-    # PlanSeeder reads the price ids from the environment; they go to this
-    # one-off command only, never into .env.
-    compose run --rm -T -u app "${env_args[@]}" app php artisan db:seed --class='Database\Seeders\PlanSeeder' --force
+    if [ "${#attached[@]}" -eq 0 ]; then
+        echo "[selling] FAILED: read no rows from the catalog: check plans.php" >&2
+        exit 1
+    fi
+
+    printf '%s\n' "${attached[@]}" | python3 -I -c '
+import json, sys
+rows = [dict(zip(("slug", "interval", "price_id"), line.split())) for line in sys.stdin if line.strip()]
+print(json.dumps(rows))
+' | plans attach
 }
 
 write_webhook_secret() {
@@ -99,7 +134,7 @@ up() {
         exit 1
     fi
 
-    seed_plans
+    sync_catalog
     write_webhook_secret
 
     touch "$SELLING_MARKER"

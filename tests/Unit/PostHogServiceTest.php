@@ -120,7 +120,7 @@ test('capture auto-attaches account groups when account is supplied', function (
     Queue::fake();
     config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test_key']);
 
-    $plan = Plan::query()->where('slug', 'workspace')->first();
+    $plan = Plan::query()->where('slug', 'mini')->first();
     $account = Account::factory()->create(['plan_id' => $plan?->id]);
 
     $service = new PostHogService;

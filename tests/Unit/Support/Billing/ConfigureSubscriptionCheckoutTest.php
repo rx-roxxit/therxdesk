@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Models\Account;
 use App\Models\Offer;
-use App\Models\Plan;
 use App\Support\Billing\ConfigureSubscriptionCheckout;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,11 +31,6 @@ function trialExpiresAt(SubscriptionBuilder $subscription): ?Carbon
     $property = (new ReflectionClass($subscription))->getProperty('trialExpires');
 
     return $property->getValue($subscription);
-}
-
-function socialsPlan(): Plan
-{
-    return Plan::where('slug', Slug::Socials)->firstOrFail();
 }
 
 function claimOfferFor(Account $account, Offer $offer): Offer

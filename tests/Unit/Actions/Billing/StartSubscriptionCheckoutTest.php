@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Billing\StartSubscriptionCheckout;
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\CheckoutEvent;
 use App\Enums\User\Persona;
 use App\Enums\User\PreviousSoftware;
@@ -189,11 +189,9 @@ test('redirect cuts an oversized click id to the stripe metadata limit', functio
 
 test('checkout session carries the plan and interval of a yearly price', function () {
 
-    $plan = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $plan->update([
-        'stripe_monthly_price_id' => 'price_workspaces_monthly',
-        'stripe_yearly_price_id' => 'price_workspaces_yearly',
-    ]);
+    $plan = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_workspaces_monthly');
+    givePlanPrice($plan, Interval::Yearly, 'price_workspaces_yearly');
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -207,7 +205,7 @@ test('checkout session carries the plan and interval of a yearly price', functio
     $builder->shouldReceive('checkout')
         ->once()
         ->withArgs(fn (array $options): bool => data_get($options, 'metadata') === [
-            'trypost_plan_slug' => 'workspaces',
+            'trypost_plan_slug' => 'plus',
             'trypost_interval' => 'yearly',
         ])
         ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
@@ -227,7 +225,7 @@ test('checkout session carries the plan and interval of a yearly price', functio
 
 test('redirect clears a leftover plan_id before opening checkout', function () {
 
-    $workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
+    $workspaces = Plan::where('slug', 'plus')->firstOrFail();
     $account = Account::factory()->create(['plan_id' => $workspaces->id]);
     Workspace::factory()->create(['account_id' => $account->id]);
     User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
@@ -322,8 +320,8 @@ test('redirect updates an existing stripe customer with the current details and 
 
 test('stores the offer id and slug in subscription and checkout metadata', function () {
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -363,8 +361,8 @@ test('stores the offer id and slug in subscription and checkout metadata', funct
 
 test('redirect uses the offer it is given and never looks one up', function () {
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -401,11 +399,9 @@ test('redirect uses the offer it is given and never looks one up', function () {
 
 test('redirect skips the offer on a yearly price', function () {
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update([
-        'stripe_monthly_price_id' => 'price_socials_monthly',
-        'stripe_yearly_price_id' => 'price_socials_yearly',
-    ]);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($plan, Interval::Yearly, 'price_socials_yearly');
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -434,8 +430,8 @@ test('redirect skips the offer on a yearly price', function () {
 });
 
 test('redirect gives the trial of the offer it is given', function () {
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
 
     $account = Account::factory()->create();
     User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
@@ -460,8 +456,8 @@ test('redirect gives the trial of the offer it is given', function () {
 });
 
 test('redirect from a generic trial charges at once and keeps the trial plan', function () {
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
     $trialEndsAt = now()->addDays(4)->startOfSecond();
 
     $account = Account::factory()->create(['plan_id' => $plan->id, 'trial_ends_at' => $trialEndsAt]);
@@ -488,8 +484,8 @@ test('redirect from a generic trial charges at once and keeps the trial plan', f
 test('redirect tracks checkout.started on the owner with the plan, interval and offer', function () {
     config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test']);
     Bus::fake([CaptureAccountEvent::class]);
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
 
     $account = Account::factory()->create();
     $owner = User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
@@ -511,12 +507,12 @@ test('redirect tracks checkout.started on the owner with the plan, interval and 
 
     Bus::assertDispatched(CaptureAccountEvent::class, fn (CaptureAccountEvent $job): bool => $job->event === CheckoutEvent::Started
         && $job->distinctId === (string) $owner->id
-        && $job->properties === ['plan_name' => 'Socials', 'interval' => 'monthly', 'offer' => 'bf26']);
+        && $job->properties === ['plan_name' => 'Mini', 'interval' => 'monthly', 'offer' => 'bf26']);
 });
 
-test('redirect gives no offer to a plan other than Socials monthly', function () {
-    $workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $workspaces->update(['stripe_monthly_price_id' => 'price_workspaces_monthly']);
+test('redirect gives no offer to a plan other than the entry plan monthly', function () {
+    $workspaces = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($workspaces, Interval::Monthly, 'price_workspaces_monthly');
 
     $account = Account::factory()->create();
     User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
