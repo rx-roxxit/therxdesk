@@ -13,6 +13,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
+| Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 
 Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), publishing (would
 call the network), Insights, Create (ideas, templates, feeds), Repurpose, workspace members and invites, settings

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\RxDesk;
 
+use App\Actions\Audit\RecordAuditEntry;
 use App\Models\Account;
 use App\Models\User;
 use App\Services\Storage\AccountStorage;
@@ -75,8 +76,11 @@ class QuotaCommand extends Command
             return self::FAILURE;
         }
 
+        $old = $account->quota_bytes;
+
         if ($size === self::DEFAULT_SIZE) {
             $storage->setQuota($account, null);
+            RecordAuditEntry::execute('cli', 'account.quota.set', $account, ['quota_bytes' => $old], ['quota_bytes' => null]);
             $this->info("{$this->email()} is back on the default Quota of {$this->size(AccountStorage::defaultQuota())}.");
             $this->reportCommitment($storage);
 
@@ -92,6 +96,7 @@ class QuotaCommand extends Command
         }
 
         $storage->setQuota($account, $bytes);
+        RecordAuditEntry::execute('cli', 'account.quota.set', $account, ['quota_bytes' => $old], ['quota_bytes' => $bytes]);
         $this->info("{$this->email()} now has a Quota of {$this->size($bytes)}.");
         $this->reportCommitment($storage);
 

@@ -11,6 +11,7 @@ use App\Models\AnalyticsAccountDailySnapshot;
 use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
+use App\Models\AuditLog;
 use App\Models\ChangelogEntry;
 use App\Models\ChangelogEntryView;
 use App\Models\CoverOutcome;
@@ -136,6 +137,7 @@ class AppServiceProvider extends ServiceProvider
             'analyticsPublication' => AnalyticsPublication::class,
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,
             'analyticsSyncState' => AnalyticsSyncState::class,
+            'auditLog' => AuditLog::class,
             'changelogEntry' => ChangelogEntry::class,
             'changelogEntryView' => ChangelogEntryView::class,
             'idea' => Idea::class,
