@@ -1,0 +1,29 @@
+# Selling mode for the dev stack, merged on top of compose.yaml and
+# compose.override.yaml by selling.sh (through env.sh's `compose`). .env is not
+# edited: container env wins over .env in Laravel, and php-fpm keeps it
+# (clear_env = no in the image).
+#
+#   - app runs with SELF_HOSTED=false and the webhook signing secret of the
+#     Stripe CLI listener, read from a mode-600 file selling.sh writes.
+#   - stripe forwards the sandbox's events (every snapshot event, the v1
+#     events Cashier reads) to Cashier's /stripe/webhook.
+#     ${STRIPE_SECRET} comes from the project's .env (compose interpolation).
+#     Its log prints the signing secret: read it through `selling.sh logs`.
+
+services:
+    app:
+        environment:
+            SELF_HOSTED: 'false'
+        env_file:
+            - path: ${HOME}/.cache/verify-therxdesk/state/stripe-webhook.env
+              required: true
+
+    stripe:
+        image: stripe/stripe-cli:v1.55.14
+        command: ['listen', '--all-snapshot', '--forward-to', 'http://app/stripe/webhook']
+        environment:
+            STRIPE_API_KEY: ${STRIPE_SECRET:?STRIPE_SECRET is empty in .env}
+        depends_on:
+            app:
+                condition: service_started
+        restart: unless-stopped

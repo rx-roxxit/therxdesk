@@ -18,6 +18,7 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Contracts\Console\Kernel;
+use Laravel\Cashier\Cashier;
 
 $root = '/var/www/html';
 require "{$root}/vendor/autoload.php";
@@ -37,6 +38,19 @@ function forget(): void
         ->each(fn (Workspace $workspace) => PurgeWorkspace::execute($workspace));
 
     $accountIds = $owners->pluck('account_id')->unique();
+
+    // A selling-mode run leaves a Customer (and its subscription) in the
+    // Stripe sandbox; deleting the Customer cancels its subscriptions.
+    Account::query()
+        ->whereIn('id', $accountIds)
+        ->whereNotNull('stripe_id')
+        ->pluck('stripe_id')
+        ->each(fn (string $customerId) => rescue(
+            fn () => Cashier::stripe()->customers->delete($customerId),
+            fn () => fwrite(STDERR, "could not delete the sandbox customer {$customerId}\n"),
+            report: false,
+        ));
+
     User::query()->whereIn('id', $owners->pluck('id'))->delete();
     Account::query()->whereIn('id', $accountIds)->delete();
 }
