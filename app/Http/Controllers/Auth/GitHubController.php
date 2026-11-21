@@ -108,7 +108,7 @@ class GitHubController extends Controller
 
     private function registerNewUser(\Laravel\Socialite\Contracts\User $githubUser): RedirectResponse
     {
-        $invite = $this->resolveInviteForRegistration();
+        $invite = Invite::fromId($this->retrieveInvite());
 
         if ($redirect = $this->inviteEmailMismatchRedirect($invite, $githubUser->getEmail())) {
             return $redirect;

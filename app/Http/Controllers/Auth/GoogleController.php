@@ -100,7 +100,7 @@ class GoogleController extends Controller
 
     private function registerNewUser(\Laravel\Socialite\Contracts\User $googleUser): RedirectResponse
     {
-        $invite = $this->resolveInviteForRegistration();
+        $invite = Invite::fromId($this->retrieveInvite());
 
         if ($redirect = $this->inviteEmailMismatchRedirect($invite, $googleUser->getEmail())) {
             return $redirect;

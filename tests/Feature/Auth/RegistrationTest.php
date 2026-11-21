@@ -104,15 +104,15 @@ test('new users registering via invite have verified email automatically', funct
     expect($user->email_verified_at)->not->toBeNull();
 });
 
-test('register page renders when self_hosted and no pending invite in session', function () {
+test('register page returns 404 when self_hosted and no pending invite in session', function () {
     config()->set('trypost.self_hosted', true);
 
     $response = $this->get(route('register'));
 
-    $response->assertOk();
+    $response->assertNotFound();
 });
 
-test('register POST asks for a signup code when self_hosted and no pending invite in session', function () {
+test('register POST returns 404 when self_hosted and no pending invite in session', function () {
     config()->set('trypost.self_hosted', true);
 
     $response = $this->post(route('register.store'), [
@@ -122,7 +122,7 @@ test('register POST asks for a signup code when self_hosted and no pending invit
         'locale' => 'en',
     ]);
 
-    $response->assertSessionHasErrors('signup_code');
+    $response->assertNotFound();
     expect(User::where('email', 'test@example.com')->exists())->toBeFalse();
 });
 
@@ -157,7 +157,6 @@ test('signup clears pending_invite_id from session', function () {
             'email' => 'invitee@example.com',
             'password' => strongPassword(),
             'locale' => 'en',
-            'invite' => $invite->id,
         ]);
 
     expect(session('pending_invite_id'))->toBeNull();

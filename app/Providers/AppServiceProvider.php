@@ -31,7 +31,6 @@ use App\Models\RepurposeItem;
 use App\Models\RssFeed;
 use App\Models\RssFeedCollection;
 use App\Models\RssFeedItem;
-use App\Models\SignupCode;
 use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
@@ -155,7 +154,6 @@ class AppServiceProvider extends ServiceProvider
             'postComment' => PostNote::class,
             'postNoteReaction' => PostNoteReaction::class,
             'postTemplate' => PostTemplate::class,
-            'signupCode' => SignupCode::class,
             'videoRecord' => VideoRecord::class,
             'coverOutcome' => CoverOutcome::class,
             'socialAccount' => SocialAccount::class,

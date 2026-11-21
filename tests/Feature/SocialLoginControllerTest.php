@@ -413,10 +413,10 @@ test('a stale invite id from an aborted oauth attempt does not leak into a later
 });
 
 // ========================================
-// Self-hosted registration gate
+// Self-hosted registration
 // ========================================
 
-test('google registration 404s in self-hosted mode without an invite param', function () {
+test('google registration creates an Owner in self-hosted mode without an invite param', function () {
     config()->set('trypost.self_hosted', true);
 
     $socialiteUser = new SocialiteUser;
@@ -431,9 +431,12 @@ test('google registration 404s in self-hosted mode without an invite param', fun
         ->andReturn($driver = Mockery::mock());
     $driver->shouldReceive('user')->andReturn($socialiteUser);
 
-    $this->get(route('auth.google.callback'))->assertNotFound();
+    $this->get(route('auth.google.callback'))->assertRedirect(route('app.welcome'));
 
-    expect(User::where('email', 'no-invite@example.com')->exists())->toBeFalse();
+    $user = User::where('email', 'no-invite@example.com')->first();
+    expect($user)->not->toBeNull();
+    expect($user->workspaces()->count())->toBe(1);
+    $this->assertAuthenticatedAs($user);
 });
 
 test('google registration succeeds in self-hosted mode with an invite param', function () {
@@ -496,7 +499,7 @@ test('google login for an existing user is never blocked by the self-hosted gate
     $this->assertAuthenticatedAs($user);
 });
 
-test('github registration 404s in self-hosted mode without an invite param', function () {
+test('github registration creates an Owner in self-hosted mode without an invite param', function () {
     config()->set('trypost.self_hosted', true);
 
     $socialiteUser = new SocialiteUser;
@@ -511,9 +514,13 @@ test('github registration 404s in self-hosted mode without an invite param', fun
         ->andReturn($driver = Mockery::mock());
     $driver->shouldReceive('user')->andReturn($socialiteUser);
 
-    $this->get(route('auth.github.callback'))->assertNotFound();
+    $this->get(route('auth.github.callback'))->assertRedirect(route('app.welcome'));
 
-    expect(User::where('email', 'gh-no-invite@example.com')->exists())->toBeFalse();
+    $user = User::where('email', 'gh-no-invite@example.com')->first();
+    expect($user)->not->toBeNull();
+    expect($user->github_id)->toBe('gh-no-invite');
+    expect($user->workspaces()->count())->toBe(1);
+    $this->assertAuthenticatedAs($user);
 });
 
 test('github registration succeeds in self-hosted mode with an invite param', function () {

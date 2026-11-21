@@ -7,12 +7,8 @@ namespace App\Http\Middleware\App;
 use App\Models\Invite;
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * The RX Desk: self-hosted signup stays open without an invite. A person
- * without one signs up with a Signup code instead, which `RegisterRequest`
- * requires and `CreateOwnerWithSignupCode` consumes.
- */
 class EnsureRegistrationEnabled
 {
     public function handle(Request $request, Closure $next): mixed
@@ -27,8 +23,10 @@ class EnsureRegistrationEnabled
 
         if (is_string($inviteId) && Invite::fromId($inviteId) !== null) {
             $request->session()->put('pending_invite_id', $inviteId);
+
+            return $next($request);
         }
 
-        return $next($request);
+        throw new NotFoundHttpException;
     }
 }

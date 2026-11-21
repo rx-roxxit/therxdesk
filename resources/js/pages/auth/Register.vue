@@ -29,7 +29,6 @@ defineProps<{
     email?: string | null;
     invite?: string | null;
     passwordRequirements: PasswordRequirement[];
-    signupCodeRequired: boolean;
 }>();
 
 const { signupLocale } = useGuestLocale();
@@ -158,26 +157,10 @@ const hasSocial = computed(
                             <InputError :message="errors.password" />
                         </div>
 
-                        <div v-if="signupCodeRequired" class="grid gap-2">
-                            <Label for="signup_code">{{ $t('rxdesk.signup_code.label') }}</Label>
-                            <Input
-                                id="signup_code"
-                                data-testid="register-signup-code"
-                                type="text"
-                                :tabindex="4"
-                                autocomplete="off"
-                                autocapitalize="characters"
-                                spellcheck="false"
-                                name="signup_code"
-                                :placeholder="$t('rxdesk.signup_code.placeholder')"
-                            />
-                            <InputError :message="errors.signup_code" />
-                        </div>
-
                         <Button
                             type="submit"
                             class="w-full"
-                            :tabindex="5"
+                            :tabindex="4"
                             :disabled="processing"
                             data-testid="register-user-button"
                         >
@@ -191,7 +174,7 @@ const hasSocial = computed(
                 {{ $t('auth.register.has_account') }}
                 <TextLink
                     :href="login()"
-                    :tabindex="6"
+                    :tabindex="5"
                     data-testid="register-log-in-link"
                     >{{ $t('auth.register.log_in') }}</TextLink
                 >
