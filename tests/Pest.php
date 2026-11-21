@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\SocialAccount\Platform;
 use App\Jobs\Analytics\BootstrapAccountAnalytics;
 use App\Jobs\Analytics\CollectAccountDailySnapshot;
 use App\Models\AccessToken;
 use App\Models\Account;
 use App\Models\Plan;
+use App\Models\PlanPrice;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
@@ -266,6 +267,28 @@ function workspaceOutsider(Workspace $workspace): User
 }
 
 /**
+ * Point a plan's active price of the interval at a Stripe price id, adding the
+ * row when the plan was made by a factory.
+ */
+function givePlanPrice(Plan $plan, Interval $interval, string $priceId, ?int $amount = null): PlanPrice
+{
+    $price = $plan->priceFor($interval);
+
+    if ($price === null) {
+        return PlanPrice::factory()->create([
+            'plan_id' => $plan->id,
+            'interval' => $interval,
+            'amount' => $amount ?? 1000,
+            'stripe_price_id' => $priceId,
+        ]);
+    }
+
+    $price->update(['stripe_price_id' => $priceId]);
+
+    return $price;
+}
+
+/**
  * Create an account on the Workspace plan with an active subscription on the
  * given Stripe price, plus N workspaces. Used by the billing-cycle tests.
  *
@@ -273,11 +296,9 @@ function workspaceOutsider(Workspace $workspace): User
  */
 function billingAccount(string $price, array $subscriptionAttributes = [], int $workspaces = 1): Account
 {
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update([
-        'stripe_monthly_price_id' => 'price_month',
-        'stripe_yearly_price_id' => 'price_year',
-    ]);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    $plan->priceFor(Interval::Monthly)?->update(['stripe_price_id' => 'price_month']);
+    $plan->priceFor(Interval::Yearly)?->update(['stripe_price_id' => 'price_year']);
 
     $account = Account::factory()->create([
         'plan_id' => $plan->id,

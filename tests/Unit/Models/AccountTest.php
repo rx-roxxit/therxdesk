@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
@@ -200,7 +199,7 @@ test('activeTrialEndsAt returns null for paying customer post-trial', function (
     $account = Account::factory()->create([
         'trial_ends_at' => null,
         'stripe_id' => 'cus_test_'.fake()->uuid(),
-        'plan_id' => Plan::where('slug', Slug::Workspace)->value('id'),
+        'plan_id' => Plan::where('slug', 'mini')->value('id'),
     ]);
     $account->subscriptions()->create([
         'type' => Account::SUBSCRIPTION_NAME,

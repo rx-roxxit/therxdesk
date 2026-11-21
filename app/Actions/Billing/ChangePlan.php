@@ -32,7 +32,7 @@ class ChangePlan
             return back()->with('flash.error', $authorization->message());
         }
 
-        $priceId = $interval->priceIdFor($plan);
+        $priceId = $plan->priceFor($interval)?->stripe_price_id;
 
         abort_if(blank($priceId), Response::HTTP_UNPROCESSABLE_ENTITY, 'No price configured for this interval');
 

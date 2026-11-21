@@ -23,9 +23,16 @@ final class StripeSubscriptionConversion
      */
     public static function baseProperties(Account $account, array $payload): array
     {
+        $priceId = data_get($payload, 'data.object.items.data.0.price.id');
+        $interval = Interval::Monthly;
+
+        if (is_string($priceId)) {
+            $interval = $account->plan->intervalFor($priceId) ?? Interval::Monthly;
+        }
+
         return [
             'plan_name' => $account->plan->name,
-            'interval' => Interval::forPrice($account->plan, data_get($payload, 'data.object.items.data.0.price.id'))->value,
+            'interval' => $interval->value,
         ];
     }
 

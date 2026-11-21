@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\CheckoutEvent;
 use App\Enums\User\Persona;
 use App\Jobs\PostHog\SendEvent;
@@ -16,11 +16,9 @@ use Illuminate\Support\Facades\Queue;
 beforeEach(function () {
     config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test_key']);
 
-    $this->plan = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $this->plan->update([
-        'stripe_monthly_price_id' => 'price_workspaces_monthly',
-        'stripe_yearly_price_id' => 'price_workspaces_yearly',
-    ]);
+    $this->plan = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($this->plan, Interval::Monthly, 'price_workspaces_monthly');
+    givePlanPrice($this->plan, Interval::Yearly, 'price_workspaces_yearly');
 
     $this->account = Account::factory()->create(['plan_id' => $this->plan->id]);
     $this->user = User::factory()->create(['account_id' => $this->account->id]);

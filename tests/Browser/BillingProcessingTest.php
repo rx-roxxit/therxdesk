@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Billing\Interval;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
@@ -16,7 +17,9 @@ function billingProcessingSubscriber(): User
     $workspace->members()->attach($user->id, membershipPivot('admin'));
     $user->update(['current_workspace_id' => $workspace->id]);
     subscribeAccount($user->account);
-    $user->account->update(['plan_id' => Plan::query()->value('id') ?? Plan::factory()->create()->id]);
+    $plan = Plan::query()->firstOrFail();
+    $user->account->update(['plan_id' => $plan->id]);
+    givePlanPrice($plan, Interval::Monthly, 'price_123');
 
     return $user;
 }
@@ -39,7 +42,6 @@ test('a subscription started from billing returns to billing, not the onboarding
     config(['trypost.self_hosted' => false]);
 
     $user = billingProcessingSubscriber();
-    Plan::query()->whereKey($user->account->plan_id)->update(['stripe_monthly_price_id' => 'price_123']);
     $this->actingAs($user->fresh());
 
     $billingPath = route('app.billing.index', absolute: false);

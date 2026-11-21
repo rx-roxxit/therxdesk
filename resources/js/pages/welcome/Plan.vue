@@ -10,6 +10,7 @@ import WelcomeOfferBanner from '@/components/welcome/WelcomeOfferBanner.vue';
 import { useAutoRotate } from '@/composables/useAutoRotate';
 import WelcomeLayout from '@/layouts/WelcomeLayout.vue';
 import { REVIEWS } from '@/lib/reviews';
+import { formatMoney } from '@/lib/utils';
 import { store } from '@/routes/app/welcome/plan';
 import type { Offer } from '@/types/offer';
 import type { PlanOption } from '@/types/plan';
@@ -20,7 +21,7 @@ const props = defineProps<{
 }>();
 
 interface PriceCopy {
-    price: string;
+    priceKey: string | null;
     unit: string | null;
     period: string | null;
     checkoutButton: string;
@@ -28,12 +29,20 @@ interface PriceCopy {
 }
 
 const FULL_PRICE_COPY: PriceCopy = {
-    price: 'billing.subscribe.prices.socials.monthly',
+    priceKey: null,
     unit: 'billing.plans.per_month',
     period: null,
     checkoutButton: 'welcome.plan_checkout_button',
     terms: 'welcome.plan_cancel_anytime',
 };
+
+const monthlyPrice = computed((): string => {
+    if (props.plan.monthly_amount === null) {
+        return '';
+    }
+
+    return formatMoney(props.plan.monthly_amount);
+});
 
 const priceCopy = computed((): PriceCopy => {
     if (!props.offer?.has_checkout_copy) {
@@ -43,7 +52,7 @@ const priceCopy = computed((): PriceCopy => {
     const offerCopy = `offers.${props.offer.key}`;
 
     return {
-        price: `${offerCopy}.price`,
+        priceKey: `${offerCopy}.price`,
         unit: props.offer.has_unit ? `${offerCopy}.unit` : null,
         period: `${offerCopy}.period`,
         checkoutButton: `${offerCopy}.checkout_button`,
@@ -170,15 +179,19 @@ const submit = (): void => {
                         v-if="priceCopy.period"
                         class="text-sm text-muted-foreground"
                         :data-testid="`plan-price-original-${plan.slug}`"
-                        >{{ $t('billing.subscribe.prices.socials.monthly')
+                        >{{ monthlyPrice
                         }}{{ $t('billing.plans.per_month') }}</s
                     >
                     <p class="flex items-baseline gap-1 whitespace-nowrap">
                         <span
                             class="text-4xl leading-none font-strong tracking-tight tabular-nums [word-spacing:-0.15em] sm:text-5xl"
                             :data-testid="`plan-price-${plan.slug}`"
-                            >{{ $t(priceCopy.price) }}</span
                         >
+                            <template v-if="priceCopy.priceKey">{{
+                                $t(priceCopy.priceKey)
+                            }}</template>
+                            <template v-else>{{ monthlyPrice }}</template>
+                        </span>
                         <span
                             v-if="priceCopy.unit"
                             class="text-base text-foreground"
@@ -206,9 +219,7 @@ const submit = (): void => {
             <WelcomeContinueButton
                 :processing="form.processing"
                 :disabled="form.processing"
-                :label="
-                    $t(priceCopy.checkoutButton)
-                "
+                :label="$t(priceCopy.checkoutButton)"
                 testid="welcome-plan-continue"
                 @continue="submit"
             />
@@ -218,7 +229,7 @@ const submit = (): void => {
             >
                 {{
                     $t(priceCopy.terms, {
-                        price: $t('billing.subscribe.prices.socials.monthly'),
+                        price: monthlyPrice,
                     })
                 }}
             </p>

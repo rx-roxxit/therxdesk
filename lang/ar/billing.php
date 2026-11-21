@@ -13,10 +13,6 @@ return [
 
     'subscribe' => [
         'billed_monthly' => 'فوترة شهرية',
-        'prices' => [
-            'socials' => ['monthly' => '$19', 'yearly_per_month' => '$15.83', 'yearly' => '$190'],
-            'workspaces' => ['monthly' => '$99', 'yearly_per_month' => '$82.50', 'yearly' => '$990'],
-        ],
     ],
 
     'plans' => [
@@ -36,8 +32,6 @@ return [
         'upgrade' => 'الترقية إلى :plan',
         'downgrade' => 'الرجوع إلى :plan',
         'billed_yearly_total' => 'فوترة سنوية · :price (شهران مجانًا)',
-        'socials_tagline' => 'مناسب لمنشئي المحتوى والعلامات الصغيرة.',
-        'workspaces_tagline' => 'مناسب للوكالات والأعمال الكبيرة.',
         'everything_included' => 'كل شيء مشمول',
         'features' => [
             'networks_all' => 'جميع الشبكات الاجتماعية مشمولة',

@@ -8,7 +8,10 @@ a member of such an Account waits on "Waiting for the account owner". Self-hoste
 - `config('trypost.self_hosted')` false: `EnsureAccountReady` sends an Owner without app access to
   `/welcome/plan` (which first walks the unfinished Welcome steps), a member to `/welcome/subscription-required`.
 - Shared Inertia props: `selfHosted` (every page, the login page included), `auth.hasActiveSubscription`,
-  `auth.plan`, `plans` (active Plans, empty in self-hosted mode), `usage` and `features`.
+  `auth.plan`, `plans` (the active Plans, from `plan_prices`: Mini $11.90 / $119, Standard $17.90 / $179, Plus
+  $29.90 / $299, Max $49.90 / $499; empty in self-hosted mode), `usage` and `features`.
+- Plans, prices and Stripe ids are app data: `plan_prices` holds a monthly and a yearly row per Plan, and
+  `selling.sh` seeds the catalog and fills the Stripe ids (see `SKILL.md`, "Selling mode").
 - Billing, Plans and Processing pages answer only here (they redirect to the Schedule when self-hosted).
 
 ## How to get to it (user POV)

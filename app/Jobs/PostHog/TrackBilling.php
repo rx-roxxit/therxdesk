@@ -52,7 +52,7 @@ class TrackBilling implements ShouldQueue
             $this->event->value,
             [
                 'stripe_status' => data_get($this->payload, 'data.object.status'),
-                'plan_slug' => $account->plan?->slug->value,
+                'plan_slug' => $account->plan?->slug,
                 'previous_plan' => $this->previousPlan,
                 ...$this->cancellationProperties(),
                 ...$this->cancelReasonProperties(),

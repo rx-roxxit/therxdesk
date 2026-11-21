@@ -8,7 +8,6 @@ use App\Actions\Billing\StartGenericTrial;
 use App\Actions\Billing\StartSubscriptionCheckout;
 use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
-use App\Enums\Plan\Slug;
 use App\Enums\PostHog\WelcomeEvent;
 use App\Enums\User\Goal;
 use App\Enums\User\Persona;
@@ -151,7 +150,9 @@ class WelcomeController extends Controller
             return $redirect;
         }
 
-        $plan = Plan::active()->where('slug', Slug::Socials)->firstOrFail();
+        $plan = Plan::entryPlan();
+        abort_if($plan === null, Response::HTTP_NOT_FOUND);
+
         $offer = $request->user()->account->currentOffer();
 
         return Inertia::render('welcome/Plan', [
@@ -169,8 +170,10 @@ class WelcomeController extends Controller
         }
 
         $user = $request->user();
-        $plan = Plan::active()->where('slug', Slug::Socials)->firstOrFail();
-        $priceId = Interval::Monthly->priceIdFor($plan);
+        $plan = Plan::entryPlan();
+        abort_if($plan === null, Response::HTTP_NOT_FOUND);
+
+        $priceId = $plan->priceFor(Interval::Monthly)?->stripe_price_id;
 
         abort_if(blank($priceId), Response::HTTP_INTERNAL_SERVER_ERROR, 'Price is not configured.');
 

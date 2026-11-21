@@ -23,12 +23,13 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Billing
 
 ## Driving it with Playwright
 
-- Journey: `$V/drive.sh billing`, right after `welcome-checkout` on the same fixture (it needs the Socials monthly
+- Journey: `$V/drive.sh billing`, right after `welcome-checkout` on the same fixture (it needs the Mini monthly
   subscription that journey makes; do not run `fixture.sh up` in between).
-- Checks: Socials, `$19`, Active; the `4242` card listed; the dialog's Yearly shows `$15.83`; choosing Workspaces
-  makes it the current plan at `$99`; "Manage on Stripe" opens `billing.stripe.com`.
-- Side effect: the same `db.sh` query as `welcome-checkout` shows `workspaces | active | <the
-  rxdesk-verify-workspaces-monthly price>`.
+- Checks: Mini, `$11.90`, Active; the `4242` card listed; the dialog's Yearly shows `$9.92` a month; choosing
+  Standard (`@plan-select-standard`) makes it the current plan at `$17.90`; "Manage on Stripe" opens
+  `billing.stripe.com` on the Standard subscription at `$17.90 per month`.
+- Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | active | <the
+  rxdesk-verify-standard-monthly price>`.
 
 ## Gotchas
 

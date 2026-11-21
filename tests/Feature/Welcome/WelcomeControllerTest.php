@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Billing\StartGenericTrial;
 use App\Actions\Billing\StartSubscriptionCheckout;
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Enums\PostHog\CheckoutEvent;
 use App\Enums\PostHog\TrialEvent;
 use App\Enums\PostHog\WelcomeEvent;
@@ -188,7 +188,7 @@ test('plan redirects to software until a tool is selected', function () {
         ->assertRedirect(route('app.welcome.software'));
 });
 
-test('plan shows the Socials plan', function () {
+test('plan shows the entry plan', function () {
     completeWelcomeThroughSoftware($this->user);
 
     $this->actingAs($this->user->fresh())
@@ -196,8 +196,12 @@ test('plan shows the Socials plan', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('welcome/Plan', false)
-            ->where('plan.slug', Slug::Socials->value)
-            ->where('plan.workspace_limit', 1)
+            ->where('plan.slug', 'mini')
+            ->where('plan.workspace_limit', null)
+            ->where('plan.quota_bytes', 2147483648)
+            ->where('plan.ai_credits_per_month', 2500)
+            ->where('plan.monthly_amount', 1190)
+            ->where('plan.yearly_amount', 11900)
         );
 });
 
@@ -236,13 +240,11 @@ test('plan sends a claimed trial offer only to an account that may use it', func
     ]), true, false],
 ]);
 
-test('plan store sends the owner to Stripe checkout on the Socials monthly price', function () {
+test('plan store sends the owner to Stripe checkout on the entry plan monthly price', function () {
     completeWelcomeThroughSoftware($this->user);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update([
-        'stripe_monthly_price_id' => 'price_socials_monthly',
-        'stripe_yearly_price_id' => 'price_socials_yearly',
-    ]);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
+    givePlanPrice($socials, Interval::Yearly, 'price_socials_yearly');
 
     $this->mock(StartSubscriptionCheckout::class)
         ->shouldReceive('redirect')
@@ -258,9 +260,9 @@ test('plan store sends the owner to Stripe checkout on the Socials monthly price
         ->assertRedirect('https://checkout.stripe.test/session');
 });
 
-test('plan store fails loudly when the Socials price is not configured', function () {
+test('plan store fails loudly when the entry plan price is not configured', function () {
     completeWelcomeThroughSoftware($this->user);
-    Plan::where('slug', Slug::Socials)->update(['stripe_monthly_price_id' => null]);
+    Plan::where('slug', 'mini')->firstOrFail()->priceFor(Interval::Monthly)?->update(['stripe_price_id' => null]);
 
     $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
 
@@ -316,10 +318,8 @@ test('welcome funnel captures every step up to the plan, in order', function () 
     $workspace = attachCurrentWorkspace($this->user);
     SocialAccount::factory()->linkedin()->create(['workspace_id' => $workspace->id]);
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update([
-        'stripe_monthly_price_id' => 'price_monthly_test',
-    ]);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_monthly_test');
 
     $this->mock(StartSubscriptionCheckout::class)
         ->shouldReceive('redirect')
@@ -575,7 +575,7 @@ test('the plan step sends no offer once it expired', function () {
 
 test('plan store hands checkout the offer it tracked', function () {
     completeWelcomeThroughSoftware($this->user);
-    Plan::where('slug', Slug::Socials)->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
 
@@ -632,7 +632,7 @@ test('a trial without a card starts in the app, without Stripe', function () {
     config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test']);
     Bus::fake();
     completeWelcomeThroughSoftware($this->user);
-    Plan::where('slug', Slug::Socials)->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->trial(7)->withoutCard()->create(['slug' => 'ft7dnc']);
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
 
@@ -644,7 +644,7 @@ test('a trial without a card starts in the app, without Stripe', function () {
 
     $account = $this->user->account->fresh();
 
-    expect($account->plan->slug)->toBe(Slug::Socials)
+    expect($account->plan->slug)->toBe('mini')
         ->and($account->trial_ends_at->toDateString())->toBe(now()->addDays(7)->toDateString())
         ->and($account->hasAppAccess())->toBeTrue()
         ->and($account->stripe_id)->toBeNull()
@@ -660,8 +660,8 @@ test('a second submit does not start the trial without a card again', function (
     config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test']);
     Bus::fake();
     completeWelcomeThroughSoftware($this->user);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->trial(7)->withoutCard()->create(['slug' => 'ft7dnc']);
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
 
@@ -673,7 +673,7 @@ test('a second submit does not start the trial without a card again', function (
 
 test('a trial without a card whose last place went opens the full price checkout instead of a free trial', function () {
     completeWelcomeThroughSoftware($this->user);
-    Plan::where('slug', Slug::Socials)->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->trial(7)->withoutCard()->limitedTo(1)->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
     Account::factory()->create()->offers()->attach($offer, ['claimed_at' => now(), 'redeemed_at' => now()]);
@@ -694,7 +694,7 @@ test('a trial without a card whose last place went opens the full price checkout
 
 test('an offer that ends before the plan is submitted opens the full price checkout', function () {
     completeWelcomeThroughSoftware($this->user);
-    Plan::where('slug', Slug::Socials)->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->create(['ends_at' => now()->addHour()]);
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
 
@@ -713,7 +713,7 @@ test('an offer that ends before the plan is submitted opens the full price check
 
 test('when a trial without a card ends the owner loses access and is back at the plan step', function () {
     completeWelcomeThroughSoftware($this->user);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
     $offer = Offer::factory()->trial(7)->withoutCard()->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
     StartGenericTrial::execute($this->user->fresh(), $socials, $offer);
@@ -733,8 +733,8 @@ test('when a trial without a card ends the owner loses access and is back at the
 
 test('an owner on a trial without a card never reaches checkout or a second trial from Welcome', function () {
     completeWelcomeThroughSoftware($this->user);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->trial(7)->withoutCard()->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
     StartGenericTrial::execute($this->user->fresh(), $socials, $offer);

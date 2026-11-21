@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Billing\StartSubscriptionCheckout;
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
@@ -14,8 +14,8 @@ use Stripe\HttpClient\ClientInterface;
 beforeEach(function () {
     config(['cashier.secret' => 'sk_test_fake']);
 
-    $this->socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $this->socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $this->socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($this->socials, Interval::Monthly, 'price_socials_monthly');
 
     $this->account = Account::factory()->create();
     $this->account->update(['owner_id' => User::factory()->create(['account_id' => $this->account->id])->id]);

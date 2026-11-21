@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Jobs\PostHog\TrackBilling;
 use App\Jobs\PostHog\TrackCheckoutExpired;
 use App\Jobs\PostHog\TrackInvoicePaymentFailed;
@@ -92,8 +92,8 @@ test('expired checkout is not dispatched when posthog is off', function () {
 test('subscription webhooks still reach StripeEventListener after WebhookReceived', function () {
     Queue::fake();
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly_signal']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly_signal');
 
     $payload = [
         'id' => 'evt_1',
@@ -155,8 +155,8 @@ test('a dispatched WebhookReceived reaches the billing signal listener once', fu
 test('a dispatched WebhookHandled reaches the subscription listener once', function () {
     Queue::fake();
 
-    $plan = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $plan->update(['stripe_monthly_price_id' => 'price_socials_monthly_signal']);
+    $plan = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly_signal');
 
     event(new WebhookHandled([
         'type' => 'customer.subscription.updated',

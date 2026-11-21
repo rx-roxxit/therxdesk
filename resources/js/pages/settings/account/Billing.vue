@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Head, InfiniteScroll, router, useForm, usePage } from '@inertiajs/vue3';
+import {
+    Head,
+    InfiniteScroll,
+    router,
+    useForm,
+    usePage,
+} from '@inertiajs/vue3';
 import {
     IconCreditCard,
     IconDiscount,
@@ -34,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import date from '@/date';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
 import { cardBrand } from '@/lib/cardBrands';
+import { formatMoney } from '@/lib/utils';
 import {
     changePlan as changePlanRoute,
     checkout as checkoutRoute,
@@ -50,7 +57,6 @@ import type {
 import {
     DEFAULT_BILLING_INTERVAL,
     deniedPlanIdsFor,
-    isPricedPlanSlug,
     type BillingInterval,
     type PlanOption,
 } from '@/types/plan';
@@ -128,12 +134,24 @@ const deniedPlanIds = computed((): string[] =>
 const selectedInterval = ref<BillingInterval>(currentInterval.value);
 const isPlanDialogOpen = ref(false);
 
-const priceKey = computed((): string | null => {
-    if (!props.plan || !isPricedPlanSlug(props.plan.slug)) {
+const currentPrice = computed((): string | null => {
+    if (!props.plan) {
         return null;
     }
 
-    return `billing.subscribe.prices.${props.plan.slug}.${currentInterval.value === 'yearly' ? 'yearly' : 'monthly'}`;
+    if (currentInterval.value === 'yearly') {
+        if (props.plan.yearly_amount === null) {
+            return null;
+        }
+
+        return formatMoney(props.plan.yearly_amount);
+    }
+
+    if (props.plan.monthly_amount === null) {
+        return null;
+    }
+
+    return formatMoney(props.plan.monthly_amount);
 });
 
 const priceSuffixKey = computed((): string =>
@@ -230,9 +248,13 @@ const selectPlan = (planId: string): void => {
                         data-testid="billing-current-plan"
                     >
                         <div class="flex flex-col gap-5 p-5 sm:p-6">
-                            <div class="flex flex-wrap items-start justify-between gap-4">
+                            <div
+                                class="flex flex-wrap items-start justify-between gap-4"
+                            >
                                 <div class="flex min-w-0 flex-col gap-3">
-                                    <div class="flex flex-wrap items-center gap-2">
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
                                         <p
                                             class="text-lg leading-tight font-emphasis text-foreground"
                                             data-testid="billing-current-plan-name"
@@ -241,7 +263,11 @@ const selectPlan = (planId: string): void => {
                                         </p>
                                         <Badge
                                             v-if="subscriptionStatus"
-                                            :variant="STATUS_BADGES[subscriptionStatus]"
+                                            :variant="
+                                                STATUS_BADGES[
+                                                    subscriptionStatus
+                                                ]
+                                            "
                                             data-testid="billing-current-plan-badge"
                                         >
                                             {{
@@ -252,16 +278,18 @@ const selectPlan = (planId: string): void => {
                                         </Badge>
                                     </div>
                                     <p
-                                        v-if="priceKey"
+                                        v-if="currentPrice"
                                         class="flex items-baseline gap-1 tabular-nums"
                                         data-testid="billing-current-plan-price"
                                     >
                                         <span
                                             class="text-3xl leading-none font-emphasis tracking-tight text-foreground [word-spacing:-0.15em]"
                                         >
-                                            {{ $t(priceKey) }}
+                                            {{ currentPrice }}
                                         </span>
-                                        <span class="text-sm text-muted-foreground">
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                        >
                                             {{ $t(priceSuffixKey) }}
                                         </span>
                                     </p>
@@ -276,7 +304,9 @@ const selectPlan = (planId: string): void => {
                                         {{
                                             $t(discountKey, {
                                                 discount: discount.value,
-                                                date: date.formatDate(discount.ends_at),
+                                                date: date.formatDate(
+                                                    discount.ends_at,
+                                                ),
                                             })
                                         }}
                                     </p>
@@ -404,7 +434,9 @@ const selectPlan = (planId: string): void => {
                                     data-testid="billing-card-label"
                                 >
                                     {{ cardBrand(paymentMethod.brand).name }}
-                                    <span class="tabular-nums">•••• {{ paymentMethod.last4 }}</span>
+                                    <span class="tabular-nums"
+                                        >•••• {{ paymentMethod.last4 }}</span
+                                    >
                                     <Badge
                                         v-if="paymentMethod.is_default"
                                         variant="secondary"
@@ -413,7 +445,9 @@ const selectPlan = (planId: string): void => {
                                         {{ $t('billing.subscription.default') }}
                                     </Badge>
                                 </p>
-                                <p class="text-xs leading-4 text-muted-foreground tabular-nums">
+                                <p
+                                    class="text-xs leading-4 text-muted-foreground tabular-nums"
+                                >
                                     {{
                                         $t('billing.subscription.expires_on', {
                                             month: paymentMethod.exp_month
@@ -468,18 +502,38 @@ const selectPlan = (planId: string): void => {
                             <Table data-testid="billing-invoices">
                                 <TableHeader>
                                     <TableRow class="hover:bg-transparent">
-                                        <TableHead class="border-r-0 h-11 px-4 sm:px-5">
-                                            {{ $t('billing.invoices.columns.date') }}
+                                        <TableHead
+                                            class="h-11 border-r-0 px-4 sm:px-5"
+                                        >
+                                            {{
+                                                $t(
+                                                    'billing.invoices.columns.date',
+                                                )
+                                            }}
                                         </TableHead>
-                                        <TableHead class="border-r-0 h-11 px-4">
-                                            {{ $t('billing.invoices.columns.amount') }}
+                                        <TableHead class="h-11 border-r-0 px-4">
+                                            {{
+                                                $t(
+                                                    'billing.invoices.columns.amount',
+                                                )
+                                            }}
                                         </TableHead>
-                                        <TableHead class="border-r-0 h-11 px-4">
-                                            {{ $t('billing.invoices.columns.status') }}
+                                        <TableHead class="h-11 border-r-0 px-4">
+                                            {{
+                                                $t(
+                                                    'billing.invoices.columns.status',
+                                                )
+                                            }}
                                         </TableHead>
-                                        <TableHead class="border-r-0 h-11 w-14 px-4">
+                                        <TableHead
+                                            class="h-11 w-14 border-r-0 px-4"
+                                        >
                                             <span class="sr-only">
-                                                {{ $t('billing.invoices.download') }}
+                                                {{
+                                                    $t(
+                                                        'billing.invoices.download',
+                                                    )
+                                                }}
                                             </span>
                                         </TableHead>
                                     </TableRow>
@@ -496,15 +550,21 @@ const selectPlan = (planId: string): void => {
                                         >
                                             {{ date.formatDate(invoice.date) }}
                                         </TableCell>
-                                        <TableCell class="border-r-0 px-4 py-3 tabular-nums">
+                                        <TableCell
+                                            class="border-r-0 px-4 py-3 tabular-nums"
+                                        >
                                             {{ invoice.total }}
                                         </TableCell>
                                         <TableCell class="border-r-0 px-4 py-3">
                                             <Badge variant="success">
-                                                {{ $t('billing.invoices.paid') }}
+                                                {{
+                                                    $t('billing.invoices.paid')
+                                                }}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell class="border-r-0 px-2 py-2 text-right">
+                                        <TableCell
+                                            class="border-r-0 px-2 py-2 text-right"
+                                        >
                                             <Button
                                                 v-if="invoice.invoice_pdf"
                                                 variant="ghost"
@@ -514,7 +574,11 @@ const selectPlan = (planId: string): void => {
                                                 target="_blank"
                                                 rel="noopener"
                                                 class="text-muted-foreground"
-                                                :aria-label="$t('billing.invoices.download')"
+                                                :aria-label="
+                                                    $t(
+                                                        'billing.invoices.download',
+                                                    )
+                                                "
                                                 :data-testid="`billing-invoice-download-${invoice.id}`"
                                             >
                                                 <IconDownload class="size-4" />

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Enums\Plan\Slug;
 use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,12 +20,12 @@ class PlanFactory extends Factory
     public function definition(): array
     {
         return [
-            'slug' => Slug::Socials,
-            'name' => 'Socials',
-            'stripe_monthly_price_id' => null,
-            'stripe_yearly_price_id' => null,
+            'slug' => fake()->unique()->slug(),
+            'name' => 'Plan',
+            'quota_bytes' => null,
+            'ai_credits_per_month' => null,
             'workspace_limit' => 1,
-            'sort' => 0,
+            'sort' => 1,
             'is_archived' => false,
         ];
     }

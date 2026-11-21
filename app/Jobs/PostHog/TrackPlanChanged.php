@@ -37,8 +37,8 @@ class TrackPlanChanged extends AbstractTrackStripeEvent
     protected function properties(Account $account): array
     {
         return [
-            'plan_from' => $this->plan(self::FROM_ITEM)->slug->value,
-            'plan_to' => $this->plan(self::TO_ITEM)->slug->value,
+            'plan_from' => $this->plan(self::FROM_ITEM)->slug,
+            'plan_to' => $this->plan(self::TO_ITEM)->slug,
             'interval_from' => $this->interval(self::FROM_ITEM)->value,
             'interval_to' => $this->interval(self::TO_ITEM)->value,
             'monthly_amount_from' => $this->monthlyAmount(self::FROM_ITEM),
@@ -56,7 +56,13 @@ class TrackPlanChanged extends AbstractTrackStripeEvent
 
     private function interval(string $itemPath): Interval
     {
-        return Interval::forPrice($this->plan($itemPath), data_get($this->payload, "{$itemPath}.price.id"));
+        $priceId = data_get($this->payload, "{$itemPath}.price.id");
+
+        if (! is_string($priceId)) {
+            return Interval::Monthly;
+        }
+
+        return $this->plan($itemPath)?->intervalFor($priceId) ?? Interval::Monthly;
     }
 
     /**

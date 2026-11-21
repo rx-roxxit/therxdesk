@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Enums\Billing\Interval;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
 use App\Support\StripeSubscriptionConversion;
 
 beforeEach(function () {
-    $this->plan = Plan::where('slug', 'workspace')->firstOrFail();
-    $this->plan->update([
-        'stripe_monthly_price_id' => 'price_workspace_monthly',
-        'stripe_yearly_price_id' => 'price_workspace_yearly',
-    ]);
+    $this->plan = Plan::factory()->create(['slug' => 'custom', 'name' => 'Custom']);
+    givePlanPrice($this->plan, Interval::Monthly, 'price_workspace_monthly');
+    givePlanPrice($this->plan, Interval::Yearly, 'price_workspace_yearly');
 
     $this->account = Account::factory()->create(['plan_id' => $this->plan->id]);
     $this->user = User::factory()->create(['account_id' => $this->account->id]);
@@ -35,8 +34,7 @@ test('baseProperties includes plan name and interval but no persona or conversio
     ]);
 });
 
-test('baseProperties defaults to monthly, not yearly, when neither the payload price id nor the plan yearly price id is set', function () {
-    $this->plan->update(['stripe_yearly_price_id' => null]);
+test('baseProperties defaults to monthly when the payload carries no price id', function () {
     $payload = [
         'data' => ['object' => [
             'items' => ['data' => [['price' => []]]],

@@ -20,7 +20,7 @@ beforeEach(function () {
     config(['trypost.self_hosted' => false]);
 
     $this->account = Account::factory()->create([
-        'plan_id' => Plan::query()->where('slug', 'workspace')->first()?->id,
+        'plan_id' => Plan::query()->where('slug', 'mini')->first()?->id,
     ]);
     $this->user = User::factory()->create(['account_id' => $this->account->id]);
     $this->account->update(['owner_id' => $this->user->id]);

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug;
 use App\Jobs\PostHog\TrackWorkspaceLimitHit;
 use App\Models\Plan;
 use App\Models\User;
@@ -14,13 +13,16 @@ use Illuminate\Support\Str;
 
 beforeEach(function () {
     config(['trypost.self_hosted' => false]);
+
+    Plan::factory()->create(['slug' => 'capped', 'name' => 'Capped', 'workspace_limit' => 1]);
+    Plan::factory()->unlimited()->create(['slug' => 'unlimited', 'name' => 'Unlimited', 'sort' => 2]);
 });
 
 /**
  * User::factory() does not create a workspace — only CreateUser does.
  * Insert one so Socials / legacy start already at their cap of 1.
  */
-$onPlan = function (Slug $slug): User {
+$onPlan = function (string $slug): User {
     $user = User::factory()->create();
     $user->account->update(['plan_id' => Plan::where('slug', $slug)->value('id')]);
 
@@ -81,14 +83,28 @@ test('a subscribed account without a plan is still capped at one workspace', fun
 });
 
 test('the socials plan blocks a second workspace', function () use ($onPlan) {
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     expect($user->account->workspaces()->count())->toBe(1)
         ->and($user->account->canCreateWorkspace())->toBeFalse();
 });
 
+test('an owner on any seeded plan can create unlimited workspaces', function (string $slug) {
+    $user = User::factory()->create();
+    $user->account->update(['plan_id' => Plan::where('slug', $slug)->value('id')]);
+    Workspace::factory()->count(5)->create([
+        'account_id' => $user->account_id,
+        'user_id' => $user->id,
+    ]);
+    subscribeAccount($user->account);
+
+    expect($user->account->workspaces()->count())->toBe(5)
+        ->and($user->account->workspaceLimit())->toBeNull()
+        ->and($user->account->canCreateWorkspace())->toBeTrue();
+})->with(['mini', 'standard', 'plus', 'max']);
+
 test('the workspaces plan allows more workspaces', function () use ($onPlan) {
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
 
     Workspace::factory()->count(3)->create([
         'account_id' => $user->account_id,
@@ -99,13 +115,13 @@ test('the workspaces plan allows more workspaces', function () use ($onPlan) {
 });
 
 test('the legacy plan is capped at one workspace', function () use ($onPlan) {
-    $user = $onPlan(Slug::Workspace);
+    $user = $onPlan('capped');
 
     expect($user->account->canCreateWorkspace())->toBeFalse();
 });
 
 test('self-hosted ignores the cap', function () use ($onPlan) {
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     config(['trypost.self_hosted' => true]);
 
@@ -113,7 +129,7 @@ test('self-hosted ignores the cap', function () use ($onPlan) {
 });
 
 test('the create page sends the user to the workspaces list when the plan is at its cap', function () use ($onPlan) {
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->from(route('app.posts.index'))
@@ -123,7 +139,7 @@ test('the create page sends the user to the workspaces list when the plan is at 
 });
 
 test('the create page renders below the cap', function () use ($onPlan) {
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
 
     $this->actingAs($user)
         ->get(route('app.workspaces.create'))
@@ -155,7 +171,7 @@ test('a subscribed account without a plan cannot store a second workspace', func
 });
 
 test('a direct store POST cannot exceed the cap', function () use ($onPlan) {
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->from(route('app.workspaces.create'))
@@ -167,7 +183,7 @@ test('a direct store POST cannot exceed the cap', function () use ($onPlan) {
 });
 
 test('the workspaces plan can store another workspace', function () use ($onPlan) {
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
 
     $this->actingAs($user)
         ->post(route('app.workspaces.store'), ['name' => 'Second'])
@@ -177,7 +193,7 @@ test('the workspaces plan can store another workspace', function () use ($onPlan
 });
 
 test('storing a workspace checks the cap under a lock on the account row', function () use ($onPlan) {
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
     $statements = [];
     DB::listen(function (QueryExecuted $query) use (&$statements): void {
         $statements[] = Str::lower($query->sql);
@@ -201,12 +217,12 @@ $enablePostHog = function (): void {
 };
 
 $limitHitPushed = fn (User $user) => fn (TrackWorkspaceLimitHit $job): bool => $job->userId === (string) $user->id
-    && $job->planSlug === $user->account->plan?->slug->value
+    && $job->planSlug === $user->account->plan?->slug
     && $job->workspaceLimit === $user->account->workspaceLimit();
 
 test('the creation check at the limit refuses and tracks limit_hit', function () use ($onPlan, $enablePostHog, $limitHitPushed) {
     $enablePostHog();
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->postJson(route('app.workspaces.creation-check.store'))
@@ -219,7 +235,7 @@ test('the creation check at the limit refuses and tracks limit_hit', function ()
 
 test('the creation check below the limit allows and does not track', function () use ($onPlan, $enablePostHog) {
     $enablePostHog();
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
 
     $this->actingAs($user)
         ->postJson(route('app.workspaces.creation-check.store'))
@@ -231,7 +247,7 @@ test('the creation check below the limit allows and does not track', function ()
 
 test('the creation check allows self-hosted at any count and does not track', function () use ($onPlan, $enablePostHog) {
     $enablePostHog();
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
     config(['trypost.self_hosted' => true]);
 
     $this->actingAs($user)
@@ -244,7 +260,7 @@ test('the creation check allows self-hosted at any count and does not track', fu
 test('the creation check allows the first workspace and does not track', function () use ($enablePostHog) {
     $enablePostHog();
     $user = User::factory()->create();
-    $user->account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id')]);
+    $user->account->update(['plan_id' => Plan::where('slug', 'capped')->value('id')]);
     subscribeAccount($user->account);
 
     $this->actingAs($user->fresh())
@@ -268,7 +284,7 @@ test('the creation check refuses an account without a plan at one workspace, as 
 test('the creation check counts the account workspaces, not the ones the owner created, as the props did on main', function () use ($enablePostHog, $limitHitPushed) {
     $enablePostHog();
     $owner = User::factory()->create();
-    $owner->account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id')]);
+    $owner->account->update(['plan_id' => Plan::where('slug', 'capped')->value('id')]);
     subscribeAccount($owner->account);
     $creator = User::factory()->create(['account_id' => $owner->account_id]);
     Workspace::factory()->create(['account_id' => $owner->account_id, 'user_id' => $creator->id]);
@@ -285,7 +301,7 @@ test('the creation check counts the account workspaces, not the ones the owner c
 });
 
 test('the creation check is for the account owner only', function () use ($onPlan) {
-    $owner = $onPlan(Slug::Socials);
+    $owner = $onPlan('capped');
     $member = User::factory()->create(['account_id' => $owner->account_id]);
     $workspace = $owner->account->workspaces()->first();
     $workspace->members()->attach($member->id, membershipPivot('admin'));
@@ -299,7 +315,7 @@ test('the creation check is for the account owner only', function () use ($onPla
 test('a failed limit_hit dispatch still refuses the creation check', function () use ($onPlan) {
     enablePostHog();
     failDispatchOf(TrackWorkspaceLimitHit::class);
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->postJson(route('app.workspaces.creation-check.store'))
@@ -309,7 +325,7 @@ test('a failed limit_hit dispatch still refuses the creation check', function ()
 
 test('opening the create page at the limit sends the user to the workspaces list and tracks limit_hit once', function () use ($onPlan, $enablePostHog, $limitHitPushed) {
     $enablePostHog();
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->from(route('app.posts.index'))
@@ -322,7 +338,7 @@ test('opening the create page at the limit sends the user to the workspaces list
 });
 
 test('the create page at the limit still renders for a user without a current workspace, so it never loops with the workspace guard', function () use ($onPlan) {
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
     $user->update(['current_workspace_id' => null]);
 
     $this->actingAs($user->fresh())
@@ -333,7 +349,7 @@ test('the create page at the limit still renders for a user without a current wo
 
 test('opening the create page below the limit renders it and does not track', function () use ($onPlan, $enablePostHog) {
     $enablePostHog();
-    $user = $onPlan(Slug::Workspaces);
+    $user = $onPlan('unlimited');
 
     $this->actingAs($user)
         ->get(route('app.workspaces.create'))
@@ -345,7 +361,7 @@ test('opening the create page below the limit renders it and does not track', fu
 
 test('a store refused at the limit creates nothing and is tracked once', function () use ($onPlan, $enablePostHog, $limitHitPushed) {
     $enablePostHog();
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->from(route('app.workspaces.create'))
@@ -363,7 +379,7 @@ test('a store refused at the limit creates nothing and is tracked once', functio
 test('a store refused for a missing subscription does not track limit_hit', function () use ($enablePostHog) {
     $enablePostHog();
     $user = User::factory()->create();
-    $user->account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id')]);
+    $user->account->update(['plan_id' => Plan::where('slug', 'capped')->value('id')]);
     Workspace::factory()->create(['account_id' => $user->account_id, 'user_id' => $user->id]);
 
     $this->actingAs($user->fresh())
@@ -376,7 +392,7 @@ test('a store refused for a missing subscription does not track limit_hit', func
 test('a failed limit_hit dispatch still sends the user away from the create page', function () use ($onPlan) {
     enablePostHog();
     failDispatchOf(TrackWorkspaceLimitHit::class);
-    $user = $onPlan(Slug::Socials);
+    $user = $onPlan('capped');
 
     $this->actingAs($user)
         ->get(route('app.workspaces.create'))

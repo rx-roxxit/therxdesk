@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Billing\StartSubscriptionCheckout;
 use App\Enums\Billing\CheckoutOrigin;
-use App\Enums\Plan\Slug;
+use App\Enums\Billing\Interval;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
@@ -53,7 +53,7 @@ test('changePlan redirects to calendar in self hosted mode', function () {
 
     $response = $this->actingAs($this->user)
         ->post(route('app.billing.change-plan'), [
-            'plan_id' => Plan::where('slug', 'socials')->value('id'),
+            'plan_id' => Plan::where('slug', 'mini')->value('id'),
             'interval' => 'yearly',
         ]);
 
@@ -188,7 +188,7 @@ test('billing processing keeps auth.plan null until the webhook writes plan_id',
 test('shared auth.plan exposes name slug and interval via AuthPlanResource', function () {
     config(['trypost.self_hosted' => false]);
 
-    $plan = Plan::where('slug', 'workspace')->firstOrFail();
+    $plan = Plan::factory()->create(['slug' => 'workspace', 'name' => 'Workspace']);
     $this->account->update(['plan_id' => $plan->id]);
 
     $response = $this->actingAs($this->user->fresh())->get(route('app.billing.processing'));
@@ -272,7 +272,7 @@ test('changePlan forbids a non-owner', function () {
 
     $this->actingAs($member)
         ->post(route('app.billing.change-plan'), [
-            'plan_id' => Plan::where('slug', 'socials')->value('id'),
+            'plan_id' => Plan::where('slug', 'mini')->value('id'),
             'interval' => 'yearly',
         ])
         ->assertForbidden();
@@ -281,11 +281,9 @@ test('changePlan forbids a non-owner', function () {
 test('changePlan writes plan_id and flashes when already on that price', function () {
     config(['trypost.self_hosted' => false]);
 
-    $plan = Plan::where('slug', 'socials')->first();
-    $plan->update([
-        'stripe_monthly_price_id' => 'price_monthly',
-        'stripe_yearly_price_id' => 'price_yearly',
-    ]);
+    $plan = Plan::where('slug', 'mini')->first();
+    givePlanPrice($plan, Interval::Monthly, 'price_monthly');
+    givePlanPrice($plan, Interval::Yearly, 'price_yearly');
     $this->account->update(['plan_id' => $plan->id]);
 
     $this->account->subscriptions()->create([
@@ -335,8 +333,8 @@ test('billing index exposes the plan and no account details', function (string $
             ->where('subscription.ends_at', null)
         );
 })->with([
-    'socials' => ['socials'],
-    'workspaces' => ['workspaces'],
+    'mini' => ['mini'],
+    'standard' => ['standard'],
 ]);
 
 test('billing index exposes the end date of a cancelled subscription', function () {
@@ -558,8 +556,8 @@ test('billing index lists no invoices for an account without any', function () {
 
 test('an owner on a generic trial subscribes through Checkout on the monthly price', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $this->account->update(['plan_id' => $socials->id, 'trial_ends_at' => now()->addDays(5)]);
 
     $this->mock(StartSubscriptionCheckout::class)
@@ -594,7 +592,7 @@ test('a member cannot open the billing checkout', function () {
     $member = User::factory()->create(['account_id' => $this->account->id]);
     $this->workspace->members()->attach($member->id, membershipPivot('member'));
     $member->update(['current_workspace_id' => $this->workspace->id]);
-    $this->account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id'), 'trial_ends_at' => now()->addDays(5)]);
+    $this->account->update(['plan_id' => Plan::where('slug', 'mini')->value('id'), 'trial_ends_at' => now()->addDays(5)]);
 
     $this->actingAs($member->fresh())
         ->post(route('app.billing.checkout'))
@@ -603,8 +601,8 @@ test('a member cannot open the billing checkout', function () {
 
 test('subscribing from a generic trial applies an offer claimed meanwhile', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $this->account->update(['plan_id' => $socials->id, 'trial_ends_at' => now()->addDays(5)]);
     $blackFriday = Offer::factory()->blackFriday()->create();
     $this->account->offers()->attach($blackFriday, ['claimed_at' => now()]);
@@ -671,8 +669,8 @@ test('loading more invoices does not ask Stripe for the cards or the discount', 
 
 test('subscribing from a generic trial never adds another trial', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $this->account->update(['plan_id' => $socials->id, 'trial_ends_at' => now()->addDays(5)]);
     $this->account->offers()->attach(Offer::factory()->trial(14)->create(), ['claimed_at' => now()]);
 
@@ -689,8 +687,8 @@ test('subscribing from a generic trial never adds another trial', function () {
 
 test('subscribing from a generic trial picks the newest coupon offer over a newer trial claim', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $socials->update(['stripe_monthly_price_id' => 'price_socials_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $this->account->update(['plan_id' => $socials->id, 'trial_ends_at' => now()->addDays(5)]);
     $blackFriday = Offer::factory()->blackFriday()->create();
     $this->account->offers()->attach($blackFriday, ['claimed_at' => now()->subDay()]);
@@ -720,9 +718,9 @@ test('billing does not show the discount of a subscription that ended', function
 
 test('changing plan during a generic trial subscribes to the picked plan through Checkout', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $workspaces->update(['stripe_yearly_price_id' => 'price_workspaces_yearly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    $workspaces = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($workspaces, Interval::Yearly, 'price_workspaces_yearly');
     $this->account->update(['plan_id' => $socials->id, 'trial_ends_at' => now()->addDays(5)]);
 
     $this->mock(StartSubscriptionCheckout::class)
@@ -740,7 +738,7 @@ test('changing plan during a generic trial subscribes to the picked plan through
 
 test('changing plan without a subscription or a trial sends the owner to Welcome', function () {
     config(['trypost.self_hosted' => false]);
-    $workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
+    $workspaces = Plan::where('slug', 'plus')->firstOrFail();
 
     $this->mock(StartSubscriptionCheckout::class)->shouldReceive('redirect')->never();
 
@@ -774,9 +772,9 @@ test('an amount discount is formatted in the user\'s language', function () {
 
 test('processing waits for the plan of the new subscription before returning to billing', function () {
     config(['trypost.self_hosted' => false]);
-    $socials = Plan::where('slug', Slug::Socials)->firstOrFail();
-    $workspaces = Plan::where('slug', Slug::Workspaces)->firstOrFail();
-    $workspaces->update(['stripe_monthly_price_id' => 'price_workspaces_monthly']);
+    $socials = Plan::where('slug', 'mini')->firstOrFail();
+    $workspaces = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($workspaces, Interval::Monthly, 'price_workspaces_monthly');
     $this->account->update(['plan_id' => $socials->id]);
     $this->account->subscriptions()->create([
         'type' => Account::SUBSCRIPTION_NAME,
@@ -814,7 +812,7 @@ test('a trial without a card shows the trial, not the ended subscription before 
         'stripe_price' => 'price_123',
         'ends_at' => now()->subMonth(),
     ]);
-    $this->account->update(['plan_id' => Plan::where('slug', Slug::Socials)->value('id'), 'trial_ends_at' => now()->addDays(7)]);
+    $this->account->update(['plan_id' => Plan::where('slug', 'mini')->value('id'), 'trial_ends_at' => now()->addDays(7)]);
 
     $this->actingAs($this->user->fresh())
         ->get(route('app.billing.index'))
@@ -827,7 +825,8 @@ test('a trial without a card shows the trial, not the ended subscription before 
 
 test('subscribe now never opens a checkout on an archived plan', function () {
     config(['trypost.self_hosted' => false]);
-    $this->account->update(['plan_id' => Plan::where('slug', Slug::Workspace)->value('id'), 'trial_ends_at' => now()->addDays(5)]);
+    $archived = Plan::factory()->archived()->create(['slug' => 'workspace', 'name' => 'Workspace']);
+    $this->account->update(['plan_id' => $archived->id, 'trial_ends_at' => now()->addDays(5)]);
 
     $this->mock(StartSubscriptionCheckout::class)->shouldReceive('redirect')->never();
 

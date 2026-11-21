@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Plan\Slug as PlanSlug;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
@@ -37,7 +36,7 @@ test('account without subscription is not active in saas mode', function () {
 });
 
 test('account belongs to plan', function () {
-    $plan = Plan::where('slug', PlanSlug::Workspace)->first();
+    $plan = Plan::where('slug', 'mini')->first();
     $this->account->update(['plan_id' => $plan->id]);
 
     expect($this->account->fresh()->plan->id)->toBe($plan->id);
@@ -124,7 +123,7 @@ test('creating an additional workspace is allowed with an active subscription', 
     config(['trypost.self_hosted' => false]);
 
     $this->account->update([
-        'plan_id' => Plan::where('slug', PlanSlug::Workspaces)->value('id'),
+        'plan_id' => Plan::where('slug', 'standard')->value('id'),
     ]);
 
     $this->account->subscriptions()->create([

@@ -63,7 +63,7 @@ class TrackInvoiceUpcoming extends AbstractTrackStripeEvent
 
         return transform(
             Plan::forStripePrices([$priceId])->first(),
-            fn (Plan $plan): Interval => Interval::forPrice($plan, $priceId),
+            fn (Plan $plan): Interval => $plan->intervalFor($priceId) ?? Interval::Monthly,
         );
     }
 }
