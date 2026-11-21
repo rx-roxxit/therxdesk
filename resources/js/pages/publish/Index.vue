@@ -77,12 +77,12 @@ import type {
     PublishChannel,
     PublishCounts,
     PublishQueue,
+    QueueItem,
+    QueueView,
     PublishScope,
     PublishSocialAccount,
     PublishTab,
     QueueDay,
-    QueueItem,
-    QueueView,
     ScrollPostCards,
 } from '@/types/publish';
 
@@ -206,7 +206,9 @@ const groupQueueItems = (items: QueueItem[]): QueueDay[] => {
     return [...groups].map(([key, items]) => ({ date: key, items }));
 };
 
-const hasMorePosts = computed(() => page.scrollProps?.posts?.nextPage != null);
+const hasMorePosts = computed(
+    () => page.scrollProps?.posts?.nextPage != null,
+);
 
 const lastLoadedPostAt = computed<number | null>(() => {
     const times = (props.posts?.data ?? [])
@@ -476,9 +478,7 @@ const withPostInSlot = (
 
     return {
         days: groupQueueItems([
-            ...items.filter(
-                (item) => item.post_id !== postId && !isTarget(item),
-            ),
+            ...items.filter((item) => item.post_id !== postId && !isTarget(item)),
             ...freed,
             {
                 type: 'post',
@@ -863,9 +863,7 @@ const submitComposition = (
                                 "
                             />
                             <NewPostButton
-                                :social-account-ids="
-                                    channel ? [channel.id] : []
-                                "
+                                :social-account-ids="channel ? [channel.id] : []"
                             />
                         </div>
                     </AppHeaderActions>
@@ -882,9 +880,7 @@ const submitComposition = (
                     <PublishEmptyIllustration />
                 </template>
                 <template v-if="canManageAccounts" #action>
-                    <div
-                        class="flex flex-wrap items-center justify-center gap-2"
-                    >
+                    <div class="flex flex-wrap items-center justify-center gap-2">
                         <Button
                             data-testid="publish-welcome-connect"
                             @click="openConnectDialog()"
@@ -914,9 +910,7 @@ const submitComposition = (
                     <PublishEmptyIllustration />
                 </template>
                 <template #action>
-                    <div
-                        class="flex flex-wrap items-center justify-center gap-2"
-                    >
+                    <div class="flex flex-wrap items-center justify-center gap-2">
                         <Button
                             :data-testid="`publish-empty-new-post-${tab}`"
                             @click="newPost"

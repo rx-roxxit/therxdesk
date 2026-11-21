@@ -163,8 +163,9 @@ $V/browser-suite.sh tests/Browser/BillingPageTest.php  # one file
 needs a Playwright at least as new as the version it pins. `browser-suite.sh` builds a throwaway image from the
 official Playwright image at the version installed in `node_modules` plus PHP 8.5 (it needs `rsync` and a built
 `public/build`), copies the checkout to `~/.cache/verify-therxdesk/state/browser-suite/repo` without `public/hot`,
-and runs the suite against the dev stack's `pgsql` and `redis`. Screenshots and traces stay in that copy. CI runs the
-same suite in its `browser` job.
+and runs the suite against the dev stack's `pgsql` and `redis`. Screenshots and traces stay in that copy.
+`browser-suite.sh` is the only place this suite runs today: the fork's GitHub Actions have never run, so the
+workflow's `browser` job does not run on its own.
 
 ## Evidence
 
