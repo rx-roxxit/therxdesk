@@ -7,7 +7,8 @@ import PlanFeatureInfo from '@/components/billing/PlanFeatureInfo.vue';
 import PlanFeatureList from '@/components/billing/PlanFeatureList.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatMoney } from '@/lib/utils';
+import { activeLocale } from '@/language';
+import { formatMoney } from '@/lib/money';
 import {
     PLAN_CHANGE_LABELS,
     planChangeAction,
@@ -58,7 +59,7 @@ const price = (plan: PlanOption): string => {
         return '—';
     }
 
-    return formatMoney(amount);
+    return formatMoney(amount, activeLocale.value);
 };
 
 const yearlyTotal = (plan: PlanOption): string | null => {
@@ -66,7 +67,7 @@ const yearlyTotal = (plan: PlanOption): string | null => {
         return null;
     }
 
-    return formatMoney(plan.yearly_amount);
+    return formatMoney(plan.yearly_amount, activeLocale.value);
 };
 
 const isCurrentPlan = (plan: PlanOption): boolean =>
