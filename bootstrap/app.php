@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\NightwatchWebhookController;
 use App\Http\Middleware\Api\LoadWorkspaceFromToken;
 use App\Http\Middleware\App\CaptureOffer;
 use App\Http\Middleware\App\EnsureRegistrationEnabled;
@@ -27,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::prefix('internal/v1')->group(base_path('routes/internal.php'));
+
+            // Outside the `web` group, so Nightwatch's signed call needs no CSRF token.
+            Route::post('webhooks/nightwatch', NightwatchWebhookController::class)
+                ->name('webhooks.nightwatch');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

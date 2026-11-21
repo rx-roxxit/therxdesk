@@ -17,9 +17,12 @@ use App\Console\Commands\RefreshExpiringTokens;
 use App\Console\Commands\Repurpose\PollRepurposes;
 use App\Console\Commands\ResolveTikTokVideoIds;
 use App\Console\Commands\RssFeed\PollRssFeeds;
+use App\Console\Commands\RxDesk\CapacityCommand;
+use App\Console\Commands\RxDesk\DigestCommand;
 use App\Console\Commands\SyncPostHogLifecycleStages;
 use App\Enums\SocialAccount\Platform;
 use App\Jobs\Analytics\FinalizeAccountDailySnapshots;
+use App\Jobs\PingHeartbeat;
 use App\Services\PostHogService;
 use App\Support\Analytics\DiscoverySchedule;
 use Illuminate\Support\Facades\Schedule;
@@ -67,5 +70,25 @@ Schedule::job(new FinalizeAccountDailySnapshots(daysAgo: 1))
     ->name('analytics:finalize-account-daily-recovery')
     ->dailyAt('00:30')
     ->timezone('UTC')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(CapacityCommand::class)
+    ->everyFiveMinutes()
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(DigestCommand::class)
+    ->dailyAt((string) config('rxdesk.alerts.digest_at'))
+    ->timezone((string) config('rxdesk.alerts.timezone'))
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::job(new PingHeartbeat)
+    ->name('rxdesk:heartbeat')
+    ->everyFiveMinutes()
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
     ->withoutOverlapping()
     ->onOneServer();
