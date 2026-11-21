@@ -15,6 +15,8 @@ ARG NODE_VERSION=22
 # ----------------------------------------------------------------------------
 FROM php:${PHP_VERSION}-fpm-alpine AS system-base
 
+# pg_dump must match the bundled Postgres major (16): pg_dump 17+ writes SET
+# transaction_timeout, which a 16 server rejects on restore.
 RUN apk add --no-cache \
         nginx \
         supervisor \
@@ -24,7 +26,7 @@ RUN apk add --no-cache \
         unzip \
         shadow \
         tzdata \
-        postgresql-client \
+        postgresql16-client \
         postgresql-dev \
         mysql-client \
         libpng-dev \

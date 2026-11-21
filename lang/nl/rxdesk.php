@@ -134,6 +134,9 @@ return [
             'issues' => 'Nieuwe problemen',
             'failed_jobs' => 'Mislukte taken',
             'failed_jobs_line' => '{1} Eén taak is gisteren mislukt|[0,*] :count taken zijn gisteren mislukt',
+            'restore_drill' => 'Hersteltest',
+            'restore_drill_line' => 'De laatste hersteltest was op :date. Voer er nu een uit.',
+            'restore_drill_never' => 'Er is nog geen hersteltest vastgelegd. Voer er nu een uit.',
         ],
         'preview' => [
             'urgent' => 'Een probleem vraagt nu om aandacht.',

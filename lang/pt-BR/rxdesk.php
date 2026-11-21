@@ -134,6 +134,9 @@ return [
             'issues' => 'Novos problemas',
             'failed_jobs' => 'Falhas de tarefas',
             'failed_jobs_line' => '{1} Uma tarefa falhou ontem|[0,*] :count tarefas falharam ontem',
+            'restore_drill' => 'Teste de restauração',
+            'restore_drill_line' => 'O último teste de restauração foi em :date. Faça um agora.',
+            'restore_drill_never' => 'Nenhum teste de restauração foi registrado ainda. Faça um agora.',
         ],
         'preview' => [
             'urgent' => 'Um problema precisa de atenção agora.',

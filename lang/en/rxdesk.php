@@ -134,6 +134,9 @@ return [
             'issues' => 'New issues',
             'failed_jobs' => 'Failed jobs',
             'failed_jobs_line' => '{1} One failed job yesterday|[0,*] :count failed jobs yesterday',
+            'restore_drill' => 'Restore drill',
+            'restore_drill_line' => 'The last restore drill was on :date. Run one now.',
+            'restore_drill_never' => 'No restore drill is recorded yet. Run one now.',
         ],
         'preview' => [
             'urgent' => 'A problem needs attention now.',

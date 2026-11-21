@@ -134,6 +134,9 @@ return [
             'issues' => 'Nouveaux problèmes',
             'failed_jobs' => 'Tâches échouées',
             'failed_jobs_line' => '{1} Une tâche a échoué hier|[0,*] :count tâches ont échoué hier',
+            'restore_drill' => 'Test de restauration',
+            'restore_drill_line' => 'Le dernier test de restauration a eu lieu le :date. Lancez-en un maintenant.',
+            'restore_drill_never' => 'Aucun test de restauration n\'est encore enregistré. Lancez-en un maintenant.',
         ],
         'preview' => [
             'urgent' => 'Un problème demande une attention immédiate.',

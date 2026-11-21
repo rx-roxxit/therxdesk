@@ -7,18 +7,23 @@ namespace App\Services\Alerts;
 use App\Enums\Alerts\AdminAlertSeverity;
 use App\Models\AdminAlert;
 use App\Models\NightwatchIssue;
+use App\Services\Ops\RestoreDrillStatus;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Gathers what the daily digest reports: TODAY alerts cleared in the last 24
- * hours, Nightwatch issues opened in the last 24 hours, and yesterday's failed
- * jobs in the digest timezone. Restore drills and bucket counters belong to
- * other tickets.
+ * hours, Nightwatch issues opened in the last 24 hours, yesterday's failed
+ * jobs in the digest timezone and whether a restore drill is due. Bucket
+ * counters belong to another ticket.
  */
 class AdminAlertDigest
 {
+    public function __construct(
+        private readonly RestoreDrillStatus $restoreDrills,
+    ) {}
+
     /**
-     * @return array{cleared: list<string>, issues: list<array{title: string, url: string|null}>, failed_jobs: int}
+     * @return array{cleared: list<string>, issues: list<array{title: string, url: string|null}>, failed_jobs: int, restore_drill: array{due: bool, last_performed_at: string|null}}
      */
     public function items(): array
     {
@@ -26,15 +31,19 @@ class AdminAlertDigest
             'cleared' => $this->clearedKeys(),
             'issues' => $this->recentIssues(),
             'failed_jobs' => $this->yesterdaysFailedJobs(),
+            'restore_drill' => $this->restoreDrill(),
         ];
     }
 
     /**
-     * @param  array{cleared: list<string>, issues: list<array<string, mixed>>, failed_jobs: int}  $items
+     * @param  array{cleared: list<string>, issues: list<array<string, mixed>>, failed_jobs: int, restore_drill: array{due: bool, last_performed_at: string|null}}  $items
      */
     public function isEmpty(array $items): bool
     {
-        return $items['cleared'] === [] && $items['issues'] === [] && $items['failed_jobs'] === 0;
+        return $items['cleared'] === []
+            && $items['issues'] === []
+            && $items['failed_jobs'] === 0
+            && ! $items['restore_drill']['due'];
     }
 
     /**
@@ -82,5 +91,18 @@ class AdminAlertDigest
         return DB::table('failed_jobs')
             ->whereBetween('failed_at', [$start, $end])
             ->count();
+    }
+
+    /**
+     * @return array{due: bool, last_performed_at: string|null}
+     */
+    private function restoreDrill(): array
+    {
+        $last = $this->restoreDrills->lastPerformedAt();
+
+        return [
+            'due' => $this->restoreDrills->isDue(),
+            'last_performed_at' => $last?->timezone((string) config('rxdesk.alerts.timezone'))->format('Y-m-d'),
+        ];
     }
 }

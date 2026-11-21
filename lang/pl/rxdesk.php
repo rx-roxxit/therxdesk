@@ -134,6 +134,9 @@ return [
             'issues' => 'Nowe problemy',
             'failed_jobs' => 'Nieudane zadania',
             'failed_jobs_line' => '{1} Jedno zadanie nie powiodło się wczoraj|[2,4] :count zadania nie powiodły się wczoraj|[0,*] :count zadań nie powiodło się wczoraj',
+            'restore_drill' => 'Test odtwarzania',
+            'restore_drill_line' => 'Ostatni test odtwarzania odbył się :date. Przeprowadź go teraz.',
+            'restore_drill_never' => 'Nie zapisano jeszcze żadnego testu odtwarzania. Przeprowadź go teraz.',
         ],
         'preview' => [
             'urgent' => 'Problem wymaga teraz uwagi.',

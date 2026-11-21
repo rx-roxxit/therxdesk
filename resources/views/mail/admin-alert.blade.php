@@ -87,6 +87,16 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 <p style="margin: 24px 0 0; font-weight: 600; line-height: 24px">{{ __('rxdesk.alerts.digest.failed_jobs') }}</p>
                 <p style="margin: 4px 0 0; line-height: 24px">{{ trans_choice('rxdesk.alerts.digest.failed_jobs_line', $items['failed_jobs']) }}</p>
                 @endif
+                @if($items['restore_drill']['due'])
+                <p style="margin: 24px 0 0; font-weight: 600; line-height: 24px">{{ __('rxdesk.alerts.digest.restore_drill') }}</p>
+                <p style="margin: 4px 0 0; line-height: 24px">
+                  @if($items['restore_drill']['last_performed_at'])
+                  {{ __('rxdesk.alerts.digest.restore_drill_line', ['date' => $items['restore_drill']['last_performed_at']]) }}
+                  @else
+                  {{ __('rxdesk.alerts.digest.restore_drill_never') }}
+                  @endif
+                </p>
+                @endif
                 @else
                 @if($isResolved)
                 <p style="margin: 0; line-height: 24px">

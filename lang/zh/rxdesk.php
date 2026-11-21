@@ -134,6 +134,9 @@ return [
             'issues' => '新问题',
             'failed_jobs' => '失败的任务',
             'failed_jobs_line' => '{1} 昨天有 1 个任务失败|[0,*] 昨天有 :count 个任务失败',
+            'restore_drill' => '恢复演练',
+            'restore_drill_line' => '上次恢复演练是在 :date。现在再演练一次。',
+            'restore_drill_never' => '还没有恢复演练记录。现在演练一次。',
         ],
         'preview' => [
             'urgent' => '有问题需要立即处理。',

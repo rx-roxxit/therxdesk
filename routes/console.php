@@ -17,6 +17,7 @@ use App\Console\Commands\RefreshExpiringTokens;
 use App\Console\Commands\Repurpose\PollRepurposes;
 use App\Console\Commands\ResolveTikTokVideoIds;
 use App\Console\Commands\RssFeed\PollRssFeeds;
+use App\Console\Commands\RxDesk\BackupCommand;
 use App\Console\Commands\RxDesk\CapacityCommand;
 use App\Console\Commands\RxDesk\DigestCommand;
 use App\Console\Commands\SyncPostHogLifecycleStages;
@@ -83,6 +84,13 @@ Schedule::command(DigestCommand::class)
     ->dailyAt((string) config('rxdesk.alerts.digest_at'))
     ->timezone((string) config('rxdesk.alerts.timezone'))
     ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(BackupCommand::class)
+    ->hourly()
+    ->timezone('UTC')
+    ->when(fn (): bool => (bool) config('rxdesk.backup.enabled') && filled(config('laravel-database-backup.disk.bucket')))
     ->withoutOverlapping()
     ->onOneServer();
 

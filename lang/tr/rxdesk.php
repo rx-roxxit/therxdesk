@@ -134,6 +134,9 @@ return [
             'issues' => 'Yeni sorunlar',
             'failed_jobs' => 'Başarısız işler',
             'failed_jobs_line' => '{1} Dün bir iş başarısız oldu|[0,*] Dün :count iş başarısız oldu',
+            'restore_drill' => 'Geri yükleme tatbikatı',
+            'restore_drill_line' => 'Son geri yükleme tatbikatı :date tarihindeydi. Şimdi bir tane yapın.',
+            'restore_drill_never' => 'Henüz kayıtlı bir geri yükleme tatbikatı yok. Şimdi bir tane yapın.',
         ],
         'preview' => [
             'urgent' => 'Bir sorun hemen ilgi bekliyor.',

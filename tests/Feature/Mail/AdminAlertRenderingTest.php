@@ -60,20 +60,48 @@ test('the digest shows only the sections that have items', function () {
         'cleared' => [],
         'issues' => [],
         'failed_jobs' => 0,
+        'restore_drill' => ['due' => false, 'last_performed_at' => null],
     ]))->render();
 
     expect($empty)->not->toContain(__('rxdesk.alerts.digest.cleared'))
         ->and($empty)->not->toContain(__('rxdesk.alerts.digest.issues'))
-        ->and($empty)->not->toContain(__('rxdesk.alerts.digest.failed_jobs'));
+        ->and($empty)->not->toContain(__('rxdesk.alerts.digest.failed_jobs'))
+        ->and($empty)->not->toContain(__('rxdesk.alerts.digest.restore_drill'));
 
     $full = (new AdminAlertMail(AlertLevel::Digest, null, [], [
         'cleared' => [AdminAlertKey::CapacityRam->value],
         'issues' => [['title' => 'Boom', 'url' => null]],
         'failed_jobs' => 3,
+        'restore_drill' => ['due' => false, 'last_performed_at' => null],
     ]))->render();
 
     expect($full)->toContain(__('rxdesk.alerts.digest.cleared'))
         ->and($full)->toContain(__('rxdesk.alerts.conditions.capacity_ram'))
         ->and($full)->toContain('Boom')
         ->and($full)->toContain(__('rxdesk.alerts.digest.failed_jobs'));
+});
+
+test('the digest asks for a restore drill when one is due', function () {
+    app()->setLocale('en');
+
+    $never = (new AdminAlertMail(AlertLevel::Digest, null, [], [
+        'cleared' => [],
+        'issues' => [],
+        'failed_jobs' => 0,
+        'restore_drill' => ['due' => true, 'last_performed_at' => null],
+    ]))->render();
+
+    expect($never)->toContain(__('rxdesk.alerts.digest.restore_drill'))
+        ->and($never)->toContain(__('rxdesk.alerts.digest.restore_drill_never'));
+
+    $lastPerformedAt = now()->subMonthsNoOverflow(4)->format('Y-m-d');
+
+    $stale = (new AdminAlertMail(AlertLevel::Digest, null, [], [
+        'cleared' => [],
+        'issues' => [],
+        'failed_jobs' => 0,
+        'restore_drill' => ['due' => true, 'last_performed_at' => $lastPerformedAt],
+    ]))->render();
+
+    expect($stale)->toContain(__('rxdesk.alerts.digest.restore_drill_line', ['date' => $lastPerformedAt]));
 });

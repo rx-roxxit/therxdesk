@@ -72,17 +72,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Database backups
+    |--------------------------------------------------------------------------
+    |
+    | `rxdesk:backup` owns the hourly run: it dumps the database to the backup
+    | bucket, records the run and pings the backup heartbeat. The package's own
+    | `BACKUP_ENABLED` schedule stays off so only one command ever runs.
+    | `restore_drill_months` is how long a restore drill stays current; after
+    | that the daily digest asks for another one.
+    |
+    */
+
+    'backup' => [
+        'enabled' => (bool) env('RXDESK_BACKUP_ENABLED', false),
+        'restore_drill_months' => (int) env('RXDESK_RESTORE_DRILL_MONTHS', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Heartbeat
     |--------------------------------------------------------------------------
     |
     | The scheduler dispatches `PingHeartbeat` every five minutes; the job
     | pings Better Stack at `url` from the queue. A blank URL turns the ping
-    | into a no-op, which is the self-hosted default.
+    | into a no-op, which is the self-hosted default. `backup_url` is the
+    | separate backup heartbeat `rxdesk:backup` pings only after a run
+    | succeeds.
     |
     */
 
     'heartbeat' => [
         'url' => env('RXDESK_HEARTBEAT_URL'),
+        'backup_url' => env('RXDESK_BACKUP_HEARTBEAT_URL'),
         'timeout' => (int) env('RXDESK_HEARTBEAT_TIMEOUT', 5),
     ],
 
