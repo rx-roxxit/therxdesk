@@ -152,6 +152,20 @@ $V/db.sh "select id, status, content from posts where workspace_id = '<workspace
 
 `db.sh` opens a read-only transaction on the dev database (`trypost`), so a write fails instead of landing.
 
+## Browser suite
+
+```sh
+$V/browser-suite.sh                                    # the whole suite, three processes
+$V/browser-suite.sh tests/Browser/BillingPageTest.php  # one file
+```
+
+`tests/Browser` never runs in the Alpine dev image: the bundled Chromium needs glibc, and the Pest browser plugin
+needs a Playwright at least as new as the version it pins. `browser-suite.sh` builds a throwaway image from the
+official Playwright image at the version installed in `node_modules` plus PHP 8.5 (it needs `rsync` and a built
+`public/build`), copies the checkout to `~/.cache/verify-therxdesk/state/browser-suite/repo` without `public/hot`,
+and runs the suite against the dev stack's `pgsql` and `redis`. Screenshots and traces stay in that copy. CI runs the
+same suite in its `browser` job.
+
 ## Evidence
 
 Each run folder holds: `NN-<step>.png` (full-page screenshots in order), `trace.zip` (every action with DOM
@@ -196,6 +210,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | `doctor.sh` | is this instance worth driving | no |
 | `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `guests` removes register-journey Owners | `up`, `down`, `guests` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
+| `browser-suite.sh [pest args]` | run `tests/Browser` in the Playwright + PHP image | a scratch copy under `state/` |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
 | `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plan_prices` |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
