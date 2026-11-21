@@ -14,6 +14,8 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
+| The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |
+| Admin alerts, heartbeat, capacity check and health (`selling.sh up`) | [admin-alerts.md](admin-alerts.md) | not a browser journey; selling.sh + internal.sh |
 
 Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), publishing (would
 call the network), Insights, Create (ideas, templates, feeds), Repurpose, workspace members and invites, settings

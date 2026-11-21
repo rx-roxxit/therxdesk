@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => '메모리 사용량 높음',
+            'capacity_load' => '서버 부하 높음',
+            'capacity_wait' => '대기열 대기 시간 김',
+            'capacity_disk_free' => '디스크 여유 공간 부족',
+            'disk_guard' => '디스크 공간 거의 소진',
+            'nightwatch_burst' => '새 문제 급증',
+        ],
+        'messages' => [
+            'capacity_ram' => '서버 메모리가 :percent%로, 경고 기준인 :threshold%를 넘었습니다.',
+            'capacity_load' => '5분 평균 부하가 :load로, 경고 기준인 :threshold를 넘었습니다.',
+            'capacity_wait' => '대기열의 최대 대기 시간이 :minutes분으로, 경고 기준인 :threshold_minutes분을 넘었습니다.',
+            'capacity_disk_free' => '디스크 여유 공간이 :free로, 경고 기준인 :threshold보다 적습니다.',
+            'disk_guard' => '디스크 여유 공간이 :free로, 디스크 보호 기준인 :threshold에 가깝습니다. 곧 업로드가 중단됩니다.',
+            'nightwatch_burst' => '지난 한 시간 동안 Nightwatch에서 :count개의 문제가 열렸습니다.',
+        ],
+        'resolved_body' => '이 경고는 해제되었습니다. 같은 상황이 다시 발생하면 다시 알려드립니다.',
+        'digest' => [
+            'title' => '일일 요약',
+            'cleared' => '해제된 경고',
+            'cleared_line' => '지난 24시간 동안 해제된 경고입니다.',
+            'issues' => '새 문제',
+            'failed_jobs' => '실패한 작업',
+            'failed_jobs_line' => '{1} 어제 작업 1개가 실패했습니다|[0,*] 어제 작업 :count개가 실패했습니다',
+        ],
+        'preview' => [
+            'urgent' => '지금 주의가 필요한 문제가 있습니다.',
+            'today' => '오늘 주의가 필요한 문제가 있습니다.',
+            'resolved' => '경고가 해제되었습니다.',
+            'digest' => '일일 요약입니다.',
+        ],
+        'sent_at' => '보낸 시각 :time',
     ],
 ];

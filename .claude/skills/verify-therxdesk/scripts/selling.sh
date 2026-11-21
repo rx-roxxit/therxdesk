@@ -7,6 +7,7 @@
 #   selling.sh down     stop the listener, recreate app from .env (self-hosted)
 #   selling.sh status   the marker, the app container's SELF_HOSTED, what php-fpm serves, the listener
 #   selling.sh logs     the listener's log, with the signing secret redacted
+#   selling.sh heartbeat  the local heartbeat receiver's log
 #
 # Never prints STRIPE_SECRET or the webhook signing secret.
 source "$(dirname "$0")/env.sh"
@@ -143,6 +144,18 @@ served_mode_is() {
     [ "$(served_mode)" = "$1" ]
 }
 
+# Whether a service of the selling overlay is running, with or without the
+# marker (status runs in both states).
+service_running() {
+    docker compose --progress quiet --project-directory "$MAIN_CHECKOUT" \
+        -f "$MAIN_CHECKOUT/compose.yaml" -f "$MAIN_CHECKOUT/compose.override.yaml" -f "$SELLING_OVERLAY" \
+        ps --status running -q "$1" 2>/dev/null || true
+}
+
+heartbeat_ready() {
+    [ -n "$(service_running heartbeat)" ]
+}
+
 up() {
     if [ -z "$(compose ps --status running -q app)" ]; then
         echo "[selling] the dev stack is not running: run launch.sh first" >&2
@@ -155,11 +168,12 @@ up() {
     touch "$SELLING_MARKER"
     write_internal_tokens
     echo "[selling] recreating app in selling mode and starting the Stripe listener"
-    compose up -d app stripe
+    compose up -d app stripe heartbeat
 
     wait_until_usable
     wait_for "php-fpm serves selling mode (selfHosted=false)" 60 served_mode_is selling
     wait_for "Stripe listener ready" 60 listener_ready
+    wait_for "heartbeat receiver (HTTP 8080)" 60 heartbeat_ready
     echo "[selling] selling mode is up; selling.sh down returns to .env's mode"
 }
 
@@ -169,8 +183,8 @@ down() {
         return
     fi
 
-    echo "[selling] stopping the Stripe listener"
-    compose rm -sf stripe
+    echo "[selling] stopping the Stripe listener and the heartbeat receiver"
+    compose rm -sf stripe heartbeat
     rm -f "$SELLING_MARKER"
 
     echo "[selling] recreating app from .env"
@@ -197,14 +211,18 @@ status() {
 
     echo "served    $(served_mode)"
 
-    listener="$(docker compose --progress quiet --project-directory "$MAIN_CHECKOUT" \
-        -f "$MAIN_CHECKOUT/compose.yaml" -f "$MAIN_CHECKOUT/compose.override.yaml" -f "$SELLING_OVERLAY" \
-        ps --status running -q stripe 2>/dev/null || true)"
+    listener="$(service_running stripe)"
     if [ -n "$listener" ]; then echo "listener  running"; else echo "listener  not running"; fi
+
+    if [ -n "$(service_running heartbeat)" ]; then echo "heartbeat running"; else echo "heartbeat not running"; fi
 }
 
 logs() {
     compose logs --no-log-prefix --tail="${1:-200}" stripe | sed -E 's/whsec_[A-Za-z0-9]+/whsec_<redacted>/g'
+}
+
+heartbeat_logs() {
+    compose logs --no-log-prefix --tail="${1:-200}" heartbeat
 }
 
 case "${1:-status}" in
@@ -212,8 +230,9 @@ case "${1:-status}" in
     down) down ;;
     status) status ;;
     logs) logs "${2:-200}" ;;
+    heartbeat) heartbeat_logs "${2:-200}" ;;
     *)
-        echo "usage: selling.sh up|down|status|logs [lines]" >&2
+        echo "usage: selling.sh up|down|status|logs|heartbeat [lines]" >&2
         exit 2
         ;;
 esac

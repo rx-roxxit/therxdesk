@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Hoog geheugengebruik',
+            'capacity_load' => 'Hoge serverbelasting',
+            'capacity_wait' => 'Lange wachttijd in de wachtrij',
+            'capacity_disk_free' => 'Weinig vrije schijfruimte',
+            'disk_guard' => 'Schijfruimte bijna uitgeput',
+            'nightwatch_burst' => 'Golf van nieuwe problemen',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Het servergeheugen staat op :percent%, boven de waarschuwingsdrempel van :threshold%.',
+            'capacity_load' => 'De gemiddelde belasting over 5 minuten is :load, boven de waarschuwingsdrempel van :threshold.',
+            'capacity_wait' => 'De langste wachttijd in de wachtrij is :minutes minuten, boven de waarschuwingsdrempel van :threshold_minutes minuten.',
+            'capacity_disk_free' => 'De vrije schijfruimte is :free, onder de waarschuwingsdrempel van :threshold.',
+            'disk_guard' => 'De vrije schijfruimte is :free, dicht bij de schijfbewakingdrempel van :threshold. Uploads stoppen binnenkort.',
+            'nightwatch_burst' => 'In het laatste uur zijn :count problemen in Nightwatch geopend.',
+        ],
+        'resolved_body' => 'Deze melding is opgelost. Hij komt terug als de situatie zich opnieuw voordoet.',
+        'digest' => [
+            'title' => 'Dagelijks overzicht',
+            'cleared' => 'Meldingen opgelost',
+            'cleared_line' => 'Deze meldingen zijn in de laatste 24 uur opgelost.',
+            'issues' => 'Nieuwe problemen',
+            'failed_jobs' => 'Mislukte taken',
+            'failed_jobs_line' => '{1} Eén taak is gisteren mislukt|[0,*] :count taken zijn gisteren mislukt',
+        ],
+        'preview' => [
+            'urgent' => 'Een probleem vraagt nu om aandacht.',
+            'today' => 'Een probleem vraagt vandaag om aandacht.',
+            'resolved' => 'Een melding is opgelost.',
+            'digest' => 'Je dagelijkse overzicht.',
+        ],
+        'sent_at' => 'Verzonden :time',
     ],
 ];

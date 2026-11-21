@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Uso elevato della memoria',
+            'capacity_load' => 'Carico server elevato',
+            'capacity_wait' => 'Attesa lunga in coda',
+            'capacity_disk_free' => 'Poco spazio libero su disco',
+            'disk_guard' => 'Spazio su disco quasi esaurito',
+            'nightwatch_burst' => 'Picco di nuovi problemi',
+        ],
+        'messages' => [
+            'capacity_ram' => 'La memoria del server è al :percent%, sopra la soglia di avviso del :threshold%.',
+            'capacity_load' => 'Il carico medio a 5 minuti è :load, sopra la soglia di avviso di :threshold.',
+            'capacity_wait' => 'L\'attesa più lunga in coda è di :minutes minuti, sopra la soglia di avviso di :threshold_minutes minuti.',
+            'capacity_disk_free' => 'Lo spazio libero su disco è :free, sotto la soglia di avviso di :threshold.',
+            'disk_guard' => 'Lo spazio libero su disco è :free, vicino alla soglia di protezione del disco di :threshold. I caricamenti si fermeranno presto.',
+            'nightwatch_burst' => 'Nell\'ultima ora sono stati aperti :count problemi in Nightwatch.',
+        ],
+        'resolved_body' => 'Questo avviso è rientrato. Verrà inviato di nuovo se la condizione si ripresenta.',
+        'digest' => [
+            'title' => 'Riepilogo giornaliero',
+            'cleared' => 'Avvisi rientrati',
+            'cleared_line' => 'Questi avvisi sono rientrati nelle ultime 24 ore.',
+            'issues' => 'Nuovi problemi',
+            'failed_jobs' => 'Attività non riuscite',
+            'failed_jobs_line' => '{1} Un\'attività non è riuscita ieri|[0,*] :count attività non sono riuscite ieri',
+        ],
+        'preview' => [
+            'urgent' => 'Un problema richiede attenzione subito.',
+            'today' => 'Un problema richiede attenzione oggi.',
+            'resolved' => 'Un avviso è rientrato.',
+            'digest' => 'Il tuo riepilogo giornaliero.',
+        ],
+        'sent_at' => 'Inviato :time',
     ],
 ];

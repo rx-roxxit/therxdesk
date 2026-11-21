@@ -17,6 +17,7 @@ SKILL_IN_WORK="/work/${SKILL_DIR#"$HERE_TOPLEVEL"/}"
 
 BASE_URL="${VERIFY_BASE_URL:-http://localhost:8000}"
 VITE_URL="${VERIFY_VITE_URL:-http://localhost:5173}"
+MAILPIT_URL="${VERIFY_MAILPIT_URL:-http://localhost:8025}"
 PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.65.1-noble"
 NODE_MODULES_VOLUME="therxdesk_app-node-modules"
 

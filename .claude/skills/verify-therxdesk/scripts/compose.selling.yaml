@@ -9,16 +9,32 @@
 #     events Cashier reads) to Cashier's /stripe/webhook.
 #     ${STRIPE_SECRET} comes from the project's .env (compose interpolation).
 #     Its log prints the signing secret: read it through `selling.sh logs`.
+#   - heartbeat is a local receiver for the five-minute heartbeat job, so the
+#     queue pings a dev service instead of Better Stack. `selling.sh heartbeat`
+#     prints its log.
 
 services:
     app:
         environment:
             SELF_HOSTED: 'false'
+            RXDESK_ALERT_RECIPIENT: admin@therxdesk.com
+            RXDESK_HEARTBEAT_URL: http://heartbeat:8080/hb
+            # Dev-only signing secret so the webhook can be exercised locally.
+            NIGHTWATCH_WEBHOOK_SECRET: verify-nightwatch-secret
         env_file:
             - path: ${HOME}/.cache/verify-therxdesk/state/stripe-webhook.env
               required: true
             - path: ${HOME}/.cache/verify-therxdesk/state/internal-api.env
               required: true
+
+    heartbeat:
+        image: mendhak/http-https-echo:31
+        environment:
+            HTTP_PORT: '8080'
+        depends_on:
+            app:
+                condition: service_started
+        restart: unless-stopped
 
     stripe:
         image: stripe/stripe-cli:v1.55.14

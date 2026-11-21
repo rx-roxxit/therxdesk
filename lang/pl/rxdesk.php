@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 /*
-| The RX Desk's own copy. English in every locale on purpose (see CLAUDE.md,
-| "New copy is English only"); upstream never touches this file.
+| The RX Desk's own copy. Every new key ships in all 16 locales; upstream
+| never touches this file.
 */
 
 return [
@@ -108,5 +108,39 @@ return [
         'outcome' => [
             'failed' => "Cover couldn't be set. Add it in the network's app.",
         ],
+    ],
+    'alerts' => [
+        'conditions' => [
+            'capacity_ram' => 'Wysokie użycie pamięci',
+            'capacity_load' => 'Wysokie obciążenie serwera',
+            'capacity_wait' => 'Długie oczekiwanie w kolejce',
+            'capacity_disk_free' => 'Mało wolnego miejsca na dysku',
+            'disk_guard' => 'Miejsce na dysku prawie wyczerpane',
+            'nightwatch_burst' => 'Nasilenie nowych problemów',
+        ],
+        'messages' => [
+            'capacity_ram' => 'Pamięć serwera wynosi :percent%, powyżej progu alertu :threshold%.',
+            'capacity_load' => 'Średnie obciążenie z 5 minut wynosi :load, powyżej progu alertu :threshold.',
+            'capacity_wait' => 'Najdłuższe oczekiwanie w kolejce to :minutes min, powyżej progu alertu :threshold_minutes min.',
+            'capacity_disk_free' => 'Wolne miejsce na dysku to :free, poniżej progu alertu :threshold.',
+            'disk_guard' => 'Wolne miejsce na dysku to :free, blisko progu ochrony dysku :threshold. Przesyłanie wkrótce się zatrzyma.',
+            'nightwatch_burst' => 'W ostatniej godzinie w Nightwatch otwarto problemy: :count.',
+        ],
+        'resolved_body' => 'Ten alert został wycofany. Wróci, jeśli warunek się powtórzy.',
+        'digest' => [
+            'title' => 'Dzienny przegląd',
+            'cleared' => 'Alerty wycofane',
+            'cleared_line' => 'Te alerty wycofano w ciągu ostatnich 24 godzin.',
+            'issues' => 'Nowe problemy',
+            'failed_jobs' => 'Nieudane zadania',
+            'failed_jobs_line' => '{1} Jedno zadanie nie powiodło się wczoraj|[2,4] :count zadania nie powiodły się wczoraj|[0,*] :count zadań nie powiodło się wczoraj',
+        ],
+        'preview' => [
+            'urgent' => 'Problem wymaga teraz uwagi.',
+            'today' => 'Problem wymaga uwagi dziś.',
+            'resolved' => 'Alert został wycofany.',
+            'digest' => 'Twój dzienny przegląd.',
+        ],
+        'sent_at' => 'Wysłano :time',
     ],
 ];
