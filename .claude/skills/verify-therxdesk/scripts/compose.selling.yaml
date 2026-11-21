@@ -19,6 +19,7 @@ services:
             SELF_HOSTED: 'false'
             RXDESK_ALERT_RECIPIENT: admin@therxdesk.com
             RXDESK_HEARTBEAT_URL: http://heartbeat:8080/hb
+            RXDESK_BACKUP_HEARTBEAT_URL: http://heartbeat:8080/backup-hb
             # Dev-only signing secret so the webhook can be exercised locally.
             NIGHTWATCH_WEBHOOK_SECRET: verify-nightwatch-secret
         env_file:

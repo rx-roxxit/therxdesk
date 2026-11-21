@@ -16,6 +16,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 | The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |
 | Admin alerts, heartbeat, capacity check and health (`selling.sh up`) | [admin-alerts.md](admin-alerts.md) | not a browser journey; selling.sh + internal.sh |
+| Database backups, the backup heartbeat and a restore drill (`selling.sh up`) | [database-backups.md](database-backups.md) | not a browser journey; selling.sh + internal.sh + a scratch Postgres |
 
 Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), publishing (would
 call the network), Insights, Create (ideas, templates, feeds), Repurpose, workspace members and invites, settings
