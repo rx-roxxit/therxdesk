@@ -48,6 +48,23 @@ if [ -n "$container_now" ]; then
     if [ "${skew#-}" -le 2 ]; then ok "clock skew ${skew}s"; else bad "clock skew ${skew}s between host and container"; fi
 fi
 
+# Which mode php-fpm serves (the login page's `selfHosted` prop), and whether
+# it is the mode selling.sh left the stack in.
+mode="$(served_mode)"
+if [ -f "$SELLING_MARKER" ]; then
+    if [ "$mode" = "selling" ]; then ok "mode: selling (selling.sh up; selling.sh down returns to .env)"; else bad "selling.sh up was run, but php-fpm serves $mode (run selling.sh up again)"; fi
+
+    if [ -n "$(compose ps --status running -q stripe 2>/dev/null)" ]; then
+        ok "Stripe CLI listener running (selling.sh logs)"
+    else
+        bad "Stripe CLI listener not running: webhooks never reach the app (run selling.sh up again)"
+    fi
+
+    if [ "$(stat -c %a "$SELLING_SECRET_FILE" 2>/dev/null)" = "600" ]; then ok "webhook secret file is mode 600"; else bad "webhook secret file $SELLING_SECRET_FILE missing or not mode 600"; fi
+else
+    if [ "$mode" = "self-hosted" ]; then ok "mode: self-hosted (from .env)"; else bad "no selling.sh marker, but php-fpm serves $mode"; fi
+fi
+
 if "$(dirname "$0")/fixture.sh" show >/dev/null 2>&1; then
     ok "fixture Owner exists (fixture.sh show)"
 else
