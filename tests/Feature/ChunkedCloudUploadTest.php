@@ -434,6 +434,46 @@ test('chunked upload rejects a non-numeric, negative or absurd duration header',
 
 // ─── HTTP: object storage ────────────────────────────────────────
 
+test('chunked upload completes a video as a multipart upload on the r2 disk', function () {
+    config(['filesystems.default' => 'r2', 'filesystems.disks.r2.driver' => 's3']);
+    Storage::fake('r2');
+    seedChunkedUploadWorkspace();
+
+    $client = Mockery::mock(S3Client::class);
+    $client->shouldReceive('createMultipartUpload')
+        ->once()
+        ->andReturn(new Result(['UploadId' => 'upload-1']));
+    $client->shouldReceive('uploadPart')
+        ->twice()
+        ->andReturn(new Result(['ETag' => '"etag-a"']), new Result(['ETag' => '"etag-b"']));
+    $client->shouldReceive('completeMultipartUpload')
+        ->once()
+        ->andReturn(new Result([]));
+    // The duration probe reads the assembled object; the mock answers nothing,
+    // so the browser value (none here) is kept.
+    $client->shouldReceive('getObject')->andThrow(new RuntimeException('range GET failed'));
+
+    app()->instance(
+        ChunkedCloudUploader::class,
+        new ChunkedCloudUploader(Cache::store(), $client, 'test-bucket', 'r2'),
+    );
+
+    $firstPart = str_pad(fakeMp4Bytes(), ChunkedCloudUploader::MIN_PART_BYTES, "\0");
+    $secondPart = str_repeat('b', 50);
+    $total = strlen($firstPart) + strlen($secondPart);
+    $uploadId = Str::uuid()->toString();
+
+    postChunkedAsset('clip.mp4', $firstPart, 0, $total, uploadId: $uploadId)
+        ->assertSuccessful()
+        ->assertJson(['done' => false]);
+
+    $done = postChunkedAsset('clip.mp4', $secondPart, strlen($firstPart), $total, uploadId: $uploadId);
+
+    $done->assertSuccessful();
+    $done->assertJson(['done' => true]);
+    expect($done->json('path'))->toStartWith('medias/');
+});
+
 test('chunked upload uses multipart for videos on s3 disks', function (string $disk) {
     config([
         'filesystems.default' => $disk,

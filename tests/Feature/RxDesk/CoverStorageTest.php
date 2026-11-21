@@ -18,7 +18,8 @@ use Illuminate\Testing\TestResponse;
 use Tests\Support\FakeDiskSpace;
 
 beforeEach(function () {
-    Storage::fake();
+    config(['filesystems.default' => 'r2']);
+    Storage::fake('r2', ['url' => 'https://media.therxdesk.test']);
     config(['rxdesk.storage.default_quota' => '10MB']);
 
     $this->mb = 1024 * 1024;

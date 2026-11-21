@@ -39,7 +39,8 @@ const BACKUP_TEST_FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 beforeEach(function () {
     $this->freezeTime();
-    Storage::fake();
+    config(['filesystems.default' => 'r2']);
+    Storage::fake('r2', ['url' => 'https://media.therxdesk.test']);
     Mail::fake();
     config()->set([
         'queue.default' => 'database',
@@ -634,7 +635,7 @@ test('retry is refused for a post whose backup has not failed', function () {
     $this->actingAs(retryOwner())
         ->postJson(route('app.posts.video-backup.retry', $post))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['post' => "This post has no failed backup to retry."]);
+        ->assertJsonValidationErrors(['post' => 'This post has no failed backup to retry.']);
 
     expect(queuedPolicyJobs())->toBe($queued);
     runDueBackupJobs();

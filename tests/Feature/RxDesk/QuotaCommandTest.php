@@ -111,6 +111,18 @@ test('the space media can use never goes below nothing', function () {
     expect(Artisan::output())->toContain('Warning: the Quotas add up to 5 GB, more than the 0 B the disk can give to media');
 });
 
+test('with media on object storage the command reports the total and no over-commit warning', function () {
+    config(['filesystems.default' => 'r2', 'filesystems.disks.r2.driver' => 's3']);
+    FakeDiskSpace::bind(free: 1);
+    quotaOwner('ann@example.com');
+
+    Artisan::call('rxdesk:quota', ['action' => 'show', 'email' => 'ann@example.com']);
+
+    expect(Artisan::output())->toContain('The Quotas add up to 5 GB.')
+        ->not->toContain('Warning')
+        ->not->toContain('disk can give to media');
+});
+
 test('an unknown action fails', function () {
     expect(Artisan::call('rxdesk:quota', ['action' => 'drop', 'email' => 'ann@example.com']))->toBe(1)
         ->and(Artisan::output())->toContain('Unknown action "drop". Use show or set.');
