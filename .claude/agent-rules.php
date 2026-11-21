@@ -62,7 +62,7 @@ return [
 
     // Project rules that hold for any change
     'branching-reads-top-to-bottom-php-and-typescript' => true,
-    'git' => true,
+    'git' => false,
     'dates' => $code,
     'imports' => $code,
     'laravel-helpers-over-native-php' => $php,
