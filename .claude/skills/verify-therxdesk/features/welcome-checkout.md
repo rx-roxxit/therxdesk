@@ -7,7 +7,7 @@ gives the Account access, and lands on the Schedule.
 
 - Welcome steps: persona (`@welcome-persona-<persona>`, `@welcome-persona-continue`), goals (`@welcome-goal-<goal>`,
   several, `@welcome-goals-continue`), current tool (`@welcome-software-<value>`, `@welcome-software-continue`).
-- Plan step (`/welcome/plan`): the Mini card (`@plan-card-mini`, `@plan-price-mini`), reviews, terms,
+- Plan step (`/welcome/plan`): the Mini card (`@plan-card-mini`, `@plan-price-mini`), terms,
   `@welcome-plan-continue`, which opens Stripe Checkout for Mini monthly. Welcome shows one Plan; the other three
   (Standard, Plus, Max) are on billing's change-plan picker. Prices come from `plan_prices` (see
   `selling-mode.md`).

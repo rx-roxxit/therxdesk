@@ -19,6 +19,8 @@ Owner. There is no Signup code: registration is upstream's open form (ticket #47
 
 - Journey: `$V/drive.sh register` (selling mode).
 - Selectors: `@register-name`, `@register-email`, `@register-password`, `@register-user-button`.
+- Chrome: `@auth-preview-image` loads (a real app screenshot, no reviews), and the two links in
+  `@legal-links` equal the `legal.terms` / `legal.privacy` shared props (the `LEGAL_*_URL` values).
 - Checks: no `@register-signup-code` and no `input[name="signup_code"]`, and the page never says "Signup code";
   after submit the path starts with `/welcome`, `auth.user.email` is the new address and
   `auth.hasActiveSubscription` is `false`.

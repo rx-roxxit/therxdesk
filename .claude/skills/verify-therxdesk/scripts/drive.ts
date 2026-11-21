@@ -279,6 +279,41 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.waitForLoadState('networkidle');
         await run.step('register-form');
 
+        const preview = page.locator(tid('@auth-preview-image'));
+        const reviews = page.locator(tid('@auth-reviews'));
+        run.check(
+            'the auth screen shows the app screenshot, not reviews',
+            (await preview.count()) === 1 &&
+                (await preview.evaluate(
+                    (image) => (image as HTMLImageElement).naturalWidth > 0,
+                )) &&
+                (await reviews.count()) === 0,
+            { previews: await preview.count(), reviews: await reviews.count() },
+        );
+
+        const legal = await page.evaluate(() => {
+            const props = window.history.state?.page?.props as
+                | { legal?: { terms?: string; privacy?: string } }
+                | undefined;
+
+            return {
+                terms: props?.legal?.terms ?? null,
+                privacy: props?.legal?.privacy ?? null,
+                links: [
+                    ...document.querySelectorAll(
+                        '[data-testid="legal-links"] a',
+                    ),
+                ].map((link) => link.getAttribute('href')),
+            };
+        });
+        run.check(
+            'Terms and Privacy follow the LEGAL_* URLs',
+            legal.links.length === 2 &&
+                legal.links.includes(legal.terms) &&
+                legal.links.includes(legal.privacy),
+            legal,
+        );
+
         const codeField = page.locator(tid('@register-signup-code'));
         const namedCodeField = page.locator('input[name="signup_code"]');
         const codeCopy = page.getByText('Signup code', { exact: false });
@@ -453,6 +488,11 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.locator(tid('@welcome-software-continue')).click();
 
         await page.locator(tid('@plan-card-mini')).waitFor();
+        run.check(
+            'the plan step has no reviews',
+            (await page.locator(tid('@welcome-plan-reviews')).count()) === 0,
+            await page.locator(tid('@welcome-plan-reviews')).count(),
+        );
         await run.step('welcome-plan');
 
         const price = await page.locator(tid('@plan-price-mini')).innerText();
