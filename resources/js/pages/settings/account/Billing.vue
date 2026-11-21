@@ -38,9 +38,10 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import date from '@/date';
+import { activeLocale } from '@/language';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
 import { cardBrand } from '@/lib/cardBrands';
-import { formatMoney } from '@/lib/utils';
+import { formatMoney } from '@/lib/money';
 import {
     changePlan as changePlanRoute,
     checkout as checkoutRoute,
@@ -144,14 +145,14 @@ const currentPrice = computed((): string | null => {
             return null;
         }
 
-        return formatMoney(props.plan.yearly_amount);
+        return formatMoney(props.plan.yearly_amount, activeLocale.value);
     }
 
     if (props.plan.monthly_amount === null) {
         return null;
     }
 
-    return formatMoney(props.plan.monthly_amount);
+    return formatMoney(props.plan.monthly_amount, activeLocale.value);
 });
 
 const priceSuffixKey = computed((): string =>

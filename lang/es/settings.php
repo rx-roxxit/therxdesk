@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Acciones irreversibles.',
         'delete_warning' => 'Advertencia',
         'delete_title' => 'Eliminar este workspace',
-        'delete_description' => 'Elimina este workspace de forma permanente, incluyendo publicaciones, cuentas conectadas y medios. Pasarás a pagar por un workspace menos.',
         'delete_description_self_hosted' => 'Elimina permanentemente este workspace, sus publicaciones, cuentas conectadas y medios.',
         'delete_only_description' => 'No puedes eliminar tu único workspace. Cancela la suscripción en facturación para dejar de pagar, o elimina tu cuenta en Autenticación para cancelar la facturación y borrar todo de forma permanente.',
         'delete_go_to_billing' => 'Ir a facturación',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Eliminar workspace',
         'delete_cancel' => 'Cancelar',
         'delete_confirm_title' => '¿Eliminar workspace?',
-        'delete_confirm_description' => 'Esto elimina permanentemente el workspace y todos sus datos. Tu facturación se actualizará para reflejar un workspace menos.',
         'delete_confirm_description_self_hosted' => 'Esto elimina permanentemente el workspace y todos sus datos.',
     ],
 

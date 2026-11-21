@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Nieodwracalne działania.',
         'delete_warning' => 'Ostrzeżenie',
         'delete_title' => 'Usuń ten workspace',
-        'delete_description' => 'Trwale usuwa ten workspace wraz z postami, połączonymi kontami i mediami. Będziesz rozliczany za o jeden workspace mniej.',
         'delete_description_self_hosted' => 'Trwale usuwa ten workspace, jego posty, połączone konta i media.',
         'delete_only_description' => 'Nie możesz usunąć swojego jedynego workspace. Anuluj subskrypcję w rozliczeniach, aby przestać płacić, albo usuń konto w Uwierzytelnianiu, aby anulować rozliczenia i trwale usunąć wszystko.',
         'delete_go_to_billing' => 'Przejdź do rozliczeń',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Usuń workspace',
         'delete_cancel' => 'Anuluj',
         'delete_confirm_title' => 'Usunąć workspace?',
-        'delete_confirm_description' => 'To trwale usuwa workspace i wszystkie jego dane. Rozliczenia zostaną zaktualizowane, aby odzwierciedlić o jeden workspace mniej.',
         'delete_confirm_description_self_hosted' => 'To trwale usuwa workspace i wszystkie jego dane.',
     ],
 

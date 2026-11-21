@@ -128,27 +128,6 @@ export const formatPercentChange = withDash((value: number): string => {
     }).format(value / 100);
 });
 
-export const formatMoney = (cents: number): string => {
-    const dollars = cents / 100;
-    return dollars.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-};
-
-export const formatMoneyCompact = (cents: number): string => {
-    const dollars = cents / 100;
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        notation: 'compact',
-        compactDisplay: 'short',
-        maximumFractionDigits: 1,
-    }).format(dollars);
-};
-
 export const copyToClipboard = async (
     text: string,
     message?: string,

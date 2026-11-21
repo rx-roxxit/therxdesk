@@ -174,7 +174,6 @@ return [
         'danger_description' => '元に戻せない操作です。',
         'delete_warning' => '警告',
         'delete_title' => 'このワークスペースを削除',
-        'delete_description' => 'このワークスペースと、投稿・連携アカウント・メディアを含むすべての内容を完全に削除します。請求はワークスペースが1つ減った分になります。',
         'delete_description_self_hosted' => 'このワークスペースと投稿、連携アカウント、メディアを完全に削除します。',
         'delete_only_description' => '唯一のワークスペースは削除できません。支払いを止めるには請求設定でサブスクリプションを解約するか、認証設定でアカウントを削除して請求を止め、すべてを完全に削除してください。',
         'delete_go_to_billing' => '請求へ移動',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'ワークスペースを削除',
         'delete_cancel' => 'キャンセル',
         'delete_confirm_title' => 'ワークスペースを削除しますか？',
-        'delete_confirm_description' => 'ワークスペースとそのすべてのデータが完全に削除されます。請求はワークスペースが1つ減った内容に更新されます。',
         'delete_confirm_description_self_hosted' => 'ワークスペースとそのすべてのデータが完全に削除されます。',
     ],
 

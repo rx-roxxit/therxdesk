@@ -10,58 +10,6 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Str;
 
-function welcomePlanVisibleReview(mixed $page): ?string
-{
-    return $page->script(<<<'JS'
-        document.querySelector('[data-testid^="welcome-plan-review-"]:not([aria-hidden="true"])')?.dataset.testid
-    JS);
-}
-
-function waitForWelcomePlanReviewOtherThan(mixed $page, string $testId): ?string
-{
-    return $page->script(<<<JS
-        (async () => {
-            for (let i = 0; i < 100; i++) {
-                const visible = document.querySelector('[data-testid^="welcome-plan-review-"]:not([aria-hidden="true"])')?.dataset.testid;
-                if (visible !== '{$testId}') return visible;
-                await new Promise((resolve) => setTimeout(resolve, 100));
-            }
-        })()
-    JS);
-}
-
-function welcomePlanVisibleReviewAfter(mixed $page, int $milliseconds): ?string
-{
-    return $page->script(<<<JS
-        (async () => {
-            await new Promise((resolve) => setTimeout(resolve, {$milliseconds}));
-            return document.querySelector('[data-testid^="welcome-plan-review-"]:not([aria-hidden="true"])')?.dataset.testid;
-        })()
-    JS);
-}
-
-/**
- * @return array{active: list<float|int>, inactive: list<float|int>}|string
- */
-function waitForWelcomePlanReviewerOpacities(mixed $page): array|string
-{
-    return $page->script(<<<'JS'
-        (async () => {
-            const opacityOf = (button) => Number(getComputedStyle(button).opacity);
-            for (let i = 0; i < 40; i++) {
-                const buttons = [...document.querySelectorAll('[data-testid^="welcome-plan-reviewer-"]')];
-                const active = buttons.filter((button) => button.getAttribute('aria-pressed') === 'true').map(opacityOf);
-                const inactive = buttons.filter((button) => button.getAttribute('aria-pressed') !== 'true').map(opacityOf);
-                if (active[0] === 1 && inactive.every((value) => value === 0.5)) {
-                    return { active, inactive: [...new Set(inactive)] };
-                }
-                await new Promise((resolve) => setTimeout(resolve, 50));
-            }
-            return 'not settled';
-        })()
-    JS);
-}
-
 /**
  * @return list<string>
  */
@@ -99,17 +47,9 @@ function welcomePlanLastFeatureLabelTestId(mixed $page, string $listTestId): ?st
     JS);
 }
 
-/**
- * @return array{scrolls: bool, quoteVisible: bool}
- */
-function welcomePlanPhoneLayout(mixed $page): array
+function welcomePlanScrollsOnPhone(mixed $page): bool
 {
-    return $page->script(<<<'JS'
-        ({
-            scrolls: document.documentElement.scrollHeight > window.innerHeight,
-            quoteVisible: document.querySelector('[data-testid^="welcome-plan-review-"]:not([aria-hidden="true"])')?.getClientRects().length > 0,
-        })
-    JS);
+    return (bool) $page->script('document.documentElement.scrollHeight > window.innerHeight');
 }
 
 function welcomePlanFocus(mixed $page, string $testId): void
@@ -162,7 +102,7 @@ function welcomeOwnerOnPlanStep(): User
     return $user->fresh();
 }
 
-test('the plan step shows the free trial offer, what is included and the G2 rating', function () {
+test('the plan step shows the free trial offer and what is included', function () {
     config(['trypost.self_hosted' => false]);
 
     $user = welcomeOwnerOnPlanStep();
@@ -172,8 +112,6 @@ test('the plan step shows the free trial offer, what is included and the G2 rati
     $page = visit(route('app.welcome.plan'));
 
     waitFor($page, '@plan-card-mini');
-    waitForWebFonts($page);
-    waitFor($page, '@welcome-plan-reviews');
     waitForWebFonts($page);
     waitFor($page, '@welcome-plan-continue');
     waitForWebFonts($page);
@@ -192,8 +130,6 @@ test('the plan step shows the free trial offer, what is included and the G2 rati
         ->assertMissing('@welcome-plan-offer')
         ->assertVisible('@welcome-step-plan')
         ->assertNoJavaScriptErrors();
-
-    $page->assertCount('[data-testid^="welcome-plan-reviewer-"]', 5);
 
     $features = array_map(
         fn (string $testId): string => Str::after($testId, 'plan-feature-label-mini-'),
@@ -251,41 +187,7 @@ test('the plan step does not list the workspace limit, so team members close the
         ->assertNoJavaScriptErrors();
 });
 
-test('the review quotes rotate on their own', function () {
-    config(['trypost.self_hosted' => false]);
-
-    $this->actingAs(welcomeOwnerOnPlanStep());
-
-    $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@welcome-plan-review-paulo_dantas');
-    waitForWebFonts($page);
-
-    expect(welcomePlanVisibleReview($page))->toBe('welcome-plan-review-paulo_dantas')
-        ->and(waitForWelcomePlanReviewOtherThan($page, 'welcome-plan-review-paulo_dantas'))->toBe('welcome-plan-review-diego');
-});
-
-test('clicking a reviewer photo shows their quote', function () {
-    config(['trypost.self_hosted' => false]);
-
-    $this->actingAs(welcomeOwnerOnPlanStep());
-
-    $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@welcome-plan-reviewer-pedro');
-    waitForWebFonts($page);
-
-    $page->click('@welcome-plan-reviewer-pedro');
-    waitFor($page, '@welcome-plan-review-pedro');
-    waitForWebFonts($page);
-
-    $page->assertVisible('@welcome-plan-review-pedro')
-        ->assertAttribute('@welcome-plan-reviewer-pedro', 'aria-pressed', 'true')
-        ->assertNoJavaScriptErrors();
-
-    expect(welcomePlanVisibleReviewAfter($page, 7000))->toBe('welcome-plan-review-pedro')
-        ->and(waitForWelcomePlanReviewerOpacities($page))->toBe(['active' => [1], 'inactive' => [0.5]]);
-});
-
-test('the plan step fits a phone without scrolling and hides the quotes there', function () {
+test('the plan step fits a phone without scrolling', function () {
     config(['trypost.self_hosted' => false]);
 
     $this->actingAs(welcomeOwnerOnPlanStep());
@@ -294,7 +196,7 @@ test('the plan step fits a phone without scrolling and hides the quotes there', 
     waitFor($page, '@plan-card-mini');
     waitForWebFonts($page);
 
-    expect(welcomePlanPhoneLayout($page))->toBe(['scrolls' => false, 'quoteVisible' => false]);
+    expect(welcomePlanScrollsOnPhone($page))->toBeFalse();
 
     $page->assertVisible('@welcome-plan-continue')
         ->assertNoJavaScriptErrors();

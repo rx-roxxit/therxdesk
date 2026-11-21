@@ -4,11 +4,10 @@ import {
     IconBrandGithub,
     IconCheck,
     IconCoin,
-    IconHelpCircle,
-    IconLayoutGrid,
-    IconMessageChatbot,
     IconDeviceDesktop,
+    IconHelpCircle,
     IconLanguage,
+    IconLayoutGrid,
     IconLogout,
     IconMoon,
     IconPlus,
@@ -37,7 +36,6 @@ import {
 import { useChangelogDialog } from '@/composables/useChangelogDialog';
 import { clearAllComposerAutosaves } from '@/composables/useComposerAutosave';
 import { useWorkspaceAbilities } from '@/composables/useWorkspaceAbilities';
-import { openSupportChat } from '@/lib/supportChat';
 import { cn } from '@/lib/utils';
 import posthog from '@/posthog';
 import { applyTheme, type Theme } from '@/preferences';
@@ -142,7 +140,6 @@ const handleLogout = (): void => {
     router.flushAll();
 };
 
-const showChatSupport = computed(() => page.props.selfHosted === false);
 const showChangelog = computed(() => Boolean(page.props.changelog));
 const { openList: openChangelog } = useChangelogDialog();
 
@@ -406,14 +403,6 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
                         </a>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                        v-if="showChatSupport"
-                        data-testid="sidebar-support-chat"
-                        @click="openSupportChat"
-                    >
-                        <IconMessageChatbot />
-                        {{ $t('sidebar.support.chat') }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                         v-if="showChangelog"
                         data-testid="sidebar-support-changelog"
                         @click="openChangelog"
@@ -425,7 +414,6 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
             </DropdownMenuPortal>
         </DropdownMenuSub>
     </DropdownMenuGroup>
-
 
     <DropdownMenuSeparator />
 

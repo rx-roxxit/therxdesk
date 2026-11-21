@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Geri alınamaz işlemler.',
         'delete_warning' => 'Uyarı',
         'delete_title' => 'Bu workspace’i sil',
-        'delete_description' => 'Bu workspace’i kalıcı olarak siler — gönderiler, bağlı hesaplar ve medya dahil. Bir workspace daha az ücretlendirilirsiniz.',
         'delete_description_self_hosted' => 'Bu workspace’i, gönderilerini, bağlı hesaplarını ve medyasını kalıcı olarak siler.',
         'delete_only_description' => 'Tek workspace’inizi silemezsiniz. Ödemeyi durdurmak için faturalandırmadan aboneliği iptal edin veya her şeyi kalıcı olarak silmek için Kimlik doğrulama ayarlarından hesabınızı silin.',
         'delete_go_to_billing' => 'Faturalandırmaya git',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Workspace’i sil',
         'delete_cancel' => 'İptal',
         'delete_confirm_title' => 'Workspace silinsin mi?',
-        'delete_confirm_description' => 'Bu, workspace’i ve tüm verilerini kalıcı olarak siler. Faturalandırma bir workspace eksilecek şekilde güncellenir.',
         'delete_confirm_description_self_hosted' => 'Bu, workspace’i ve tüm verilerini kalıcı olarak siler.',
     ],
 

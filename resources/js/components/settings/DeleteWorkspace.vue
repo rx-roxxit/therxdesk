@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 import { IconAlertTriangle } from '@tabler/icons-vue';
 import { computed, ref } from 'vue';
 
@@ -19,9 +19,6 @@ const props = defineProps<{
     otherMemberCount: number;
 }>();
 
-const page = usePage();
-const isSelfHosted = computed(() => Boolean(page.props.selfHosted));
-
 const deleteModal = ref<InstanceType<typeof ConfirmDeleteModal> | null>(null);
 
 const warningKey = computed((): string => {
@@ -29,16 +26,10 @@ const warningKey = computed((): string => {
         return 'settings.workspace.delete_only_description';
     }
 
-    return isSelfHosted.value
-        ? 'settings.workspace.delete_description_self_hosted'
-        : 'settings.workspace.delete_description';
+    return 'settings.workspace.delete_description_self_hosted';
 });
 
-const confirmKey = computed((): string =>
-    isSelfHosted.value
-        ? 'settings.workspace.delete_confirm_description_self_hosted'
-        : 'settings.workspace.delete_confirm_description',
-);
+const confirmKey = 'settings.workspace.delete_confirm_description_self_hosted';
 
 const showMembersWarning = computed(
     (): boolean => !props.isOnlyWorkspace && props.otherMemberCount > 0,

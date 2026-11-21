@@ -72,6 +72,21 @@ test('the billing page shows the current plan and changes plans in a dialog', fu
         ->assertNoJavaScriptErrors();
 });
 
+test('the billing page writes the price in the owner\'s language, in USD', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $owner = billingPageOwner();
+    $owner->update(['locale' => 'fr']);
+
+    $this->actingAs($owner->fresh());
+
+    $page = visit(route('app.billing.index'));
+    waitFor($page, '@billing-current-plan-price');
+
+    $page->assertSeeIn('@billing-current-plan-price', "11,90\u{a0}\$US")
+        ->assertNoJavaScriptErrors();
+});
+
 test('self-hosted settings show neither an account nor a billing item', function () {
     config(['trypost.self_hosted' => true]);
 

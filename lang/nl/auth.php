@@ -25,31 +25,7 @@ return [
     ],
 
     'legal' => 'Door door te gaan ga je akkoord met onze <a href=":terms_url" target="_blank">Servicevoorwaarden</a> en <a href=":privacy_url" target="_blank">Privacybeleid</a>.',
-
-    'reviews' => [
-        'eyebrow' => '5/5 op G2',
-        'heading' => 'Geliefd bij wie elke dag publiceert',
-        'paulo_dantas' => [
-            'role' => 'Oprichter, chatadv.com.br',
-            'quote' => 'De eenvoud van content maken, organiseren en verspreiden op alle sociale netwerken. Met MCP gebruiken we de AI die we willen, zoals Claude of ChatGPT, om content te maken en meteen in te plannen.',
-        ],
-        'diego' => [
-            'role' => 'CEO, Globalfy.com',
-            'quote' => 'Ik vind The RX Desk heel makkelijk in gebruik. Ik maak een post direct in Claude en gebruik daarna MCP om te publiceren en in te plannen. Binnen vijf minuten stond alles klaar.',
-        ],
-        'luiz' => [
-            'role' => 'Contentmaker',
-            'quote' => 'Ik vind het geweldig hoe makkelijk ik mijn AI-tools en agents koppel en mijn posts in een paar minuten op 9 sociale netwerken inplan.',
-        ],
-        'pedro' => [
-            'role' => 'Oprichter, templated.io',
-            'quote' => 'Heel makkelijk te gebruiken en te integreren. Met MCP heb ik de interface alleen nodig om de social media-accounts te koppelen.',
-        ],
-        'paulo_castellano' => [
-            'role' => 'Oprichter, changelogfy.com',
-            'quote' => 'Ik ben dol op de MCP-integratie, want daarmee beheer ik al mijn social media-accounts vanuit Claude of ChatGPT.',
-        ],
-    ],
+    'preview_alt' => 'Een voorbeeld van de RX Desk-app',
 
     'or_continue_with' => 'Of ga verder met',
     'or_continue_with_email' => 'Of ga verder met e-mail',

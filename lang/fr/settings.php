@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Actions irréversibles.',
         'delete_warning' => 'Avertissement',
         'delete_title' => 'Supprimer cet espace de travail',
-        'delete_description' => 'Supprime définitivement cet espace de travail et tout son contenu — publications, comptes connectés et médias. Vous serez facturé pour un espace de travail de moins.',
         'delete_description_self_hosted' => 'Supprime définitivement cet espace de travail, ses publications, comptes connectés et médias.',
         'delete_only_description' => 'Vous ne pouvez pas supprimer votre seul espace de travail. Annulez l’abonnement dans la facturation pour arrêter de payer, ou supprimez votre compte dans Authentification pour annuler la facturation et tout supprimer définitivement.',
         'delete_go_to_billing' => 'Aller à la facturation',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Supprimer l’espace de travail',
         'delete_cancel' => 'Annuler',
         'delete_confirm_title' => 'Supprimer l’espace de travail ?',
-        'delete_confirm_description' => 'Cela supprime définitivement l’espace de travail et toutes ses données. Votre facturation sera mise à jour pour refléter un espace de travail en moins.',
         'delete_confirm_description_self_hosted' => 'Cela supprime définitivement l’espace de travail et toutes ses données.',
     ],
 

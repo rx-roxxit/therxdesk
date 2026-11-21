@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Unwiderrufliche Aktionen.',
         'delete_warning' => 'Warnung',
         'delete_title' => 'Diesen Workspace löschen',
-        'delete_description' => 'Löscht diesen Workspace dauerhaft — inklusive Beiträge, verbundener Konten und Medien. Du wirst für einen Workspace weniger berechnet.',
         'delete_description_self_hosted' => 'Löscht diesen Workspace dauerhaft inklusive Beiträge, verbundener Konten und Medien.',
         'delete_only_description' => 'Du kannst deinen einzigen Workspace nicht löschen. Kündige das Abonnement in der Abrechnung, um die Zahlung zu stoppen, oder lösche dein Konto unter Authentifizierung, um die Abrechnung zu beenden und alles dauerhaft zu entfernen.',
         'delete_go_to_billing' => 'Zur Abrechnung',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Workspace löschen',
         'delete_cancel' => 'Abbrechen',
         'delete_confirm_title' => 'Workspace löschen?',
-        'delete_confirm_description' => 'Dadurch wird der Workspace und alle seine Daten dauerhaft gelöscht. Deine Abrechnung wird um einen Workspace reduziert.',
         'delete_confirm_description_self_hosted' => 'Dadurch wird der Workspace und alle seine Daten dauerhaft gelöscht.',
     ],
 

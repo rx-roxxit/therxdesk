@@ -25,31 +25,7 @@ return [
     ],
 
     'legal' => '続行すると、<a href=":terms_url" target="_blank">利用規約</a>および<a href=":privacy_url" target="_blank">プライバシーポリシー</a>に同意したものとみなされます。',
-
-    'reviews' => [
-        'eyebrow' => 'G2で5/5',
-        'heading' => '毎日投稿する人に愛される',
-        'paulo_dantas' => [
-            'role' => '創業者, chatadv.com.br',
-            'quote' => 'あらゆるSNS向けにコンテンツを作成し、整理し、配信できる手軽さです。MCPを使えば、ClaudeやChatGPTなど好きなAIでコンテンツを作り、そのまま予約投稿できます。',
-        ],
-        'diego' => [
-            'role' => 'CEO, Globalfy.com',
-            'quote' => 'The RX Deskは本当に使いやすいです。Claudeで直接投稿を作り、MCPで公開したり予約したりできます。設定は5分で終わりました。',
-        ],
-        'luiz' => [
-            'role' => 'コンテンツクリエイター',
-            'quote' => 'AIツールやエージェントを簡単につなげて、9つのSNSへの投稿を数分で予約できるところが気に入っています。',
-        ],
-        'pedro' => [
-            'role' => '創業者, templated.io',
-            'quote' => '導入も利用もとても簡単です。MCPのおかげで、画面を開くのはSNSアカウントを連携するときだけです。',
-        ],
-        'paulo_castellano' => [
-            'role' => '創業者, changelogfy.com',
-            'quote' => 'MCP連携が本当に気に入っています。ClaudeやChatGPTからすべてのSNSアカウントを管理できます。',
-        ],
-    ],
+    'preview_alt' => 'The RX Desk アプリのプレビュー',
 
     'or_continue_with' => 'または次で続行',
     'or_continue_with_email' => 'またはメールで続行',

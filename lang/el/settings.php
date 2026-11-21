@@ -174,7 +174,6 @@ return [
         'danger_description' => 'Μη αναστρέψιμες ενέργειες.',
         'delete_warning' => 'Προειδοποίηση',
         'delete_title' => 'Διαγραφή αυτού του workspace',
-        'delete_description' => 'Διαγράφει οριστικά αυτό το workspace και ό,τι περιέχει — αναρτήσεις, συνδεδεμένους λογαριασμούς και μέσα. Θα χρεώνεστε για ένα λιγότερο workspace.',
         'delete_description_self_hosted' => 'Διαγράφει οριστικά αυτό το workspace, τις αναρτήσεις, τους συνδεδεμένους λογαριασμούς και τα μέσα.',
         'delete_only_description' => 'Δεν μπορείτε να διαγράψετε το μοναδικό σας workspace. Ακυρώστε τη συνδρομή στη χρέωση για να σταματήσετε να πληρώνετε, ή διαγράψτε τον λογαριασμό σας στην Επαλήθευση για να ακυρώσετε τη χρέωση και να αφαιρέσετε τα πάντα οριστικά.',
         'delete_go_to_billing' => 'Μετάβαση στη χρέωση',
@@ -183,7 +182,6 @@ return [
         'delete_action' => 'Διαγραφή workspace',
         'delete_cancel' => 'Ακύρωση',
         'delete_confirm_title' => 'Διαγραφή workspace;',
-        'delete_confirm_description' => 'Αυτό διαγράφει οριστικά το workspace και όλα τα δεδομένα του. Η χρέωσή σας θα ενημερωθεί ώστε να αντικατοπτρίζει ένα λιγότερο workspace.',
         'delete_confirm_description_self_hosted' => 'Αυτό διαγράφει οριστικά το workspace και όλα τα δεδομένα του.',
     ],
 
