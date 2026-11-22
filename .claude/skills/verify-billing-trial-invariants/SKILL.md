@@ -160,11 +160,12 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **cee5136d**. Confirmed against these files and functions:
+Sync commit: **616578a8**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
 | `ConfigureSubscriptionCheckout::trialDays()` / `apply()` — the Trial decision is frozen in the Stripe session; an Offer that does not cover the Plan and interval gives no trial | `OpenCheckout` |
+| `ConfigureSubscriptionCheckout::sessionOptions()` — a coupon leaves `allow_promotion_codes` out entirely, because Stripe refuses a session naming both; this keeps a coupon Checkout valid, not a Trial rule | `OpenCheckout` |
 | `StartSubscriptionCheckout::redirect()` — an uncovered or leftover Offer is dropped before the session, so the model's `CanStartTrial` is a superset of the Trials a Checkout can start | `OpenCheckout` |
 | `OpenCheckoutSessions::expire()` — the Account's other sessions are expired, or the race misses them | `OpenCheckout`'s `expireOthers` |
 | Stripe creating the subscription after the session completes | `CompleteCheckout` |
