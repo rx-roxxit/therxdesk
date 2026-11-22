@@ -7,6 +7,7 @@ namespace App\Actions\Billing;
 use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
 use App\Enums\PostHog\CheckoutEvent;
+use App\Enums\User\Locale;
 use App\Jobs\PostHog\CaptureAccountEvent;
 use App\Models\Account;
 use App\Models\Offer;
@@ -30,14 +31,12 @@ class StartSubscriptionCheckout
 
         $subscription = $account->newSubscription(Account::SUBSCRIPTION_NAME, $priceId);
 
-        $offer = $this->qualifiesForOffer($plan, $priceId) ? $offer : null;
-
         $offerMetadata = array_filter([
             ConfigureSubscriptionCheckout::OFFER_METADATA_KEY => $offer?->id,
             ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
         ], filled(...));
 
-        ConfigureSubscriptionCheckout::apply($subscription, $offer);
+        ConfigureSubscriptionCheckout::apply($subscription, $offer, $account);
 
         $subscription->withMetadata($offerMetadata);
 
@@ -55,6 +54,7 @@ class StartSubscriptionCheckout
                 ConfigureSubscriptionCheckout::INTERVAL_METADATA_KEY => $interval->value,
                 ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
             ], filled(...)),
+            ...ConfigureSubscriptionCheckout::sessionOptions($account->owner?->locale ?? Locale::DEFAULT),
         ]);
 
         rescue(function () use ($account, $plan, $interval, $offer): void {
@@ -72,20 +72,5 @@ class StartSubscriptionCheckout
         });
 
         return Inertia::location($session->url);
-    }
-
-    /**
-     * Offers are written for the Welcome plan, monthly, so no other price gets
-     * one.
-     */
-    private function qualifiesForOffer(?Plan $plan, string $priceId): bool
-    {
-        $entryPlan = Plan::entryPlan();
-
-        if ($plan === null || $entryPlan === null || $entryPlan->isNot($plan)) {
-            return false;
-        }
-
-        return $entryPlan->priceFor(Interval::Monthly)?->stripe_price_id === $priceId;
     }
 }

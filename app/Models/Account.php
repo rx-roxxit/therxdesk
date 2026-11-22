@@ -192,6 +192,43 @@ class Account extends Model
     }
 
     /**
+     * Used a trial before: a generic one (`accounts.trial_ends_at`), a
+     * subscription that started on a trial, or an offer with trial days it
+     * redeemed. One trial per Account.
+     */
+    public function hasHadTrial(): bool
+    {
+        if (filled($this->trial_ends_at)) {
+            return true;
+        }
+
+        if ($this->subscriptions()->whereNotNull('trial_ends_at')->exists()) {
+            return true;
+        }
+
+        return $this->redeemedOffers()->where('trial_days', '>', 0)->exists();
+    }
+
+    /**
+     * A first checkout may start a trial: never one before, never charged,
+     * and no billable subscription without a trial.
+     */
+    public function canStartTrial(): bool
+    {
+        if ($this->hasHadTrial()) {
+            return false;
+        }
+
+        if (filled($this->first_paid_at)) {
+            return false;
+        }
+
+        return ! $this->subscriptions()->get()->contains(
+            fn (Subscription $subscription): bool => $subscription->becameBillable() && blank($subscription->trial_ends_at),
+        );
+    }
+
+    /**
      * Charged at least once. Cashier clears `trial_ends_at` when a subscription
      * is deleted, so a trial cancelled before its first charge cannot be told
      * apart from a paid one afterwards; `first_paid_at` keeps that fact.

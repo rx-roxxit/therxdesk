@@ -22,14 +22,15 @@ class StartGenericTrial
      * Starts an offer's trial without a card: Cashier's generic trial on
      * `accounts.trial_ends_at`, with nothing created in Stripe. The account
      * has app access until it ends, and subscribes through Checkout from
-     * billing to keep it. A second submit while it runs starts nothing.
+     * billing to keep it. A second submit while it runs starts nothing, and
+     * neither does an Account that already had a trial.
      */
-    public static function execute(User $user, Plan $plan, Offer $offer): void
+    public static function execute(User $user, Plan $plan, Interval $interval, Offer $offer): void
     {
         $account = DB::transaction(function () use ($user, $plan, $offer): ?Account {
             $account = Account::query()->lockForUpdate()->find($user->account_id);
 
-            if ($account->onGenericTrial() || $account->subscribed(Account::SUBSCRIPTION_NAME)) {
+            if (! $account->canStartTrial() || $account->onGenericTrial() || $account->subscribed(Account::SUBSCRIPTION_NAME)) {
                 return null;
             }
 
@@ -47,7 +48,7 @@ class StartGenericTrial
             return;
         }
 
-        rescue(function () use ($user, $account, $plan, $offer): void {
+        rescue(function () use ($user, $account, $plan, $interval, $offer): void {
             SyncUser::dispatchIf(PostHogService::isEnabled(), (string) $user->id);
             CaptureAccountEvent::dispatchIf(
                 PostHogService::isEnabled(),
@@ -56,7 +57,7 @@ class StartGenericTrial
                 TrialEvent::Started,
                 [
                     'plan_name' => $plan->name,
-                    'interval' => Interval::Monthly->value,
+                    'interval' => $interval->value,
                     'offer' => $offer->slug,
                     'trial_ends_at' => $account->trial_ends_at?->toIso8601String(),
                 ],

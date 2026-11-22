@@ -27,7 +27,7 @@ trait SyncsStripeCustomer
     public static function bootSyncsStripeCustomer(): void
     {
         static::updated(function (self $user): void {
-            if (! $user->wasChanged(['name', 'email', ...self::STRIPE_METADATA_ATTRIBUTES])) {
+            if (! $user->wasChanged(['name', 'email', 'locale', ...self::STRIPE_METADATA_ATTRIBUTES])) {
                 return;
             }
 
