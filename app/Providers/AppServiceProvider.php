@@ -26,6 +26,7 @@ use App\Models\MediaSourceConnection;
 use App\Models\NightwatchIssue;
 use App\Models\NotificationPreference;
 use App\Models\Offer;
+use App\Models\Operator;
 use App\Models\Plan;
 use App\Models\PlanPrice;
 use App\Models\Post;
@@ -164,6 +165,7 @@ class AppServiceProvider extends ServiceProvider
             'nightwatchIssue' => NightwatchIssue::class,
             'notificationPreference' => NotificationPreference::class,
             'offer' => Offer::class,
+            'operator' => Operator::class,
             'plan' => Plan::class,
             'planPrice' => PlanPrice::class,
             'post' => Post::class,
