@@ -191,6 +191,20 @@ return [
             'close' => 'Nie teraz',
         ],
     ],
+    'suspension' => [
+        'title' => 'Konto zawieszone',
+        'description' => 'Konto jest zawieszone, skontaktuj się z pomocą techniczną. Dopóki pozostaje zawieszone, nic nie można opublikować, a połączone narzędzia nie mają dostępu do aplikacji.',
+        'auto' => 'Ta strona odświeża się automatycznie — nie musisz jej przeładowywać.',
+        'support_action' => 'Napisz do pomocy technicznej',
+    ],
+    'publishing_block' => [
+        'title' => 'Dlaczego post nie został opublikowany',
+        'lapsed' => 'Twoja subskrypcja się zakończyła, więc ten post nie został opublikowany. Subskrybuj ponownie, a następnie spróbuj jeszcze raz.',
+        'suspended' => 'Twoje konto jest zawieszone, więc ten post nie został opublikowany. Skontaktuj się z pomocą techniczną, a następnie spróbuj jeszcze raz.',
+        'retry' => 'Spróbuj ponownie',
+        'retry_started' => 'Ponawianie publikacji posta.',
+        'retry_failed' => 'Nie udało się ponowić publikacji posta. Spróbuj ponownie.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk jest prowadzony przez :name, :address.',

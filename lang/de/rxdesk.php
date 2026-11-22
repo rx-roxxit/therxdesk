@@ -191,6 +191,20 @@ return [
             'close' => 'Nicht jetzt',
         ],
     ],
+    'suspension' => [
+        'title' => 'Konto gesperrt',
+        'description' => 'Das Konto ist gesperrt, wende dich an den Support. Solange es gesperrt ist, kann nichts veröffentlicht werden und verbundene Tools erreichen die App nicht.',
+        'auto' => 'Diese Seite aktualisiert sich automatisch — kein Neuladen nötig.',
+        'support_action' => 'Support per E-Mail',
+    ],
+    'publishing_block' => [
+        'title' => 'Warum er nicht veröffentlicht wurde',
+        'lapsed' => 'Dein Abo ist ausgelaufen, deshalb wurde dieser Beitrag nicht veröffentlicht. Schließe das Abo erneut ab und versuche es dann noch einmal.',
+        'suspended' => 'Dein Konto ist gesperrt, deshalb wurde dieser Beitrag nicht veröffentlicht. Wende dich an den Support und versuche es dann noch einmal.',
+        'retry' => 'Erneut versuchen',
+        'retry_started' => 'Der Beitrag wird erneut veröffentlicht.',
+        'retry_failed' => 'Der Beitrag konnte nicht erneut veröffentlicht werden. Versuche es noch einmal.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk wird von :name, :address betrieben.',

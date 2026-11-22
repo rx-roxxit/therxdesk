@@ -191,6 +191,20 @@ return [
             'close' => 'Non ora',
         ],
     ],
+    'suspension' => [
+        'title' => 'Account sospeso',
+        'description' => 'Account sospeso, contatta l\'assistenza. Finché è sospeso non si può pubblicare nulla e gli strumenti collegati non possono accedere all\'app.',
+        'auto' => 'Questa pagina si aggiorna automaticamente: non serve ricaricarla.',
+        'support_action' => 'Scrivi all\'assistenza',
+    ],
+    'publishing_block' => [
+        'title' => 'Perché non è stato pubblicato',
+        'lapsed' => 'Il tuo abbonamento è terminato, quindi questo post non è stato pubblicato. Riattiva l\'abbonamento e poi riprova.',
+        'suspended' => 'Il tuo account è sospeso, quindi questo post non è stato pubblicato. Contatta l\'assistenza e poi riprova.',
+        'retry' => 'Riprova',
+        'retry_started' => 'Nuovo tentativo di pubblicazione del post.',
+        'retry_failed' => 'Impossibile riprovare a pubblicare il post. Riprova.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk è gestito da :name, :address.',

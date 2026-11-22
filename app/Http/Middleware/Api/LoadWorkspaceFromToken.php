@@ -62,8 +62,15 @@ class LoadWorkspaceFromToken
             }
         }
 
-        // Match web access (EnsureAccountReady).
-        if (! config('trypost.self_hosted') && ! $workspace->account?->hasAppAccess()) {
+        // Match web access (EnsureAccountReady). A Suspension outranks the
+        // subscription state and gets its own message.
+        $account = $workspace->account;
+
+        if ($account?->isSuspended()) {
+            return response()->json(['message' => 'Account suspended, contact support.'], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        if (! config('trypost.self_hosted') && ! $account?->hasAppAccess()) {
             return response()->json(['message' => 'Active subscription required.'], Response::HTTP_PAYMENT_REQUIRED);
         }
 

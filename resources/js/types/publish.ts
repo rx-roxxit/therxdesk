@@ -60,18 +60,24 @@ export interface UnavailablePostMetrics {
     reason: MetricsUnavailableReason;
 }
 
-export type PostCardMetrics = PublicationAnalyticsDetail | UnavailablePostMetrics;
+export type PostCardMetrics =
+    | PublicationAnalyticsDetail
+    | UnavailablePostMetrics;
 
 export interface PostCardFailure {
     category?: string | null;
     failed_at?: string | null;
 }
 
+/** Why the access gate kept a post from publishing. Availability adds its own. */
+export type PublishBlockReason = 'lapsed' | 'suspended';
+
 export interface PostCard {
     id: string;
     content: string | null;
     status: PostStatusValue;
     publish_status: PublishStatusValue;
+    publish_block_reason?: PublishBlockReason | null;
     social_account_id: string | null;
     social_account: PublishSocialAccount | null;
     platform: string | null;
@@ -144,7 +150,11 @@ export interface ScrollPostCards {
 
 export type PostCardMove = 'top' | 'up' | 'down';
 
-export type PostScheduleAction = 'draft' | 'publish_now' | 'queue_next' | 'queue_top';
+export type PostScheduleAction =
+    | 'draft'
+    | 'publish_now'
+    | 'queue_next'
+    | 'queue_top';
 
 export type PostCardMenuAction =
     | 'publish_now'

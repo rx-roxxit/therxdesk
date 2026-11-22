@@ -191,6 +191,20 @@ return [
             'close' => 'Pas maintenant',
         ],
     ],
+    'suspension' => [
+        'title' => 'Compte suspendu',
+        'description' => 'Compte suspendu, contactez l\'assistance. Tant qu\'il est suspendu, rien ne peut être publié et les outils connectés ne peuvent pas accéder à l\'application.',
+        'auto' => 'Cette page se met à jour automatiquement — inutile de la recharger.',
+        'support_action' => 'Contacter l\'assistance',
+    ],
+    'publishing_block' => [
+        'title' => 'Pourquoi la publication n\'a pas eu lieu',
+        'lapsed' => 'Votre abonnement a pris fin, donc cette publication n\'a pas été faite. Réabonnez-vous, puis réessayez.',
+        'suspended' => 'Votre compte est suspendu, donc cette publication n\'a pas été faite. Contactez l\'assistance, puis réessayez.',
+        'retry' => 'Réessayer',
+        'retry_started' => 'Nouvelle tentative de publication.',
+        'retry_failed' => 'Impossible de réessayer la publication. Réessayez.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk est exploité par :name, :address.',

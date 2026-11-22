@@ -42,6 +42,7 @@ class PostPublishFailed extends Mailable implements ShouldQueue
                     'accountName' => $this->post->display_name,
                     'platform' => $this->post->platform,
                     'error' => $this->post->error_message,
+                    'block_reason' => $this->post->publish_block_reason?->value,
                 ],
                 'postPreview' => PostPreview::from($this->post),
                 'url' => route('app.posts.index', ['tab' => 'sent', 'post' => $this->post->id]),

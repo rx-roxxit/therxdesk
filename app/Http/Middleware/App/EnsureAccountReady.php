@@ -21,9 +21,13 @@ class EnsureAccountReady
             return $next($request);
         }
 
-        if (! config('trypost.self_hosted')) {
-            $account = $user->account;
+        $account = $user->account;
 
+        if ($account?->isSuspended()) {
+            return redirect()->route('app.welcome.suspended');
+        }
+
+        if (! config('trypost.self_hosted')) {
             if (! $account?->hasAppAccess()) {
                 // Members can't finish Welcome checkout — send them straight to
                 // the hold screen instead of the Welcome steps.

@@ -191,6 +191,20 @@ return [
             'close' => 'Agora não',
         ],
     ],
+    'suspension' => [
+        'title' => 'Conta suspensa',
+        'description' => 'Conta suspensa, fale com o suporte. Enquanto estiver suspensa, nada pode ser publicado e as ferramentas conectadas não conseguem acessar o app.',
+        'auto' => 'Esta página atualiza automaticamente — não precisa recarregar.',
+        'support_action' => 'Enviar e-mail ao suporte',
+    ],
+    'publishing_block' => [
+        'title' => 'Por que não foi publicado',
+        'lapsed' => 'Sua assinatura terminou, então esta publicação não foi publicada. Assine novamente e tente outra vez.',
+        'suspended' => 'Sua conta está suspensa, então esta publicação não foi publicada. Fale com o suporte e tente outra vez.',
+        'retry' => 'Tentar novamente',
+        'retry_started' => 'Tentando publicar novamente.',
+        'retry_failed' => 'Não foi possível tentar publicar novamente. Tente outra vez.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk é operado por :name, :address.',

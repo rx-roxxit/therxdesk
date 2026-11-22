@@ -20,6 +20,7 @@ use App\Http\Resources\App\WelcomePlanResource;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
+use App\Models\User;
 use App\Services\PostHogService;
 use App\Support\Billing\BillingPortal;
 use App\Support\Billing\BlockedCountries;
@@ -212,6 +213,10 @@ class WelcomeController extends Controller
      */
     public function planPortal(Request $request): RedirectResponse
     {
+        if ($request->user()->account?->isSuspended()) {
+            return redirect()->route('app.welcome.suspended');
+        }
+
         if (config('trypost.self_hosted')) {
             return redirect()->route('app.calendar');
         }
@@ -272,6 +277,10 @@ class WelcomeController extends Controller
     {
         $user = $request->user();
 
+        if ($user->account?->isSuspended()) {
+            return redirect()->route('app.welcome.suspended');
+        }
+
         if ($user->account?->hasAppAccess()) {
             return redirect()->route('app.calendar');
         }
@@ -283,6 +292,21 @@ class WelcomeController extends Controller
         return Inertia::render('welcome/SubscriptionRequired', [
             'ownerName' => $user->account?->owner?->name,
         ]);
+    }
+
+    /**
+     * The holding screen for every member of a Suspended Account. It leaves on
+     * its own once the System admin lifts the Suspension.
+     */
+    public function suspended(Request $request): InertiaResponse|RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! $user->account?->isSuspended()) {
+            return $this->whereTheyBelong($user);
+        }
+
+        return Inertia::render('welcome/Suspended');
     }
 
     /**
@@ -410,6 +434,10 @@ class WelcomeController extends Controller
     {
         $user = $request->user();
 
+        if ($user->account?->isSuspended()) {
+            return redirect()->route('app.welcome.suspended');
+        }
+
         // A Complimentary Plan in force is app access, but its Owner keeps the
         // plan step to read it; every other owner with access goes on.
         if ($user->account?->isComplimentary() && $user->isAccountOwner()) {
@@ -430,5 +458,23 @@ class WelcomeController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Where a signed-in user goes when the Suspended screen has nothing to
+     * hold: the app with access, the plan step for the Owner, the member hold
+     * screen otherwise.
+     */
+    private function whereTheyBelong(User $user): RedirectResponse
+    {
+        if ($user->account?->hasAppAccess()) {
+            return redirect()->route('app.calendar');
+        }
+
+        if ($user->isAccountOwner()) {
+            return redirect()->route('app.welcome.plan');
+        }
+
+        return redirect()->route('app.welcome.subscription-required');
     }
 }

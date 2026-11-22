@@ -27,6 +27,16 @@ test('rejects api requests when the account has no app access', function () {
         ->assertJson(['message' => 'Active subscription required.']);
 });
 
+test('rejects a suspended account with its own message', function () {
+    subscribeAccount($this->user->account);
+    $this->user->account->forceFill(['suspended_at' => now()])->save();
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->plainToken])
+        ->getJson(route('api.workspace.show'))
+        ->assertStatus(Response::HTTP_PAYMENT_REQUIRED)
+        ->assertJson(['message' => 'Account suspended, contact support.']);
+});
+
 test('allows api requests for subscribed accounts', function () {
     subscribeAccount($this->user->account);
 

@@ -108,6 +108,7 @@ class RetryFailedPost extends Command
 
             $locked->writePublication([
                 'publish_status' => PublishStatus::Pending,
+                'publish_block_reason' => null,
                 'platform_post_id' => null,
                 'platform_url' => null,
                 'error_message' => null,

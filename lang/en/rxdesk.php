@@ -191,6 +191,20 @@ return [
             'close' => 'Not now',
         ],
     ],
+    'suspension' => [
+        'title' => 'Account suspended',
+        'description' => 'Account suspended, contact support. Nothing can be published and connected tools can’t reach the app while it is suspended.',
+        'auto' => 'This page updates automatically — no need to refresh.',
+        'support_action' => 'Email support',
+    ],
+    'publishing_block' => [
+        'title' => 'Why it wasn’t published',
+        'lapsed' => 'Your subscription ended, so this post was not published. Subscribe again, then try again.',
+        'suspended' => 'Your account is suspended, so this post was not published. Contact support, then try again.',
+        'retry' => 'Try again',
+        'retry_started' => 'Retrying the post.',
+        'retry_failed' => 'Couldn’t retry the post. Try again.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk is operated by :name, :address.',

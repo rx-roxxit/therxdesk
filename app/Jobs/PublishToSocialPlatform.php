@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Actions\Post\FinalizePostPublication;
+use App\Actions\Post\PublishingGate;
 use App\Enums\GoogleBusiness\LocalPostState;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\Post\PublishStatus;
@@ -93,6 +94,14 @@ class PublishToSocialPlatform implements ShouldBeUnique, ShouldQueue
         $this->post->refresh();
 
         if ($this->post->publish_status->isClosed() || $this->post->isPublicationWaitingForLimitRetry()) {
+            return;
+        }
+
+        $denial = PublishingGate::denial($this->post);
+
+        if ($denial !== null) {
+            PublishingGate::block($this->post, $denial);
+
             return;
         }
 
