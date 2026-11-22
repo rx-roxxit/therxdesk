@@ -15,6 +15,8 @@ use App\Http\Resources\App\PlanResource;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Support\Billing\BillingPortal;
+use App\Support\Billing\OfferCopy;
+use App\Support\Billing\OfferPlanPrices;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,6 +61,16 @@ class BillingController extends Controller
         abort_unless($request->user()->isAccountOwner(), SymfonyResponse::HTTP_FORBIDDEN);
 
         $subscription = $account->validSubscription();
+        $resolved = false;
+        $discountValue = null;
+        $discount = function () use ($account, $subscription, &$resolved, &$discountValue): ?array {
+            if (! $resolved) {
+                $discountValue = ShowSubscriptionDiscount::execute($account, $subscription);
+                $resolved = true;
+            }
+
+            return $discountValue;
+        };
 
         return Inertia::render('settings/account/Billing', [
             'hasSubscription' => filled($subscription),
@@ -71,8 +83,46 @@ class BillingController extends Controller
                 $account->cursorPaginateInvoices((int) config('app.pagination.default'), ['status' => 'paid']),
             ))->matchOn('data.id'),
             'paymentMethods' => fn (): array => ListAccountCards::execute($account, $subscription),
-            'discount' => fn (): ?array => ShowSubscriptionDiscount::execute($account, $subscription),
+            'discount' => $discount,
+            'changePlanOffer' => fn (): ?array => $this->changePlanOffer($account, $discount()),
         ]);
+    }
+
+    /**
+     * The Offer the current subscription was bought with, priced for every
+     * active Plan × interval it covers, so the change-plan cards show what the
+     * next invoice would be. Without a live discount there is nothing to
+     * show: the Offer is the only source of a discount.
+     *
+     * @param  array{value: string, duration: string, ends_at: string|null}|null  $discount
+     * @return array{name: string, discount_label: string|null, plans: array<string, mixed>}|null
+     */
+    private function changePlanOffer(Account $account, ?array $discount): ?array
+    {
+        if ($discount === null) {
+            return null;
+        }
+
+        $offer = $account->latestRedeemedOffer();
+
+        if ($offer === null) {
+            return null;
+        }
+
+        $plans = Plan::query()->active()->with('prices')->orderBy('sort')->orderBy('name')->get();
+
+        $prices = collect(OfferPlanPrices::for($offer, $plans))
+            ->filter(fn (array $row): bool => filled($row['monthly']) || filled($row['yearly']));
+
+        if ($prices->isEmpty()) {
+            return null;
+        }
+
+        return [
+            'name' => $offer->name,
+            'discount_label' => OfferCopy::discountLabel($offer),
+            'plans' => $prices->all(),
+        ];
     }
 
     public function changePlan(ChangePlanRequest $request, ChangePlan $changePlan): SymfonyResponse

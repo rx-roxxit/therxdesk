@@ -92,14 +92,12 @@ class StripeEventListener
     protected function handleSubscriptionCreated(Account $account, ?Subscription $subscription, array $payload): void
     {
         $previousPlan = $account->plan?->name;
-        $convertsTrialWithoutCard = $this->convertsTrialWithoutCard($account, $payload);
 
         $this->syncPlanFromSubscription($account, $payload);
         $this->redeemOffer($account, $payload);
         $this->recordTrialStart($account, $subscription, $payload);
 
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Created, $payload, $previousPlan);
-        TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $convertsTrialWithoutCard, (string) $account->id, $payload, withRevenue: false);
         TrackTrialStarted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_TRIALING && blank($subscription?->trial_skipped_at), (string) $account->id, $payload);
         TrackCheckoutCompleted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_ACTIVE, (string) $account->id, $payload);
     }
@@ -110,7 +108,6 @@ class StripeEventListener
     protected function handleSubscriptionUpdated(Account $account, ?Subscription $subscription, array $payload): void
     {
         $previousPlan = $account->plan?->name;
-        $convertsTrialWithoutCard = $this->convertsTrialWithoutCard($account, $payload);
 
         $this->syncPlanFromSubscription($account, $payload);
         // No first payment here: a trial's end sends an `active` update
@@ -122,7 +119,7 @@ class StripeEventListener
         $this->recordCancellationFacts($subscription, $payload);
 
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Updated, $payload, $previousPlan);
-        TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && (($this->convertedFromTrial($payload) && $this->isNowActive($payload)) || $convertsTrialWithoutCard), (string) $account->id, $payload);
+        TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $this->convertedFromTrial($payload) && $this->isNowActive($payload), (string) $account->id, $payload);
         TrackPlanChanged::dispatchIf(PostHogService::shouldTrack() && $this->priceChanged($payload), (string) $account->id, $payload);
     }
 
@@ -360,42 +357,6 @@ class StripeEventListener
         }
 
         Cache::forget("stripe_webhook_event:{$eventId}");
-    }
-
-    /**
-     * A subscription created during a trial without a card the account took
-     * from an offer (`Account::subscribedDuringTrialWithoutCard()`) turns
-     * active: on created, or when an incomplete one is paid. The conversion is
-     * claimed atomically per subscription, so its created and updated webhooks
-     * handled at the same time count it once.
-     *
-     * @param  array<string, mixed>  $payload
-     */
-    private function convertsTrialWithoutCard(Account $account, array $payload): bool
-    {
-        if (! $this->startsActive($payload)) {
-            return false;
-        }
-
-        $subscriptionId = data_get($payload, 'data.object.id', $account->id);
-        $subscribedAt = StripeValue::timestamp(data_get($payload, 'data.object.created')) ?? now();
-
-        return $account->subscribedDuringTrialWithoutCard($subscribedAt)
-            && Cache::add("posthog:trial_converted:{$subscriptionId}", true, now()->addDay());
-    }
-
-    /**
-     * The subscription turns active now: created active, or paid after it was
-     * created incomplete. A renewal or a plan change of an active one is not.
-     *
-     * @param  array<string, mixed>  $payload
-     */
-    private function startsActive(array $payload): bool
-    {
-        return $this->isNowActive($payload) && (
-            data_get($payload, 'type') === StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_CREATED
-            || data_get($payload, 'data.previous_attributes.status') === StripeSubscription::STATUS_INCOMPLETE
-        );
     }
 
     /**

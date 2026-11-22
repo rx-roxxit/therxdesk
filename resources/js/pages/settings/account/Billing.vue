@@ -38,10 +38,8 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import date from '@/date';
-import { activeLocale } from '@/language';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
 import { cardBrand } from '@/lib/cardBrands';
-import { formatMoney } from '@/lib/money';
 import {
     changePlan as changePlanRoute,
     checkout as checkoutRoute,
@@ -55,6 +53,7 @@ import type {
     Subscription,
     SubscriptionDiscount,
 } from '@/types/billing';
+import type { ChangePlanOffer } from '@/types/offer';
 import {
     DEFAULT_BILLING_INTERVAL,
     deniedPlanIdsFor,
@@ -89,6 +88,7 @@ const props = defineProps<{
     invoices: ScrollInvoices;
     paymentMethods: PaymentMethod[];
     discount: SubscriptionDiscount | null;
+    changePlanOffer: ChangePlanOffer | null;
 }>();
 
 const discountKey = computed((): string => {
@@ -141,18 +141,10 @@ const currentPrice = computed((): string | null => {
     }
 
     if (currentInterval.value === 'yearly') {
-        if (props.plan.yearly_amount === null) {
-            return null;
-        }
-
-        return formatMoney(props.plan.yearly_amount, activeLocale.value);
+        return props.plan.yearly_price;
     }
 
-    if (props.plan.monthly_amount === null) {
-        return null;
-    }
-
-    return formatMoney(props.plan.monthly_amount, activeLocale.value);
+    return props.plan.monthly_price;
 });
 
 const priceSuffixKey = computed((): string =>
@@ -386,6 +378,7 @@ const selectPlan = (planId: string): void => {
                             <PlanPicker
                                 :plans="plans"
                                 v-model:interval="selectedInterval"
+                                :offer="changePlanOffer"
                                 :current-plan-id="plan?.id ?? null"
                                 :current-interval="currentInterval"
                                 :disabled-plan-ids="deniedPlanIds"

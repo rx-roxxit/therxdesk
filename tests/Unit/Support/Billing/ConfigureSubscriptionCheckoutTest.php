@@ -119,8 +119,8 @@ test('clamps a one-day trial to the Stripe Checkout minimum of two days', functi
     expect(trialExpiresAt(configureCheckout($this->account->fresh()))?->toDateTimeString())->toBe('2026-08-09 12:00:00');
 });
 
-test('a coupon offer still applies its coupon and keeps promotion codes off', function () {
-    claimOfferFor($this->account, Offer::factory()->allowingPromotionCodes()->create(['stripe_coupon_id' => 'BF26_50']));
+test('a coupon offer applies its coupon once and keeps promotion codes off', function () {
+    claimOfferFor($this->account, Offer::factory()->create(['stripe_coupon_id' => 'BF26_50']));
 
     $subscription = configureCheckout($this->account->fresh());
 
@@ -130,7 +130,7 @@ test('a coupon offer still applies its coupon and keeps promotion codes off', fu
 });
 
 test('an offer never turns the promotion code field on', function () {
-    claimOfferFor($this->account, Offer::factory()->trial(8)->allowingPromotionCodes()->create());
+    claimOfferFor($this->account, Offer::factory()->trial(8)->create());
 
     expect(configureCheckout($this->account->fresh())->allowPromotionCodes)->toBeFalse();
 });

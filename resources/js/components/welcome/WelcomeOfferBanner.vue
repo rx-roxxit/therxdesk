@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineProps<{
-    offerKey: string;
+    name: string;
+    line: string;
 }>();
 </script>
 
@@ -12,11 +13,9 @@ defineProps<{
             <span
                 class="shrink-0 rounded-full bg-background px-3 py-1 text-xs font-strong tracking-wider text-foreground uppercase sm:text-sm"
                 data-testid="welcome-plan-offer-name"
-                >{{ $t(`offers.${offerKey}.name`) }}</span
+                >{{ name }}</span
             >
-            <span data-testid="welcome-plan-offer-headline">{{
-                $t(`offers.${offerKey}.headline`)
-            }}</span>
+            <span data-testid="welcome-plan-offer-headline">{{ line }}</span>
         </p>
     </div>
 </template>

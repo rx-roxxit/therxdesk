@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Gönderildi :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount ilk ayınızda indirim',
+            'once_yearly' => ':discount ilk yılınızda indirim',
+            'repeating_monthly' => '{1} :discount ilk ayınızda indirim|[2,*] :discount ilk :months ayınızda indirim',
+            'repeating_yearly' => ':discount ilk yılınızda indirim',
+            'forever' => ':discount abone kaldığınız sürece indirim',
+            'forever_until' => ':discount abone kaldığınız sürece indirim, :date tarihine kadar',
+            'trial' => ':days gün ücretsiz deneme',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Planını seç',
         'description' => 'Aylık veya yıllık öde. İstediğin zaman değiştir veya iptal et.',

@@ -260,7 +260,7 @@ test('the offer survives moving from the register page to login', function () {
     expect($owner->account->offers()->pluck('offers.id')->all())->toBe([$this->offer->id]);
 });
 
-test('a former customer cannot claim a first-subscription offer', function () {
+test('a former customer can claim a link offer', function () {
     $owner = User::factory()->create();
     $owner->account->update(['owner_id' => $owner->id]);
     $owner->account->subscriptions()->create([
@@ -270,10 +270,9 @@ test('a former customer cannot claim a first-subscription offer', function () {
         'stripe_price' => 'price_123',
         'ends_at' => now()->subDay(),
     ]);
-    $offer = Offer::factory()->firstSubscriptionOnly()->create(['slug' => 'fm1']);
+    $offer = Offer::factory()->link()->create(['slug' => 'win-back']);
 
-    expect(ClaimOffer::execute($owner->account->fresh(), 'fm1'))->toBeNull()
-        ->and($owner->account->offers()->whereKey($offer->id)->exists())->toBeFalse();
+    expect(ClaimOffer::execute($owner->account->fresh(), 'win-back')?->id)->toBe($offer->id);
 });
 
 test('a waiting offer is still claimed when the first signed-in page links to one that cannot be', function () {

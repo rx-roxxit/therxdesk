@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Sent :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount off your first month',
+            'once_yearly' => ':discount off your first year',
+            'repeating_monthly' => '{1} :discount off your first month|[2,*] :discount off your first :months months',
+            'repeating_yearly' => ':discount off your first year',
+            'forever' => ':discount off for as long as you stay subscribed',
+            'forever_until' => ':discount off for as long as you stay subscribed, until :date',
+            'trial' => ':days-day free trial',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Choose your plan',
         'description' => 'Pay monthly or yearly. Change or cancel anytime.',

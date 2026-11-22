@@ -20,10 +20,13 @@ class ChangePlan
 
     /**
      * Moves the account to a plan's price, once `swapPlan` allows it. A
-     * subscription swaps its price; a generic trial subscribes through Stripe
-     * Checkout, charged at once, with a coupon offer the owner claimed meanwhile.
-     * A swap to a yearly price drops the subscription's discount: an offer is
-     * written for Socials monthly, and Stripe would take it off a whole year.
+     * subscription swaps its price; an account without a subscription
+     * subscribes through Stripe Checkout, charged at once, with the coupon
+     * Offer it is still eligible for.
+     *
+     * The subscription's discount is kept while the Offer it was bought with
+     * covers the new Plan and interval, and dropped otherwise. Coverage is
+     * what stops a monthly percentage from being taken off a whole year.
      */
     public function execute(Account $account, Plan $plan, Interval $interval): Response
     {
@@ -53,10 +56,12 @@ class ChangePlan
         }
 
         $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
+        $offer = $account->latestRedeemedOffer();
+        $keepsDiscount = $offer?->covers($plan, $interval) ?? false;
 
         try {
             if ($subscription->stripe_price !== $priceId) {
-                $subscription->swap($priceId, $interval === Interval::Yearly ? ['discounts' => ''] : []);
+                $subscription->swap($priceId, $keepsDiscount ? [] : ['discounts' => '']);
             }
         } catch (IncompletePayment $exception) {
             return redirect()->route('cashier.payment', [

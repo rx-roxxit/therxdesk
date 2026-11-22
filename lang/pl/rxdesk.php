@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Wysłano :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount zniżki na pierwszy miesiąc',
+            'once_yearly' => ':discount zniżki na pierwszy rok',
+            'repeating_monthly' => '{1} :discount zniżki na pierwszy miesiąc|[2,4] :discount zniżki na pierwsze :months miesiące|[5,*] :discount zniżki na pierwsze :months miesięcy',
+            'repeating_yearly' => ':discount zniżki na pierwszy rok',
+            'forever' => ':discount zniżki przez cały okres subskrypcji',
+            'forever_until' => ':discount zniżki przez cały okres subskrypcji, do :date',
+            'trial' => '{1} :days dzień bezpłatnej próby|[2,*] :days dni bezpłatnej próby',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Wybierz plan',
         'description' => 'Płać miesięcznie lub rocznie. Zmień lub anuluj w dowolnym momencie.',

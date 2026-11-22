@@ -413,12 +413,12 @@ test('redirect uses the offer it is given and never looks one up', function () {
     );
 });
 
-test('redirect applies the given offer to any plan and interval', function () {
+test('redirect applies the given offer when it covers the plan and interval', function () {
 
     $plan = Plan::where('slug', 'mini')->firstOrFail();
     givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
     givePlanPrice($plan, Interval::Yearly, 'price_socials_yearly');
-    $offer = Offer::factory()->create(['stripe_coupon_id' => 'YEARLY_50']);
+    $offer = Offer::factory()->create(['stripe_coupon_id' => 'YEARLY_50', 'intervals' => ['yearly']]);
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -455,15 +455,15 @@ test('redirect gives the trial of the offer it is given', function () {
 
     $account = Account::factory()->create();
     User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
-    $offer = Offer::factory()->freeTrial()->create();
+    $offer = Offer::factory()->trial(14)->create();
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('trialDays')->once()->with(8)->andReturnSelf();
+    $builder->shouldReceive('trialDays')->once()->with(14)->andReturnSelf();
     $builder->shouldReceive('withCoupon')->never();
     $builder->shouldReceive('withMetadata')
         ->once()
-        ->with(['trypost_offer_id' => $offer->id, 'trypost_offer_slug' => 'ft7d'])
+        ->with(['trypost_offer_id' => $offer->id, 'trypost_offer_slug' => $offer->slug])
         ->andReturnSelf();
     $builder->shouldReceive('checkout')->once()->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
 
@@ -528,7 +528,7 @@ test('redirect tracks checkout.started on the owner with the plan, interval and 
 
     Bus::assertDispatched(CaptureAccountEvent::class, fn (CaptureAccountEvent $job): bool => $job->event === CheckoutEvent::Started
         && $job->distinctId === (string) $owner->id
-        && $job->properties === ['plan_name' => 'Mini', 'interval' => 'monthly', 'offer' => 'bf26']);
+        && $job->properties === ['plan_name' => 'Mini', 'interval' => 'monthly', 'offer' => $offer->slug]);
 });
 
 test('redirect gives the offer to a plan other than the first one too', function () {
@@ -542,7 +542,7 @@ test('redirect gives the offer to a plan other than the first one too', function
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
     $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
-    $builder->shouldReceive('withCoupon')->once()->with('BF26_50_3M')->andReturnSelf();
+    $builder->shouldReceive('withCoupon')->once()->with($offer->stripe_coupon_id)->andReturnSelf();
     $builder->shouldReceive('withMetadata')
         ->once()
         ->with(['trypost_offer_id' => $offer->id, 'trypost_offer_slug' => $offer->slug])

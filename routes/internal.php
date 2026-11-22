@@ -6,6 +6,7 @@ use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\HealthController;
+use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\PlanController;
 use App\Http\Controllers\Internal\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -51,4 +52,18 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::patch('catalog-settings', [CatalogSettingController::class, 'update'])
         ->name('internal.catalog-settings.update');
+
+    Route::get('offers', [OfferController::class, 'index'])
+        ->name('internal.offers.index');
+
+    Route::post('offers', [OfferController::class, 'store'])
+        ->name('internal.offers.store');
+
+    Route::patch('offers/{offer}', [OfferController::class, 'update'])
+        ->whereUuid('offer')
+        ->name('internal.offers.update');
+
+    Route::post('offers/{offer}/end', [OfferController::class, 'end'])
+        ->whereUuid('offer')
+        ->name('internal.offers.end');
 });

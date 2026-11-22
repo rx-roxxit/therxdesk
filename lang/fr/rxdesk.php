@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Envoyé le :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount de réduction sur votre premier mois',
+            'once_yearly' => ':discount de réduction sur votre première année',
+            'repeating_monthly' => '{1} :discount de réduction sur votre premier mois|[2,*] :discount de réduction sur vos :months premiers mois',
+            'repeating_yearly' => ':discount de réduction sur votre première année',
+            'forever' => ':discount de réduction tant que vous restez abonné',
+            'forever_until' => ':discount de réduction tant que vous restez abonné, jusqu\'au :date',
+            'trial' => '{1} Essai gratuit de :days jour|[2,*] Essai gratuit de :days jours',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Choisissez votre forfait',
         'description' => "Payez au mois ou à l'année. Changez ou annulez à tout moment.",

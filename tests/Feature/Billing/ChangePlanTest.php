@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Billing\Interval;
 use App\Enums\User\Locale;
 use App\Models\Account;
+use App\Models\Offer;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -266,7 +267,7 @@ test('change-plan swaps to the yearly price', function () use ($withWorkspace) {
         ->and(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_yearly']);
 });
 
-test('a swap to a yearly price removes the discount, so an offer never discounts a whole year', function () use ($withWorkspace) {
+test('a swap to a yearly price removes a discount whose offer covers monthly only', function () use ($withWorkspace) {
     Cashier::useSubscriptionModel(RecordingSwapSubscription::class);
 
     $user = User::factory()->create();
@@ -280,6 +281,10 @@ test('a swap to a yearly price removes the discount, so an offer never discounts
         'stripe_status' => 'active',
         'stripe_price' => 'price_socials_monthly',
     ]);
+    $account->offers()->attach(
+        Offer::factory()->covering([$this->socials], ['monthly'])->create(),
+        ['claimed_at' => now(), 'redeemed_at' => now()],
+    );
 
     $this->actingAs($user->fresh())
         ->post(route('app.billing.change-plan'), [
@@ -292,7 +297,7 @@ test('a swap to a yearly price removes the discount, so an offer never discounts
         ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '']]);
 });
 
-test('a swap to a monthly price keeps the discount the owner still has', function () use ($withWorkspace) {
+test('a swap keeps the discount when the offer covers the new plan and interval', function () use ($withWorkspace) {
     Cashier::useSubscriptionModel(RecordingSwapSubscription::class);
 
     $user = User::factory()->create();
@@ -306,6 +311,10 @@ test('a swap to a monthly price keeps the discount the owner still has', functio
         'stripe_status' => 'active',
         'stripe_price' => 'price_socials_monthly',
     ]);
+    $account->offers()->attach(
+        Offer::factory()->covering([$this->workspaces], ['monthly'])->create(),
+        ['claimed_at' => now(), 'redeemed_at' => now()],
+    );
 
     $this->actingAs($user->fresh())
         ->post(route('app.billing.change-plan'), [
@@ -315,6 +324,36 @@ test('a swap to a monthly price keeps the discount the owner still has', functio
         ->assertRedirect(route('app.billing.index'));
 
     expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_monthly'])
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([[]]);
+});
+
+test('a swap to a yearly price keeps the discount when the offer covers yearly', function () use ($withWorkspace) {
+    Cashier::useSubscriptionModel(RecordingSwapSubscription::class);
+
+    $user = User::factory()->create();
+    $account = $user->account;
+    $account->update(['plan_id' => $this->socials->id]);
+    $withWorkspace($user);
+
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_'.fake()->uuid(),
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_socials_monthly',
+    ]);
+    $account->offers()->attach(
+        Offer::factory()->covering([$this->socials], ['yearly'])->create(),
+        ['claimed_at' => now(), 'redeemed_at' => now()],
+    );
+
+    $this->actingAs($user->fresh())
+        ->post(route('app.billing.change-plan'), [
+            'plan_id' => $this->socials->id,
+            'interval' => 'yearly',
+        ])
+        ->assertRedirect(route('app.billing.index'));
+
+    expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_socials_yearly'])
         ->and(RecordingSwapSubscription::$swapOptions)->toBe([[]]);
 });
 

@@ -16,20 +16,30 @@ until the webhook gives the Account access, and lands on the Schedule.
   Prices come from `plan_prices` (see `selling-mode.md`), labels from the Plan row, and the Trial length from the
   Catalog (`catalog_settings.trial_days`).
 - An Owner who never had a Trial sees "Start 7-day free trial" and "Then $11.90/month from <date>. Cancel anytime.
-  One free trial per card."; one who had one sees "Subscribe". A no-card trial Offer uses its own `checkout_button`
-  and `terms`.
+  One free trial per card."; one who had one sees "Subscribe". A trial always needs a card and always goes through
+  Stripe Checkout: there is no no-card trial path any more.
 - A card that already started a Trial is charged at once: the webhook ends the Trial, sets `trial_skipped_at` and
   `trial_ended_at`, and the charge that follows sets `paid_without_trial_at`. `fixture.sh up`, `down` and `guests`
   delete the Account's `trial_cards` rows, so `4242` starts a fresh Trial on the next run; `trial-and-payment.md`
   proves the repeat-card path.
+- An Offer created through `/internal/v1/offers` changes the step: the banner
+  (`@welcome-plan-offer`, `@welcome-plan-offer-name`, `@welcome-plan-offer-headline`) when `show_banner` is on, and,
+  on the Plans and intervals it covers, the discount badge (`@plan-offer-badge-<slug>`), the struck regular price
+  (`@plan-offer-regular-<slug>`), the discounted price (`@plan-price-<slug>`) and the Offer's line
+  (`@plan-terms-<slug>`). An uncovered card keeps its regular price and shows no badge. The server computes every
+  covered Plan × interval, rounded as Stripe rounds; the browser does no money math.
+- A link Offer (`?offer=<slug>`) is claimed by the Owner; a general Offer needs no claim and the latest one to start
+  wins. A link Offer beats a general one. The line comes from `rxdesk.offer.line.*` templates in all 16 locales, so
+  there is no per-Offer lang key. The Offer's longer trial applies only on the Plans and intervals it covers; an
+  Account that already had a Trial gets only the discount.
 - `/register?plan=<slug>&interval=monthly|yearly` is kept for the guest and preselects that card and interval; a
   junk value is dropped silently. The preselected card carries `data-selected="true"`.
 - Pressing a card button before the email is verified opens `@verify-email-dialog` with `@verify-email-close`
   ("Not now") and `@verify-email-resend`, which sends the existing verification email (Mailpit). The link returns to
   `/welcome/plan`.
-- An Offer (`?offer=`) changes the step: a banner (`@welcome-plan-offer`), a trial, or a no-card trial that skips
-  Checkout. The fixture has no Offer. `OfferSeeder` has local rows, but its coupons are Stripe test-mode objects this
-  sandbox does not guarantee, so the journeys always take the full-price path.
+- The full-price journeys (`welcome-plan`, `welcome-checkout`) use the fixture with no Offer. The Offer journey
+  creates its own two link Offers with `offer.sh up` and drives both banner states; `OfferSeeder` only seeds
+  trial-only local rows, because a discount Offer must create its Stripe coupon through `/internal/v1/offers`.
 - Stripe Checkout (hosted, sandbox): the Owner's language (never `auto`), a required billing address, a required
   Terms consent checkbox, no promotion code field, and `subscription_data.trial_end` on a first checkout.
 - The billing country must be allowed: the completed-checkout webhook cancels a subscription billed to an EU/UK
@@ -56,6 +66,14 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   needs `fixture.sh up` and a fixture Owner who has not answered Welcome: a second run lands on the Schedule and times
   out waiting for the persona step. `payment-retry`, `past-due` and `lapsed` are the Trial and payment paths in
   `trial-and-payment.md`; they need a Stripe test clock.
+- Offers: `$V/offer.sh up` creates two sandbox link Offers through `/internal/v1/offers` (the app creates each
+  Stripe coupon itself) and writes `~/.cache/verify-therxdesk/state/offers.env`; `drive.sh` passes their slugs to the
+  journey. Both cover Mini monthly with 20% off the first 3 months and a 14-day trial; one shows the banner and one
+  does not. The fixed slugs and the stable coupon id (`rxdesk-offer-<hash of the slug>`) make a rerun reuse the same
+  Offers and coupon. `$V/drive.sh welcome-offer` registers a guest through `/register?offer=<banner>`, checks the
+  banner, the 20% badge, the struck $11.90, the discounted $9.52 and the uncovered Standard card, then opens
+  `/welcome/plan?offer=<no-banner>` and checks the same prices with no banner, verifies the email, and pays on the
+  second Offer. `offer.sh down` removes the env; Offers are never deleted, so the sandbox rows stay.
 - Stripe's page: `payOnStripeCheckout()` in `drive.ts` ticks the Terms consent checkbox when the session shows one,
   then fills card `4242 4242 4242 4242` (or `VERIFY_TEST_CARD`, which `drive.sh` passes through) with an expiry two
   years ahead, CVC `123` and a name in the Elements frame.
@@ -67,9 +85,13 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
 - Mailpit: `welcome-plan` waits for the signup email through Mailpit's HTTP API (`VERIFY_MAILPIT_URL`, default
   `http://localhost:8025`), clicks Resend, waits for a different message, and opens its `/verify-email/...` link.
 - End state: the path is `/schedule...` and `auth.hasActiveSubscription` is `true`; `auth.plan.name` is `Mini` for
-  `welcome-checkout` (`08-after-checkout.png`) and `Plus` for `welcome-plan` (`10-after-checkout.png`). The
-  subscription is `trialing` for the Catalog's trial days, not `active`, unless a repeat card skipped the Trial: then
-  it is `active` and `first_paid_at` / `first_invoice_id` are set.
+  `welcome-checkout` and `welcome-offer` (`08-after-checkout.png`) and `Plus` for `welcome-plan`
+  (`10-after-checkout.png`). The subscription is `trialing` for the Catalog's trial days (14 on the Offer path), not
+  `active`, unless a repeat card skipped the Trial: then it is `active` and `first_paid_at` / `first_invoice_id` are
+  set. On the Offer path, `db.sh "select o.slug, ao.redeemed_at from account_offer ao join offers o on o.id =
+  ao.offer_id where ao.account_id = '<accountId>'"` shows the no-banner Offer redeemed, and
+  `stripe.sh get /v1/subscriptions/<sub id>` shows its `discount.coupon.id` (the app-created
+  `rxdesk-offer-...`).
 - Side effects, from the host:
   `$V/db.sh "select p.slug, s.stripe_status, s.stripe_price from accounts a left join plans p on p.id = a.plan_id left join subscriptions s on s.account_id = a.id where a.id = '<accountId>'"`
   shows `mini | trialing | <the Mini monthly Price id in plan_prices>` after `welcome-checkout`, and

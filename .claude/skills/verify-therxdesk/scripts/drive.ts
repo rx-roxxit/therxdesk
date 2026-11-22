@@ -193,6 +193,7 @@ const SELLING_JOURNEYS = [
     'selling-mode',
     'welcome-plan',
     'welcome-checkout',
+    'welcome-offer',
     'billing',
     'payment-retry',
     'past-due',
@@ -1045,6 +1046,226 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             auth,
         );
         run.check('the Account is on Plus', auth.plan === 'Plus', auth.plan);
+    },
+
+    /**
+     * features/welcome-checkout.md
+     *
+     * A link Offer created through /internal/v1 by the app itself: the banner,
+     * the badge, the struck regular price and the discounted price on the
+     * covered card only, then the same without a banner. Pays on the second
+     * Offer, so Stripe Checkout carries the app-made coupon.
+     */
+    'welcome-offer': async (run) => {
+        const { page } = run;
+        const banner = process.env.VERIFY_OFFER_BANNER;
+        const noBanner = process.env.VERIFY_OFFER_NO_BANNER;
+
+        if (!banner || !noBanner) {
+            throw new Error('run offer.sh up first (no VERIFY_OFFER_* slugs)');
+        }
+
+        const email = guestEmail();
+        run.note('signupEmail', email);
+
+        await page.goto(
+            `${run.baseUrl}/register?offer=${encodeURIComponent(banner)}`,
+        );
+        await page.locator(tid('@register-user-button')).waitFor();
+        await page.locator(tid('@register-name')).fill('Verify Offer');
+        await page.locator(tid('@register-email')).fill(email);
+        await page
+            .locator(tid('@register-password'))
+            .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-country')).selectOption('TH');
+        await page.locator(tid('@register-user-button')).click();
+        await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
+            timeout: 30_000,
+        });
+
+        await page.locator(tid('@welcome-persona-continue')).waitFor();
+        await page.locator(tid('@welcome-persona-creator')).click();
+        await page.locator(tid('@welcome-persona-continue')).click();
+        await page.locator(tid('@welcome-goals-continue')).waitFor();
+        await page.locator(tid('@welcome-goal-save_time')).click();
+        await page.locator(tid('@welcome-goals-continue')).click();
+        await page.locator(tid('@welcome-software-continue')).waitFor();
+        await page.locator(tid('@welcome-software-none')).click();
+        await page.locator(tid('@welcome-software-continue')).click();
+
+        await page.locator(tid('@welcome-plan-offer')).waitFor();
+        await page.locator(tid('@plan-offer-badge-mini')).waitFor();
+        await run.step('welcome-offer-banner');
+
+        const bannerName = await page
+            .locator(tid('@welcome-plan-offer-name'))
+            .innerText();
+        const bannerLine = await page
+            .locator(tid('@welcome-plan-offer-headline'))
+            .innerText();
+        run.check(
+            'the banner carries the campaign name and the discount line',
+            bannerName.includes('Verify banner') &&
+                bannerLine.includes('20% off your first 3 months'),
+            { bannerName, bannerLine },
+        );
+
+        const badge = await page
+            .locator(tid('@plan-offer-badge-mini'))
+            .innerText();
+        const struck = await page
+            .locator(tid('@plan-offer-regular-mini'))
+            .innerText();
+        const discounted = await page
+            .locator(tid('@plan-price-mini'))
+            .innerText();
+        const standard = await page
+            .locator(tid('@plan-price-standard'))
+            .innerText();
+        run.check(
+            'the covered card shows 20%, $11.90 struck and $9.52',
+            badge.includes('20%') &&
+                struck.includes('$11.90') &&
+                discounted.includes('$9.52'),
+            { badge, struck, discounted },
+        );
+        run.check(
+            'an uncovered card keeps its full price and no badge',
+            standard.includes('$17.90') &&
+                (await page
+                    .locator(tid('@plan-offer-badge-standard'))
+                    .count()) === 0,
+            standard,
+        );
+        run.check(
+            'the longer Offer trial reaches the covered card',
+            (await page.locator(tid('@plan-select-mini')).innerText()).includes(
+                '14-day free trial',
+            ),
+            await page.locator(tid('@plan-select-mini')).innerText(),
+        );
+
+        await page.locator(tid('@plan-interval-yearly')).click();
+        await page.waitForFunction(() => {
+            return (
+                document
+                    .querySelector('[data-testid="plan-price-mini"]')
+                    ?.textContent?.includes('$119.00') ?? false
+            );
+        });
+        run.check(
+            'the yearly card is not covered, so it keeps its full price and no badge',
+            (await page.locator(tid('@plan-offer-badge-mini')).count()) === 0,
+            await page.locator(tid('@plan-price-mini')).innerText(),
+        );
+        await page.locator(tid('@plan-interval-monthly')).click();
+
+        // The second link Offer replaces the first claim; it shows no banner.
+        await page.goto(
+            `${run.baseUrl}/welcome/plan?offer=${encodeURIComponent(noBanner)}`,
+        );
+        await page.locator(tid('@plan-offer-badge-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('welcome-offer-no-banner');
+
+        const noBannerCount = await page
+            .locator(tid('@welcome-plan-offer'))
+            .count();
+        run.check(
+            'an Offer with its banner off shows no banner',
+            noBannerCount === 0,
+            noBannerCount,
+        );
+        run.check(
+            'the no-banner Offer still shows the badge, the struck price and the discounted price',
+            (
+                await page.locator(tid('@plan-offer-badge-mini')).innerText()
+            ).includes('20%') &&
+                (
+                    await page
+                        .locator(tid('@plan-offer-regular-mini'))
+                        .innerText()
+                ).includes('$11.90') &&
+                (
+                    await page.locator(tid('@plan-price-mini')).innerText()
+                ).includes('$9.52'),
+            {
+                badge: await page
+                    .locator(tid('@plan-offer-badge-mini'))
+                    .innerText(),
+                struck: await page
+                    .locator(tid('@plan-offer-regular-mini'))
+                    .innerText(),
+                discounted: await page
+                    .locator(tid('@plan-price-mini'))
+                    .innerText(),
+            },
+        );
+
+        const signupMail = await waitForMail(email, null);
+
+        if (signupMail === null) {
+            throw new Error('no verification email in Mailpit');
+        }
+
+        const link = await verificationLink(signupMail);
+
+        if (link === null) {
+            throw new Error('no verification link in Mailpit');
+        }
+
+        await page.goto(link);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await run.step('after-verification');
+
+        await page.locator(tid('@plan-select-mini')).click();
+        await page.waitForURL((url) => url.hostname === 'checkout.stripe.com', {
+            timeout: 60_000,
+        });
+        await waitForStripeCheckoutForm(page);
+        await page.waitForTimeout(1_500);
+        await tickTermsConsent(page);
+        await run.step('stripe-checkout-offer');
+        await payOnStripeCheckout(run);
+
+        await page.waitForURL((url) => url.pathname === '/billing/processing', {
+            timeout: 90_000,
+        });
+        await run.step('processing');
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 90_000,
+        });
+        await page.waitForLoadState('networkidle');
+        const guestUserId = await page.evaluate(() => {
+            return (
+                window.history.state?.page?.props?.auth?.user?.id ?? undefined
+            );
+        });
+        await quietFirstVisits(run, guestUserId);
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.locator(tid('@schedule-view-list')).waitFor();
+        await run.step('after-checkout');
+
+        const auth = await page.evaluate(() => {
+            const props = window.history.state?.page?.props?.auth;
+
+            return {
+                accountId: props?.account?.id ?? null,
+                hasActiveSubscription: props?.hasActiveSubscription ?? null,
+                plan: props?.plan?.name ?? null,
+            };
+        });
+        run.note('accountId', auth.accountId);
+        run.check(
+            'the Account has an active subscription after the webhook',
+            auth.hasActiveSubscription === true,
+            auth,
+        );
+        run.check('the Account is on Mini', auth.plan === 'Mini', auth.plan);
     },
 
     /** features/welcome-checkout.md */

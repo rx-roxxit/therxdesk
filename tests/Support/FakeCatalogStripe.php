@@ -35,6 +35,11 @@ final class FakeCatalogStripe implements ClientInterface
     private array $prices = [];
 
     /**
+     * @var array<string, array<string, mixed>>
+     */
+    private array $coupons = [];
+
+    /**
      * @var array{method: string, path: string, status: int, message: string}|null
      */
     private ?array $failure = null;
@@ -124,6 +129,22 @@ final class FakeCatalogStripe implements ClientInterface
         return array_keys($this->prices);
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findCoupon(string $id): ?array
+    {
+        return $this->coupons[$id] ?? null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function couponIds(): array
+    {
+        return array_keys($this->coupons);
+    }
+
     public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
     {
         $method = strtolower((string) $method);
@@ -147,6 +168,10 @@ final class FakeCatalogStripe implements ClientInterface
 
         if ($resource === 'prices') {
             return $this->price($method, $id, $params);
+        }
+
+        if ($resource === 'coupons') {
+            return $this->coupon($method, $id, $params);
         }
 
         return $this->error(404, "No such resource: {$path}");
@@ -214,6 +239,53 @@ final class FakeCatalogStripe implements ClientInterface
         }
 
         return $this->ok($this->prices[$id]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{0: string, 1: int, 2: array<string, string>}
+     */
+    private function coupon(string $method, ?string $id, array $params): array
+    {
+        if ($method === 'post' && $id === null) {
+            $couponId = (string) data_get($params, 'id', 'coupon_'.$this->nonce.count($this->coupons));
+
+            if (isset($this->coupons[$couponId])) {
+                return $this->error(400, "Coupon already exists: '{$couponId}'", [
+                    'type' => 'invalid_request_error',
+                    'code' => 'resource_already_exists',
+                ]);
+            }
+
+            $coupon = [
+                'id' => $couponId,
+                'object' => 'coupon',
+                'amount_off' => data_get($params, 'amount_off'),
+                'currency' => data_get($params, 'currency'),
+                'duration' => (string) data_get($params, 'duration', 'once'),
+                'duration_in_months' => data_get($params, 'duration_in_months'),
+                'max_redemptions' => null,
+                'metadata' => (array) data_get($params, 'metadata', []),
+                'name' => data_get($params, 'name'),
+                'percent_off' => data_get($params, 'percent_off'),
+                'redeem_by' => null,
+                'times_redeemed' => 0,
+                'valid' => true,
+            ];
+            $this->coupons[$coupon['id']] = $coupon;
+
+            return $this->ok($coupon);
+        }
+
+        if ($id === null || ! isset($this->coupons[$id])) {
+            return $this->missing('coupon', $id);
+        }
+
+        if ($method === 'post') {
+            $this->coupons[$id] = $this->merge($this->coupons[$id], $params);
+        }
+
+        return $this->ok($this->coupons[$id]);
     }
 
     /**

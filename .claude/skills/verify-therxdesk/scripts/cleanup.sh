@@ -16,6 +16,9 @@ source "$(dirname "$0")/env.sh"
 # the cleanup when Stripe refuses.
 "$(dirname "$0")/stripe-clock.sh" delete || echo "[cleanup] the test clock could not be deleted"
 
+# The journey env for the sandbox Offers (Offers themselves are never deleted).
+"$(dirname "$0")/offer.sh" down
+
 # Back to .env's mode: stop the Stripe listener, recreate app without the overlay.
 "$(dirname "$0")/selling.sh" down
 

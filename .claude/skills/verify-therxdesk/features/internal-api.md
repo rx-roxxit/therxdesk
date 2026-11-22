@@ -16,8 +16,11 @@ prints them. `selling.sh down` removes the file.
 
 ## Endpoints
 
-- `GET /internal/v1/site` (site or admin token): top-level `{ "plans": [...] }`. Each Plan has `slug`, `name`,
-  `quota_bytes`, `ai_credits_per_month` and `monthly` / `yearly` in USD cents. Only active Plans, by `sort`.
+- `GET /internal/v1/site` (site or admin token): top-level `{ "offer": {...}|null, "plans": [...] }`. Each Plan has
+  `slug`, `name`, `quota_bytes`, `ai_credits_per_month`, `monthly` / `yearly` in USD cents and `offer.monthly` /
+  `offer.yearly` (`regular`, `discount`, `discounted` in cents, or null). `offer` is the running general Offer
+  (never a link one) with its name, discount, `trial_days`, dates, `plan_ids` and `intervals`. Only active Plans, by
+  `sort`.
 - `GET /internal/v1/accounts?search=<email>` (admin): paginated `{ "data": [...], "links": {...}, "meta": {...} }`,
   the configured page size (25). A row has `id`, `name`, `owner` (`id`, `name`, `email`), `plan` (`id`, `slug`,
   `name`), `subscription_status`, `members_count` and `created_at`. `search` matches any User email in the Account.
@@ -51,8 +54,23 @@ prints them. `selling.sh down` removes the file.
 - `GET` / `PATCH /internal/v1/catalog-settings` (admin): `trial_days`, `tokens_per_credit`, `trial_ai_credits`
   (defaults 7, 150, 1,000); `GET` also returns `updated_at`. `trial_ai_credits` may not exceed any active Plan's
   monthly credits, and a Plan's credits may not fall below it.
+- `GET /internal/v1/offers` (admin): paginated, newest start first; `?search=` matches name or slug, `?reach=general|link`,
+  `?ended=1|0`. A row has `id`, `slug`, `name`, `reach`, `discount` (`type`, `percent_off`, `amount_off`, `currency`,
+  `duration`, `duration_in_months`, or null), `stripe_coupon_id`, `trial_days`, `starts_at`, `ends_at`,
+  `max_redemptions`, `show_banner`, `plan_ids`, `intervals`, `is_ended`, `redemptions_count` and timestamps.
+- `POST /internal/v1/offers` (admin): `slug` (immutable), `name`, `reach` (`general` or `link`), `coupon`
+  (`type` percent/amount, `percent_off` or `amount_off` in USD cents, `duration` once/repeating/forever,
+  `duration_in_months` when repeating; optional), `trial_days`, `starts_at`, `ends_at`, `max_redemptions`,
+  `show_banner`, `plan_ids` (default every active Plan), `intervals` (default `["monthly"]`). It needs a coupon, trial
+  days, or both. The app creates the Stripe coupon with `applies_to` the covered Plans' products and a stable id
+  (`rxdesk-offer-<hash of the slug>`), so a retried create or a rerun reuses it. 201.
+- `PATCH /internal/v1/offers/{uuid}` (admin): only `name`, `starts_at`, `ends_at`, `max_redemptions`, `show_banner`
+  and `trial_days`. Sending `slug`, `reach`, `coupon`, `percent_off`, `amount_off`, `duration`, `duration_in_months`,
+  `plan_ids` or `intervals` answers 422 (the discount, duration and coverage are locked). An ended Offer answers 422.
+- `POST /internal/v1/offers/{uuid}/end` (admin): ends the Offer now; a second call is a no-op and records nothing.
+  Offers are never deleted and an ended Offer is read-only.
 - A Stripe failure answers `502` and saves nothing. Every write above that changes something records an audit row
-  with the admin email from `X-Internal-Admin-Email`.
+  with the admin email from `X-Internal-Admin-Email` (`offer.create`, `offer.update`, `offer.end`).
 
 ## Helper
 
@@ -78,6 +96,10 @@ $V/internal.sh POST /plans/<uuid>/archive --token admin
 $V/internal.sh POST /plans/<uuid>/quota-cut-dry-run --token admin --body '{"quota_bytes":536870912}'
 $V/internal.sh GET /catalog-settings --token admin
 $V/internal.sh PATCH /catalog-settings --token admin --body '{"trial_days":14}'
+$V/internal.sh GET /offers --token admin
+$V/internal.sh POST /offers --token admin --body '{"slug":"spring-sale","name":"Spring sale","reach":"general","coupon":{"type":"percent","percent_off":20,"duration":"repeating","duration_in_months":3},"trial_days":14,"starts_at":"2026-11-22T00:00:00Z","show_banner":true}'
+$V/internal.sh PATCH /offers/<uuid> --token admin --body '{"name":"Spring sale extended","show_banner":false}'
+$V/internal.sh POST /offers/<uuid>/end --token admin
 $V/internal.sh GET /health --token admin
 ```
 
@@ -96,6 +118,8 @@ $V/internal.sh GET /health --token admin
 - The 502 path (a Stripe rejection saves nothing) is covered by `tests/Feature/Internal/PlansTest.php` with a faked
   Stripe. A live request cannot provoke it: `monthly_amount` is validated to `1..99999999`, and Stripe accepted the
   yearly ten-times amount even at that ceiling (checked November 2026).
+- A `POST /offers` returns 201 and `/audit-log` has `offer.create` with the admin email; the same request reuses the
+  coupon with the same slug, and a `PATCH` with `coupon`, `plan_ids` or `reach` answers 422.
 - `--token site` on any of the write endpoints answers 404.
 - `GET /health` with the admin token answers 200 with `queue`, `backup`, `restore_drill`, `disk` and `nightwatch`;
   with the site token it answers 404.

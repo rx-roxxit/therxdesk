@@ -12,6 +12,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Switch the app language from the sidebar | [language-switch.md](language-switch.md) | `language-switch` |
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout`, `welcome-plan` |
+| Admin Offers on the Plan step (`selling.sh up`, `offer.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-offer` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
 | Trial and payment: repeat card, failed first charge, past due, a lapse (`selling.sh up`, a Stripe test clock) | [trial-and-payment.md](trial-and-payment.md) | `payment-retry`, `past-due`, `lapsed` |
 | Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `media.sh up`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |

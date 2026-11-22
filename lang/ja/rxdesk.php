@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => '送信日時 :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => '初月 :discount オフ',
+            'once_yearly' => '初年度 :discount オフ',
+            'repeating_monthly' => '最初の :months か月間 :discount オフ',
+            'repeating_yearly' => '初年度 :discount オフ',
+            'forever' => 'ご契約中ずっと :discount オフ',
+            'forever_until' => 'ご契約中ずっと :discount オフ（:date まで）',
+            'trial' => ':days 日間の無料トライアル',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'プランを選択',
         'description' => '月払いまたは年払い。いつでも変更・解約できます。',

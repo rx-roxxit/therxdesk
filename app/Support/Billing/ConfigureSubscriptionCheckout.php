@@ -28,7 +28,8 @@ final class ConfigureSubscriptionCheckout
     /**
      * The trial and the discount. A first checkout gets the Catalog's trial,
      * or the offer's longer one; an Account that already had a trial gets
-     * none. The coupon applies whenever the offer carries one.
+     * none. A trial always needs a card, so it always goes through Stripe
+     * Checkout. The coupon applies whenever the offer carries one.
      *
      * Promotion codes are never allowed: an Account pays the Catalog price, or
      * what its offer grants.

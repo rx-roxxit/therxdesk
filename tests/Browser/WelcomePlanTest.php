@@ -6,6 +6,7 @@ use App\Enums\User\Goal;
 use App\Enums\User\Persona;
 use App\Enums\User\PreviousSoftware;
 use App\Models\Offer;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -133,31 +134,13 @@ test('pressing a plan before verifying the email opens the verify dialog', funct
         ->assertNoJavaScriptErrors();
 });
 
-test('a trial without a card uses the offer copy on every card', function () {
+test('the offer banner stays above the four cards and only covered cards show its prices', function () {
     config(['trypost.self_hosted' => false]);
 
     $user = welcomeOwnerOnPlanStep();
+    $mini = Plan::query()->where('slug', 'mini')->firstOrFail();
     $user->account->offers()->attach(
-        Offer::factory()->freeTrial()->withoutCard()->create(['slug' => 'ft7dnc']),
-        ['claimed_at' => now()],
-    );
-    $this->actingAs($user->fresh());
-
-    $page = visit(route('app.welcome.plan'));
-    waitFor($page, '@plan-select-mini');
-    waitForWebFonts($page);
-
-    $page->assertSeeIn('@plan-select-mini', 'Start free trial')
-        ->assertSeeIn('@plan-terms-mini', 'No credit card required')
-        ->assertNoJavaScriptErrors();
-});
-
-test('the offer banner stays above the four cards', function () {
-    config(['trypost.self_hosted' => false]);
-
-    $user = welcomeOwnerOnPlanStep();
-    $user->account->offers()->attach(
-        Offer::factory()->blackFriday()->withBanner()->create(),
+        Offer::factory()->blackFriday()->covering([$mini->id], ['monthly'])->create(['name' => 'Black Friday']),
         ['claimed_at' => now()],
     );
     $this->actingAs($user->fresh());
@@ -168,7 +151,36 @@ test('the offer banner stays above the four cards', function () {
 
     $page->assertSeeIn('@welcome-plan-offer-name', 'Black Friday')
         ->assertSeeIn('@welcome-plan-offer-headline', '50% off your first 3 months')
-        ->assertSeeIn('@plan-price-mini', '$11.90')
+        ->assertSeeIn('@plan-offer-badge-mini', '50%')
+        ->assertSeeIn('@plan-offer-regular-mini', '$11.90')
+        ->assertSeeIn('@plan-price-mini', '$5.95')
+        ->assertSeeIn('@plan-terms-mini', '50% off your first 3 months')
+        ->assertSeeIn('@plan-price-standard', '$17.90')
+        ->assertMissing('@plan-offer-badge-standard')
+        ->assertNoJavaScriptErrors();
+});
+
+test('an offer without a banner shows its badge and prices without the banner', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = welcomeOwnerOnPlanStep();
+    $mini = Plan::query()->where('slug', 'mini')->firstOrFail();
+    $user->account->offers()->attach(
+        Offer::factory()->blackFriday()->covering([$mini->id], ['monthly'])->create([
+            'name' => 'Quiet sale',
+            'show_banner' => false,
+        ]),
+        ['claimed_at' => now()],
+    );
+    $this->actingAs($user->fresh());
+
+    $page = visit(route('app.welcome.plan'));
+    waitFor($page, '@plan-offer-badge-mini');
+    waitForWebFonts($page);
+
+    $page->assertMissing('@welcome-plan-offer')
+        ->assertSeeIn('@plan-offer-badge-mini', '50%')
+        ->assertSeeIn('@plan-price-mini', '$5.95')
         ->assertNoJavaScriptErrors();
 });
 

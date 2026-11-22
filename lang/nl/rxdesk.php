@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Verzonden :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount korting op je eerste maand',
+            'once_yearly' => ':discount korting op je eerste jaar',
+            'repeating_monthly' => '{1} :discount korting op je eerste maand|[2,*] :discount korting op je eerste :months maanden',
+            'repeating_yearly' => ':discount korting op je eerste jaar',
+            'forever' => ':discount korting zolang je abonnee blijft',
+            'forever_until' => ':discount korting zolang je abonnee blijft, tot :date',
+            'trial' => '{1} :days dag gratis proberen|[2,*] :days dagen gratis proberen',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Kies je abonnement',
         'description' => 'Betaal maandelijks of jaarlijks. Wissel of stop wanneer je wilt.',

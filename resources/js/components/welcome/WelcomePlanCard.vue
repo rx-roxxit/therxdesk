@@ -1,22 +1,15 @@
 <script setup lang="ts">
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import date from '@/date';
-import { activeLocale } from '@/language';
-import { formatMoney } from '@/lib/money';
-import type { Offer } from '@/types/offer';
-import type {
-    BillingInterval,
-    WelcomePlan,
-    WelcomePlanTrial,
-} from '@/types/plan';
+import type { OfferPriceSlot, OfferTrialSlot } from '@/types/offer';
+import type { BillingInterval, WelcomePlan } from '@/types/plan';
 
 type Translate = (key: string, replace?: Record<string, string>) => string;
 
 const props = defineProps<{
     plan: WelcomePlan;
     interval: BillingInterval;
-    trial: WelcomePlanTrial | null;
-    offer: Offer | null;
     processing: boolean;
     selected: boolean;
 }>();
@@ -25,23 +18,47 @@ const emit = defineEmits<{
     (event: 'select'): void;
 }>();
 
-const amount = (): number | null => {
-    if (props.interval === 'yearly') {
-        return props.plan.yearly_amount;
+const offerSlot = (): OfferPriceSlot | null => props.plan.offer[props.interval];
+
+const hasOffer = (): boolean => offerSlot() !== null;
+
+const trialSlot = (): OfferTrialSlot | null => props.plan.trial[props.interval];
+
+const cardClass = (): string => {
+    if (props.selected) {
+        return 'border-primary ring-1 ring-primary';
     }
 
-    return props.plan.monthly_amount;
+    return 'border-border';
+};
+
+const selectedAttribute = (): string | undefined => {
+    if (props.selected) {
+        return 'true';
+    }
+
+    return undefined;
 };
 
 const price = (): string => {
-    const value = amount();
+    const offer = offerSlot();
 
-    if (value === null) {
-        return '—';
+    if (offer !== null) {
+        return offer.discounted;
     }
 
-    return formatMoney(value, activeLocale.value);
+    if (props.interval === 'yearly') {
+        return props.plan.yearly_price ?? '—';
+    }
+
+    return props.plan.monthly_price ?? '—';
 };
+
+const regularPrice = (): string | null => offerSlot()?.regular ?? null;
+
+const badge = (): string | null => offerSlot()?.badge ?? null;
+
+const offerLine = (): string | null => offerSlot()?.line ?? null;
 
 const unitKey = (): string => {
     if (props.interval === 'yearly') {
@@ -53,46 +70,28 @@ const unitKey = (): string => {
 
 const priceWithUnit = ($t: Translate): string => `${price()}${$t(unitKey())}`;
 
-/**
- * An offer's own button and terms when it starts a trial without a card,
- * otherwise the trial or full-price copy.
- */
-const usesOfferCopy = (): boolean => {
-    if (props.offer === null) {
-        return false;
-    }
-
-    if (!props.offer.starts_without_card) {
-        return false;
-    }
-
-    if (!props.offer.has_checkout_copy) {
-        return false;
-    }
-
-    return props.trial !== null;
-};
-
 const buttonLabel = ($t: Translate): string => {
-    if (usesOfferCopy() && props.offer !== null) {
-        return $t(`offers.${props.offer.key}.checkout_button`);
-    }
+    const trial = trialSlot();
 
-    if (props.trial === null) {
+    if (trial === null) {
         return $t('rxdesk.welcome_plan.subscribe');
     }
 
     return $t('rxdesk.welcome_plan.start_trial', {
-        days: String(props.trial.days),
+        days: String(trial.days),
     });
 };
 
 const termsLine = ($t: Translate): string => {
-    if (usesOfferCopy() && props.offer !== null && props.offer.has_terms) {
-        return $t(`offers.${props.offer.key}.terms`);
+    const line = offerLine();
+
+    if (line !== null) {
+        return line;
     }
 
-    if (props.trial === null) {
+    const trial = trialSlot();
+
+    if (trial === null) {
         return $t('rxdesk.welcome_plan.subscribe_terms', {
             price: priceWithUnit($t),
         });
@@ -100,7 +99,7 @@ const termsLine = ($t: Translate): string => {
 
     return $t('rxdesk.welcome_plan.trial_terms', {
         price: priceWithUnit($t),
-        date: date.formatDate(props.trial.first_charge_at),
+        date: date.formatDate(trial.first_charge_at),
     });
 };
 
@@ -112,11 +111,9 @@ const select = (): void => {
 <template>
     <article
         class="flex flex-col gap-4 rounded-xl border bg-card p-5 text-start transition-colors"
-        :class="
-            selected ? 'border-primary ring-1 ring-primary' : 'border-border'
-        "
+        :class="cardClass()"
         :data-testid="`plan-card-${plan.slug}`"
-        :data-selected="selected ? 'true' : undefined"
+        :data-selected="selectedAttribute()"
     >
         <div class="flex flex-col gap-2">
             <h3 class="text-lg leading-tight font-medium">{{ plan.name }}</h3>
@@ -130,6 +127,21 @@ const select = (): void => {
                     class="text-base text-foreground"
                     :data-testid="`plan-price-unit-${plan.slug}`"
                     >{{ $t(unitKey()) }}</span
+                >
+            </p>
+            <p
+                v-if="hasOffer()"
+                class="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+                <Badge
+                    variant="secondary"
+                    :data-testid="`plan-offer-badge-${plan.slug}`"
+                    >{{ badge() }}</Badge
+                >
+                <span
+                    class="line-through"
+                    :data-testid="`plan-offer-regular-${plan.slug}`"
+                    >{{ regularPrice() }}</span
                 >
             </p>
         </div>

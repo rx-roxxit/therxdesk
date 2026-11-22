@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\App;
 
-use App\Actions\Billing\StartGenericTrial;
 use App\Actions\Billing\StartSubscriptionCheckout;
-use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
 use App\Enums\PostHog\WelcomeEvent;
 use App\Enums\User\Goal;
@@ -171,13 +169,15 @@ class WelcomeController extends Controller
         $offer = $account->currentOffer();
 
         return Inertia::render('welcome/Plan', [
-            'plans' => WelcomePlanResource::collection($plans)->resolve($request),
+            'plans' => $plans
+                ->map(fn (Plan $plan): array => WelcomePlanResource::make($plan, $account, $offer)->resolve($request))
+                ->all(),
             'selected' => [
                 'plan' => $this->selectedPlan($request, $plans)->slug,
                 'interval' => $this->selectedInterval($request)->value,
             ],
             'offer' => filled($offer) ? OfferResource::make($offer)->resolve($request) : null,
-            'trial' => $this->trial($account, $offer),
+            'trial' => $this->trial($account, null),
             'retry' => $this->retry($account),
             'countryBlocked' => filled($account->blocked_country_at),
         ]);
@@ -230,12 +230,6 @@ class WelcomeController extends Controller
         abort_if(blank($priceId), Response::HTTP_INTERNAL_SERVER_ERROR, 'Price is not configured.');
 
         $offer = $user->account->currentOffer();
-
-        if ($offer?->startsWithoutCard() && $user->account->canStartTrial()) {
-            StartGenericTrial::execute($user, $plan, $interval, $offer);
-
-            return redirect()->route('app.billing.processing', ['from' => CheckoutOrigin::Welcome->value]);
-        }
 
         return $checkout->redirect($user->account, $priceId, route('app.welcome.plan'), $plan, $offer);
     }

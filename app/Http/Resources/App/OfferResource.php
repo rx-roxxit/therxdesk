@@ -4,39 +4,37 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\App;
 
+use App\Enums\Billing\Interval;
 use App\Models\Offer;
+use App\Support\Billing\OfferCopy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Lang;
 
 /**
- * The offer's copy lives in lang/<locale>/offers.php. The page has no
- * fallback language, so each key is checked in the current locale only and
- * the page never prints a raw key.
+ * An Offer as the plan step shows it: the campaign name (never translated),
+ * its discount badge, and its line per interval from the templates in
+ * `rxdesk.php`.
  *
  * @mixin Offer
  */
 class OfferResource extends JsonResource
 {
     /**
-     * @return array{key: string, has_banner: bool, has_checkout_copy: bool, has_unit: bool, has_terms: bool, starts_without_card: bool}
+     * @return array{slug: string, name: string, reach: string, show_banner: bool, discount_label: string|null, lines: array{monthly: string, yearly: string}, trial_days: int|null}
      */
     public function toArray(Request $request): array
     {
-        $key = $this->langKey();
-
         return [
-            'key' => $key,
-            'starts_without_card' => $this->startsWithoutCard(),
-            'has_banner' => $this->show_banner && $this->hasCopy("offers.{$key}.name") && $this->hasCopy("offers.{$key}.headline"),
-            'has_checkout_copy' => $this->hasCopy("offers.{$key}.price") && $this->hasCopy("offers.{$key}.period") && $this->hasCopy("offers.{$key}.checkout_button"),
-            'has_unit' => $this->hasCopy("offers.{$key}.unit"),
-            'has_terms' => $this->hasCopy("offers.{$key}.terms"),
+            'slug' => $this->slug,
+            'name' => $this->name,
+            'reach' => $this->reach->value,
+            'show_banner' => $this->show_banner,
+            'discount_label' => OfferCopy::discountLabel($this->resource),
+            'lines' => [
+                Interval::Monthly->value => OfferCopy::line($this->resource, Interval::Monthly),
+                Interval::Yearly->value => OfferCopy::line($this->resource, Interval::Yearly),
+            ],
+            'trial_days' => $this->trial_days,
         ];
-    }
-
-    private function hasCopy(string $key): bool
-    {
-        return Lang::has($key, null, false);
     }
 }

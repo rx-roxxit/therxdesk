@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Billing\Interval;
+use App\Enums\Billing\OfferDiscountType;
+use App\Enums\Billing\OfferDuration;
+use App\Enums\Billing\OfferReach;
 use App\Models\Offer;
+use App\Models\Plan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,24 +18,42 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class OfferFactory extends Factory
 {
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
             'slug' => fake()->unique()->slug(3),
+            'name' => fake()->words(2, true),
+            'reach' => OfferReach::Link,
+            'discount_type' => OfferDiscountType::Percent,
+            'percent_off' => 20,
+            'amount_off' => null,
+            'duration' => OfferDuration::Once,
+            'duration_in_months' => null,
             'stripe_coupon_id' => fake()->unique()->bothify('coupon_????????'),
+            'trial_days' => null,
             'starts_at' => now()->subDay(),
             'ends_at' => null,
             'max_redemptions' => null,
-            'trial_days' => null,
-            'allow_promotion_codes' => false,
-            'requires_card' => true,
-            'first_subscription_only' => false,
             'show_banner' => false,
+            'plan_ids' => null,
+            'intervals' => [Interval::Monthly->value],
         ];
+    }
+
+    public function general(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'reach' => OfferReach::General,
+        ]);
+    }
+
+    public function link(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'reach' => OfferReach::Link,
+        ]);
     }
 
     public function upcoming(): static
@@ -55,62 +78,76 @@ class OfferFactory extends Factory
         ]);
     }
 
+    /**
+     * A trial-only Offer: no coupon, so it grants days instead of a discount.
+     */
     public function trial(int $days): static
     {
         return $this->state(fn (array $attributes): array => [
+            'discount_type' => null,
+            'percent_off' => null,
+            'amount_off' => null,
+            'duration' => null,
+            'duration_in_months' => null,
             'stripe_coupon_id' => null,
             'trial_days' => $days,
         ]);
     }
 
-    public function withoutCard(): static
+    public function percent(float $percent): static
     {
         return $this->state(fn (array $attributes): array => [
-            'requires_card' => false,
-        ]);
-    }
-
-    public function allowingPromotionCodes(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'allow_promotion_codes' => true,
+            'discount_type' => OfferDiscountType::Percent,
+            'percent_off' => $percent,
+            'amount_off' => null,
         ]);
     }
 
     /**
-     * The Black Friday 2026 offer: 50% off the first 3 months, with its banner.
+     * An amount-off coupon, in USD cents.
      */
-    public function blackFriday(): static
+    public function amount(int $cents): static
     {
         return $this->state(fn (array $attributes): array => [
-            'slug' => 'bf26',
-            'stripe_coupon_id' => 'BF26_50_3M',
-            'show_banner' => true,
+            'discount_type' => OfferDiscountType::Amount,
+            'percent_off' => null,
+            'amount_off' => $cents,
+        ]);
+    }
+
+    public function once(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'duration' => OfferDuration::Once,
+            'duration_in_months' => null,
+        ]);
+    }
+
+    public function repeating(int $months): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'duration' => OfferDuration::Repeating,
+            'duration_in_months' => $months,
+        ]);
+    }
+
+    public function forever(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'duration' => OfferDuration::Forever,
+            'duration_in_months' => null,
         ]);
     }
 
     /**
-     * The $1 first month, for accounts that never subscribed.
+     * @param  list<Plan>|list<string>  $plans
+     * @param  list<Interval|string>  $intervals
      */
-    public function firstMonth(): static
+    public function covering(array $plans, array $intervals = [Interval::Monthly]): static
     {
         return $this->state(fn (array $attributes): array => [
-            'slug' => 'fm1',
-            'stripe_coupon_id' => 'SOCIALS_18USD',
-            'first_subscription_only' => true,
-        ]);
-    }
-
-    /**
-     * The 7-day free trial. Stripe Checkout shows 8 trial days as 7.
-     */
-    public function freeTrial(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'slug' => 'ft7d',
-            'stripe_coupon_id' => null,
-            'trial_days' => 8,
-            'first_subscription_only' => true,
+            'plan_ids' => array_map(fn (Plan|string $plan): string => $plan instanceof Plan ? (string) $plan->id : $plan, $plans),
+            'intervals' => array_map(fn (Interval|string $interval): string => $interval instanceof Interval ? $interval->value : $interval, $intervals),
         ]);
     }
 
@@ -121,10 +158,41 @@ class OfferFactory extends Factory
         ]);
     }
 
-    public function firstSubscriptionOnly(): static
+    /**
+     * The Black Friday campaign: 50% off the first 3 months, with its banner.
+     */
+    public function blackFriday(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'first_subscription_only' => true,
+            'name' => 'Black Friday',
+            'percent_off' => 50,
+            'duration' => OfferDuration::Repeating,
+            'duration_in_months' => 3,
+            'show_banner' => true,
+        ]);
+    }
+
+    /**
+     * A $5 first month, for an amount coupon.
+     */
+    public function firstMonth(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'name' => 'First month',
+            'discount_type' => OfferDiscountType::Amount,
+            'percent_off' => null,
+            'amount_off' => 500,
+            'duration' => OfferDuration::Once,
+        ]);
+    }
+
+    /**
+     * A longer trial Offer, with no coupon.
+     */
+    public function freeTrial(int $days = 14): static
+    {
+        return $this->trial($days)->state(fn (array $attributes): array => [
+            'name' => 'Free trial',
         ]);
     }
 }

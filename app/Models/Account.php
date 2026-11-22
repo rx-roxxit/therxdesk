@@ -10,7 +10,6 @@ use App\Enums\Account\VideoPolicy;
 use App\Enums\Media\Source;
 use App\Models\Traits\BillsOwnerAsStripeCustomer;
 use App\Models\Traits\HasUsage;
-use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -126,16 +125,45 @@ class Account extends Model
     }
 
     /**
-     * The offer a checkout uses: the most recently claimed one the account may
-     * still use. Without one it pays the full price. Subscribing from billing
-     * leaves trials out, since it charges at once.
+     * The one offer a checkout uses. A link Offer the account claimed wins
+     * over a general one; a general Offer needs no claim and the latest one to
+     * start wins. Without one the account pays the full price. Subscribing
+     * from billing leaves trials out, since it charges at once.
      */
     public function currentOffer(bool $withTrial = true): ?Offer
     {
+        return $this->claimedOffer($withTrial) ?? $this->generalOffer($withTrial);
+    }
+
+    private function claimedOffer(bool $withTrial): ?Offer
+    {
         return $this->offers()
             ->availableTo($this)
+            ->link()
             ->unless($withTrial, fn (Builder $query): Builder => $query->withoutTrial())
             ->orderByPivot('claimed_at', 'desc')
+            ->first();
+    }
+
+    private function generalOffer(bool $withTrial): ?Offer
+    {
+        return Offer::query()
+            ->availableTo($this)
+            ->general()
+            ->unless($withTrial, fn (Builder $query): Builder => $query->withoutTrial())
+            ->latestStarted()
+            ->first();
+    }
+
+    /**
+     * The Offer the current subscription was bought with: the last one it
+     * redeemed. A plan change keeps its discount only while the Offer covers
+     * the new Plan and interval.
+     */
+    public function latestRedeemedOffer(): ?Offer
+    {
+        return $this->redeemedOffers()
+            ->orderByPivot('redeemed_at', 'desc')
             ->first();
     }
 
@@ -166,29 +194,6 @@ class Account extends Model
                 'first_published_at' => 'datetime',
                 'last_published_at' => 'datetime',
             ]);
-    }
-
-    /**
-     * A subscription created at that moment falls inside a trial without a
-     * card the account redeemed from an offer, whenever its webhook arrives.
-     */
-    public function subscribedDuringTrialWithoutCard(CarbonInterface $subscribedAt): bool
-    {
-        return $this->redeemedOffers()
-            ->where('offers.requires_card', false)
-            ->get()
-            ->contains(fn (Offer $offer): bool => $subscribedAt->lessThan(Carbon::parse($offer->pivot->redeemed_at)->addDays($offer->trial_days)));
-    }
-
-    /**
-     * Never billed and never redeemed an offer: a no-card trial is a redeemed
-     * offer, so it counts as the first subscription and trials do not stack.
-     * Cashier clears `trial_ends_at` on any new subscription, so the
-     * redemption is the record that lasts.
-     */
-    public function isFirstTimeSubscriber(): bool
-    {
-        return ! $this->hasHadBillableSubscription() && $this->redeemedOffers()->doesntExist();
     }
 
     public function hasHadBillableSubscription(): bool
