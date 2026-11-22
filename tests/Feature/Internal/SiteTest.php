@@ -16,6 +16,8 @@ beforeEach(function () {
     $this->siteHeaders = ['Authorization' => 'Bearer test-site-token'];
 });
 
+afterEach(fn () => Operator::forgetCurrent());
+
 test('the site payload is the active catalog with prices in cents at the top level', function () {
     $response = $this->withHeaders($this->siteHeaders)->getJson(route('internal.site'));
 

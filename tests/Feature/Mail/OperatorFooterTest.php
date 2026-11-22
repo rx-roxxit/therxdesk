@@ -12,6 +12,8 @@ beforeEach(function () {
     Operator::query()->delete();
 });
 
+afterEach(fn () => Operator::forgetCurrent());
+
 function renderPostPublishedFor(string $locale): string
 {
     app()->setLocale($locale);
@@ -38,10 +40,7 @@ test('the operator footer renders in every locale', function (Locale $locale) {
 test('without an Operator the footer sentence and its paragraph are absent', function () {
     $html = renderPostPublishedFor(Locale::English->value);
 
-    expect($html)->not->toContain(__('rxdesk.mail.footer.operator', [
-        'name' => 'Someone',
-        'address' => 'Somewhere',
-    ], Locale::English->value))
+    expect($html)->not->toContain('is operated by')
         ->not->toContain('operator-footer');
 });
 

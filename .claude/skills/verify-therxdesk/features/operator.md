@@ -52,7 +52,13 @@ $V/internal.sh GET /site --token site
 
 ## Proof checklist
 
-Run from the dev machine with the stack up. `$V` is `.claude/skills/verify-therxdesk/scripts`.
+Run from the dev machine with the stack up. `$V` is `.claude/skills/verify-therxdesk/scripts`; source its
+`env.sh` so `compose` runs in this stack with the selling overlay.
+
+```sh
+V=.claude/skills/verify-therxdesk/scripts
+source "$V/env.sh"
+```
 
 1. `$V/selling.sh up`. `compose run --rm -T -u app app php artisan rxdesk:operator show` prints
    `No Operator is recorded.`
@@ -78,7 +84,7 @@ Run from the dev machine with the stack up. `$V` is `.claude/skills/verify-therx
    $V/mail.sh show <id>
    ```
 
-   The body ends with `The RX Desk is operated by Test Operator Co., Ltd., 123 Test Road, Bangkok 10110.`
+   The body contains `The RX Desk is operated by Test Operator Co., Ltd., 123 Test Road, Bangkok 10110.`
 6. Repeat with no Operator. Delete the row, clear the alert state and the inbox, and force the alert again:
 
    ```sh

@@ -6,6 +6,7 @@ namespace App\Services\Operator;
 
 use App\Actions\Audit\RecordAuditEntry;
 use App\Models\Operator;
+use DateTimeInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -123,7 +124,7 @@ class OperatorCatalog
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function effectiveFrom(array $attributes): mixed
+    private function effectiveFrom(array $attributes): DateTimeInterface|string
     {
         $effectiveFrom = data_get($attributes, 'effective_from');
 

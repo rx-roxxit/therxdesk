@@ -21,6 +21,8 @@ beforeEach(function () {
     Operator::query()->delete();
 });
 
+afterEach(fn () => Operator::forgetCurrent());
+
 /**
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>

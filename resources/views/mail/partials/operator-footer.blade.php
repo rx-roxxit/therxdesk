@@ -1,5 +1,6 @@
+@use('App\Models\Operator')
 @php
-    $operator = \App\Models\Operator::current();
+    $operator = Operator::current();
 @endphp
 @if($operator !== null)
 <p class="operator-footer" style="margin: 8px 0 0; font-size: 12px; line-height: 20px; color: #5a5a59;">

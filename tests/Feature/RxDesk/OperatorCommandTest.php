@@ -10,6 +10,8 @@ beforeEach(function () {
     Operator::query()->delete();
 });
 
+afterEach(fn () => Operator::forgetCurrent());
+
 /**
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -104,6 +106,14 @@ test('a future effective_from fails and writes nothing', function () {
     ]))->assertFailed();
 
     expect(Operator::query()->count())->toBe(0);
+});
+
+test('a write through the CLI clears the cached current row', function () {
+    expect(Operator::current())->toBeNull();
+
+    $this->artisan('rxdesk:operator', operatorCommandOptions())->assertSuccessful();
+
+    expect(Operator::current()?->legal_name_latin)->toBe('Test Operator Co., Ltd.');
 });
 
 test('show says when no Operator is recorded', function () {
