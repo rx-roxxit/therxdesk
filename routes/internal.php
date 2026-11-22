@@ -8,6 +8,7 @@ use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\ComplimentaryPlanController;
 use App\Http\Controllers\Internal\HealthController;
 use App\Http\Controllers\Internal\OfferController;
+use App\Http\Controllers\Internal\OperatorController;
 use App\Http\Controllers\Internal\PlanController;
 use App\Http\Controllers\Internal\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,15 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('health', HealthController::class)
         ->name('internal.health');
+
+    Route::get('operator', [OperatorController::class, 'show'])
+        ->name('internal.operator.show');
+
+    Route::post('operator', [OperatorController::class, 'store'])
+        ->name('internal.operator.store');
+
+    Route::patch('operator', [OperatorController::class, 'update'])
+        ->name('internal.operator.update');
 
     Route::get('plans', [PlanController::class, 'index'])
         ->name('internal.plans.index');

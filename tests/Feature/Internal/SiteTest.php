@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Offer;
+use App\Models\Operator;
 use App\Models\Plan;
 
 beforeEach(function () {
@@ -14,6 +15,8 @@ beforeEach(function () {
 
     $this->siteHeaders = ['Authorization' => 'Bearer test-site-token'];
 });
+
+afterEach(fn () => Operator::forgetCurrent());
 
 test('the site payload is the active catalog with prices in cents at the top level', function () {
     $response = $this->withHeaders($this->siteHeaders)->getJson(route('internal.site'));
@@ -57,4 +60,46 @@ test('the site carries the running general offer and only its covered prices', f
         ->assertJsonPath('plans.0.offer.monthly.discounted', 952)
         ->assertJsonPath('plans.0.offer.yearly', null)
         ->assertJsonPath('plans.1.offer.monthly', null);
+});
+
+test('the site carries the current Operator and null when there is none', function () {
+    Operator::forgetCurrent();
+    Operator::query()->delete();
+
+    $this->withHeaders($this->siteHeaders)->getJson(route('internal.site'))
+        ->assertOk()
+        ->assertJsonPath('operator', null);
+
+    Operator::factory()->create([
+        'legal_name_latin' => 'Acme Operator Co., Ltd.',
+        'address_latin' => '1 Test Road, Bangkok',
+        'legal_name_th' => 'บริษัท แอคมี จำกัด',
+        'address_th' => '123 ถนนทดสอบ กรุงเทพมหานคร',
+        'tax_id' => '1234567890123',
+        'vat_id' => null,
+        'contact_email' => 'billing@example.com',
+        'phone' => '555-0100',
+    ]);
+
+    Operator::forgetCurrent();
+
+    $this->withHeaders($this->siteHeaders)->getJson(route('internal.site'))
+        ->assertOk()
+        ->assertJsonStructure([
+            'operator' => [
+                'legal_name_latin',
+                'address_latin',
+                'legal_name_th',
+                'address_th',
+                'tax_id',
+                'vat_id',
+                'contact_email',
+                'effective_from',
+            ],
+        ])
+        ->assertJsonPath('operator.legal_name_latin', 'Acme Operator Co., Ltd.')
+        ->assertJsonPath('operator.tax_id', '1234567890123')
+        ->assertJsonPath('operator.vat_id', null)
+        ->assertJsonMissingPath('operator.phone')
+        ->assertJsonMissingPath('operator.id');
 });

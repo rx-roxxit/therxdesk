@@ -191,4 +191,10 @@ return [
             'close' => '나중에',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'The RX Desk는 :name, :address에 의해 운영됩니다.',
+        ],
+    ],
+
 ];

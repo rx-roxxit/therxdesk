@@ -34,6 +34,17 @@
         <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.failed_jobs') }}</p>
         <p class="m-0 mt-1 leading-6">@{{ trans_choice('rxdesk.alerts.digest.failed_jobs_line', $items['failed_jobs']) }}</p>
       @endif
+
+      @if($items['restore_drill']['due'])
+        <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.restore_drill') }}</p>
+        <p class="m-0 mt-1 leading-6">
+          @if($items['restore_drill']['last_performed_at'])
+            @{{ __('rxdesk.alerts.digest.restore_drill_line', ['date' => $items['restore_drill']['last_performed_at']]) }}
+          @else
+            @{{ __('rxdesk.alerts.digest.restore_drill_never') }}
+          @endif
+        </p>
+      @endif
     @else
       @if($isResolved)
         <p class="m-0 leading-6">

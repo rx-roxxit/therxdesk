@@ -44,6 +44,18 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/health` (admin): `queue` (`available`, `waits`), `backup` (`last_run_at`, null until a run),
   `restore_drill` (`last_performed_at`, `due_at`, `due`), `disk`, and `nightwatch` (`open`, `recent`). The site
   token answers 404.
+- `GET /internal/v1/operator` (admin): `{ "current": {...}|null, "history": [...] }`. A row has `id`,
+  `legal_name_th`, `legal_name_latin`, `address_th`, `address_latin`, `tax_id`, `vat_id`, `contact_email`, `phone`,
+  `effective_from`, `ended_at`, `is_current`, `created_at` and `updated_at`. `history` holds the ended rows,
+  newest `effective_from` first.
+- `POST /internal/v1/operator` (admin): `legal_name_th`, `legal_name_latin`, `address_th`, `address_latin`, `tax_id`
+  (13 digits), `contact_email`, optional `vat_id`, `phone` and `effective_from` (not in the future). Creates the
+  first row, or ends the current row at `effective_from` (default now) and creates the next. `201` with the
+  overview. `ended_at` is never accepted.
+- `PATCH /internal/v1/operator` (admin): any of the same fields (`ended_at` never). Edits the current row and
+  answers `200` with the overview; no current row answers `422`.
+- The site token answers `404` on every `/operator` endpoint. Every write records `operator.create` /
+  `operator.update` with the admin email.
 - `GET /internal/v1/plans` (admin): paginated, ordered by `sort` then `name`; `?search=` matches name or slug,
   `?archived=1|0|all` (default all). A row has `id`, `slug`, `name`, `quota_bytes`, `ai_credits_per_month`,
   `sort`, `is_archived`, `stripe_product_id`, `prices.monthly` and `prices.yearly` (each the active row as
@@ -111,6 +123,9 @@ $V/internal.sh PATCH /offers/<uuid> --token admin --body '{"name":"Spring sale e
 $V/internal.sh POST /offers/<uuid>/end --token admin
 $V/internal.sh POST /accounts/<uuid>/complimentary --token admin --body '{"plan_id":"<uuid>"}'
 $V/internal.sh POST /accounts/<uuid>/complimentary/end --token admin --body '{"ends_at":"2037-12-31"}'
+$V/internal.sh GET /operator --token admin
+$V/internal.sh POST /operator --token admin --body '{"legal_name_th":"บริษัท ทดสอบ จำกัด","legal_name_latin":"Test Operator Co., Ltd.","address_th":"123 ถนนทดสอบ กรุงเทพมหานคร 10110","address_latin":"123 Test Road, Bangkok 10110","tax_id":"1234567890123","contact_email":"billing@example.com"}'
+$V/internal.sh PATCH /operator --token admin --body '{"phone":"555-0100"}'
 $V/internal.sh GET /health --token admin
 ```
 
@@ -134,3 +149,7 @@ $V/internal.sh GET /health --token admin
 - `--token site` on any of the write endpoints answers 404.
 - `GET /health` with the admin token answers 200 with `queue`, `backup`, `restore_drill`, `disk` and `nightwatch`;
   with the site token it answers 404.
+- `POST /operator` returns 201 and `/audit-log` has `operator.create` with the admin email; a `PATCH` records
+  `operator.update` with the before/after values. A second `POST` ends the previous row and `/operator` answers
+  exactly one `current` plus the previous row in `history`. A future `effective_from` answers 422; the site token
+  answers 404.
