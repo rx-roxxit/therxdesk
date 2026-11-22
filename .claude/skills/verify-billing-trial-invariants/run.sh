@@ -27,6 +27,8 @@ COVERED=(
   app/Support/Billing/TrialAccounts.php
   app/Support/Billing/TrialCards.php
   app/Support/Billing/CardFingerprint.php
+  app/Actions/Billing/ChangePlan.php
+  app/Services/Billing/ComplimentaryPlans.php
   app/Models/Account.php
   app/Models/Subscription.php
   app/Models/TrialAccount.php
@@ -35,6 +37,7 @@ COVERED=(
   database/migrations/2026_11_22_120000_add_billing_facts.php
   database/migrations/2026_11_22_130000_add_trial_accounts.php
   database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php
+  database/migrations/2026_11_23_000000_add_complimentary_plan_to_accounts_table.php
 )
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
@@ -96,6 +99,10 @@ add_check paid-before-keeps-access BillingFacts MC_PaidKeepsAccess.cfg \
   "An Account that paid before keeps access while past due."
 add_check blocked-checkout-no-access BillingFacts MC_BlockedNoAccess.cfg \
   "A checkout billed to a blocked country leaves the Account without access."
+add_check complimentary-access BillingFacts MC_ComplimentaryAccess.cfg \
+  "A Complimentary Plan in force grants access; once it ends the Account has none and is Lapsed."
+add_check complimentary-no-trial TrialGrant MC_ComplimentaryNoTrial.cfg \
+  "An Account given a Complimentary Plan never starts a Trial."
 add_check selftest-card-fixed TrialGrantFixed FIX_CardOneTrial.cfg \
   "Self-test: the card rule passes on the fixed model."
 add_check selftest-account-fixed TrialGrantFixed FIX_AccountOneTrial.cfg \

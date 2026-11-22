@@ -16,6 +16,12 @@ return [
         'select' => 'Elige tu país',
         'blocked' => 'Todavía no está disponible en la UE ni el Reino Unido',
     ],
+    'complimentary' => [
+        'plan_given' => 'Plan otorgado por The RX Desk',
+        'until' => 'Hasta el :date',
+        'no_end' => 'Sin fecha de fin',
+        'checkout_blocked' => 'Tu plan lo ha otorgado The RX Desk; contacta con The RX Desk para suscribirte.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

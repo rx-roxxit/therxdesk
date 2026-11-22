@@ -167,9 +167,11 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 `payOnStripeCheckout()` fills (the failed-first-charge path uses it).
 
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
-`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `payment-retry`, `past-due`, `lapsed`, `media-on-r2`
-(selling mode, listed in `SELLING_JOURNEYS`; `payment-retry`, `past-due` and `lapsed` need a Stripe test clock,
-`media-on-r2` also needs `media.sh up`). Every journey first checks the mode php-fpm serves and stops
+`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
+`payment-retry`, `past-due`, `lapsed`, `media-on-r2`
+(selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
+`complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
+test clock, `media-on-r2` also needs `media.sh up`). Every journey first checks the mode php-fpm serves and stops
 with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
 journey.
 
@@ -267,6 +269,7 @@ after every failed attempt too.
 | `media.sh up\|down\|seed\|clear` | switch the media disk to r2 and back; seed or remove the media proof | stack, `medias` rows, the bucket |
 | `mail.sh list\|latest\|wait\|show\|clear` | read the dev Mailpit inbox | `clear` empties it |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
+| `complimentary.sh up\|end\|show\|down` | give the fixture a Complimentary Plan through `/internal/v1`, end it, show it | `up`, `end`, `down` |
 | `stripe-clock.sh create\|customer\|attach\|advance\|status\|fingerprint\|delete` | a Stripe test clock, its Customer and the fixture Account | Stripe sandbox, fixture, state |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
 | `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | no |

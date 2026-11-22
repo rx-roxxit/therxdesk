@@ -16,6 +16,12 @@ return [
         'select' => 'اختر دولتك',
         'blocked' => 'غير متاح في الاتحاد الأوروبي أو المملكة المتحدة حتى الآن',
     ],
+    'complimentary' => [
+        'plan_given' => 'خطة مقدمة من The RX Desk',
+        'until' => 'حتى :date',
+        'no_end' => 'بلا تاريخ انتهاء',
+        'checkout_blocked' => 'خطتك مقدمة من The RX Desk، لذا تواصل مع The RX Desk للاشتراك.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

@@ -156,6 +156,29 @@ class WelcomeController extends Controller
             return $redirect;
         }
 
+        $account = $request->user()->account;
+
+        // A Complimentary Plan in force has app access, but its plan step is
+        // the state the Owner should see: the Plan, its end date, and the way
+        // to the app. It is not skipped like a Subscription.
+        if ($account?->isComplimentary() && $request->user()->isAccountOwner()) {
+            return Inertia::render('welcome/Plan', [
+                'plans' => [],
+                'selected' => [
+                    'plan' => (string) $account->plan?->slug,
+                    'interval' => Interval::Monthly->value,
+                ],
+                'offer' => null,
+                'trial' => null,
+                'retry' => null,
+                'countryBlocked' => filled($account->blocked_country_at),
+                'complimentary' => [
+                    'plan_name' => $account->plan?->name,
+                    'ends_at' => $account->complimentaryEndsAt()?->toIso8601String(),
+                ],
+            ]);
+        }
+
         $plans = Plan::query()
             ->active()
             ->with('prices')
@@ -165,7 +188,6 @@ class WelcomeController extends Controller
 
         abort_if($plans->isEmpty(), Response::HTTP_NOT_FOUND);
 
-        $account = $request->user()->account;
         $offer = $account->currentOffer();
 
         return Inertia::render('welcome/Plan', [
@@ -180,6 +202,7 @@ class WelcomeController extends Controller
             'trial' => $this->trial($account, null),
             'retry' => $this->retry($account),
             'countryBlocked' => filled($account->blocked_country_at),
+            'complimentary' => null,
         ]);
     }
 
@@ -195,6 +218,10 @@ class WelcomeController extends Controller
 
         abort_unless($request->user()->isAccountOwner(), Response::HTTP_FORBIDDEN);
 
+        if ($request->user()->accountOrFail()->isComplimentary()) {
+            return redirect()->route('app.welcome.plan');
+        }
+
         return BillingPortal::redirect($request->user()->accountOrFail(), route('app.welcome.plan'));
     }
 
@@ -207,6 +234,13 @@ class WelcomeController extends Controller
         }
 
         $user = $request->user();
+
+        // The System admin ends the Complimentary Plan before the Account can
+        // subscribe: Checkout is not the way out of this state.
+        if ($user->accountOrFail()->isComplimentary()) {
+            return back()->with('flash.error', __('rxdesk.complimentary.checkout_blocked'));
+        }
+
         abort_if(blank($user->email_verified_at), Response::HTTP_FORBIDDEN);
 
         if ($this->countryBlocked($user->accountOrFail())) {
@@ -375,6 +409,12 @@ class WelcomeController extends Controller
     private function redirectIfUnavailable(Request $request): ?RedirectResponse
     {
         $user = $request->user();
+
+        // A Complimentary Plan in force is app access, but its Owner keeps the
+        // plan step to read it; every other owner with access goes on.
+        if ($user->account?->isComplimentary() && $user->isAccountOwner()) {
+            return null;
+        }
 
         // Match EnsureAccountReady — generic-trial (no-card) users already have
         // app access and must not be sent through Stripe checkout again.

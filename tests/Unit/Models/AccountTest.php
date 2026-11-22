@@ -434,3 +434,96 @@ test('hasAppAccess lasts as long as a generic trial', function () {
     expect($account->fresh()->hasAppAccess())->toBeFalse()
         ->and($account->fresh()->isOnTrial())->toBeFalse();
 });
+
+test('hasAppAccess is true for a Complimentary Plan without an end date', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'complimentary_since' => now(),
+        'complimentary_until' => null,
+    ]);
+
+    expect($account->hasAppAccess())->toBeTrue()
+        ->and($account->isComplimentary())->toBeTrue()
+        ->and($account->isLapsed())->toBeFalse();
+});
+
+test('hasAppAccess is true for a Complimentary Plan before its end date', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'complimentary_since' => now(),
+        'complimentary_until' => now()->addDays(5),
+    ]);
+
+    expect($account->hasAppAccess())->toBeTrue();
+});
+
+test('hasAppAccess is false after the Complimentary Plan end date', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'complimentary_since' => now(),
+        'complimentary_until' => now()->addDay(),
+    ]);
+
+    expect($account->hasAppAccess())->toBeTrue();
+
+    Carbon::setTestNow(now()->addDays(2));
+
+    expect($account->fresh()->hasAppAccess())->toBeFalse()
+        ->and($account->fresh()->isComplimentary())->toBeFalse();
+});
+
+test('isLapsed is true after a Complimentary Plan ends without a payment', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'first_paid_at' => null,
+        'complimentary_since' => now()->subDays(40),
+        'complimentary_until' => now()->subDay(),
+    ]);
+
+    expect($account->fresh()->isLapsed())->toBeTrue();
+});
+
+test('isLapsed is false while a Complimentary Plan is in force', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'first_paid_at' => null,
+        'complimentary_since' => now(),
+        'complimentary_until' => null,
+    ]);
+
+    expect($account->fresh()->isLapsed())->toBeFalse();
+});
+
+test('canStartTrial is false for good once the account had a Complimentary Plan', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'complimentary_since' => now(),
+        'complimentary_until' => now()->addDays(5),
+    ]);
+
+    expect($account->hadComplimentaryPlan())->toBeTrue()
+        ->and($account->canStartTrial())->toBeFalse()
+        ->and($account->hasHadTrial())->toBeFalse();
+
+    Carbon::setTestNow(now()->addDays(10));
+
+    expect($account->fresh()->canStartTrial())->toBeFalse();
+});
+
+test('a fresh account can still start a trial', function () {
+    $account = Account::factory()->create(['trial_ends_at' => null]);
+
+    expect($account->canStartTrial())->toBeTrue();
+});

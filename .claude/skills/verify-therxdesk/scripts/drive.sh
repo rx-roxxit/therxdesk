@@ -33,6 +33,17 @@ if [ -s "$STATE_DIR/offers.env" ]; then
     [ -n "${VERIFY_OFFER_NO_BANNER:-}" ] && offer_env+=(-e "VERIFY_OFFER_NO_BANNER=$VERIFY_OFFER_NO_BANNER")
 fi
 
+# The complimentary journeys read the Plan name and Account id from
+# complimentary.sh up.
+complimentary_env=()
+
+if [ -s "$STATE_DIR/complimentary.env" ]; then
+    # shellcheck disable=SC1090
+    source "$STATE_DIR/complimentary.env"
+    [ -n "${VERIFY_COMPLIMENTARY_PLAN:-}" ] && complimentary_env+=(-e "VERIFY_COMPLIMENTARY_PLAN=$VERIFY_COMPLIMENTARY_PLAN")
+    [ -n "${VERIFY_COMPLIMENTARY_ACCOUNT:-}" ] && complimentary_env+=(-e "VERIFY_COMPLIMENTARY_ACCOUNT=$VERIFY_COMPLIMENTARY_ACCOUNT")
+fi
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -43,6 +54,7 @@ docker run --rm --network host --ipc=host \
     -e VERIFY_MAILPIT_URL="$MAILPIT_URL" \
     "${card_env[@]}" \
     "${offer_env[@]}" \
+    "${complimentary_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

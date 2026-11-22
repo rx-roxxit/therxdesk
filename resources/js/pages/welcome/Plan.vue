@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PaymentRetryState from '@/components/welcome/PaymentRetryState.vue';
 import VerifyEmailDialog from '@/components/welcome/VerifyEmailDialog.vue';
+import WelcomeContinueButton from '@/components/welcome/WelcomeContinueButton.vue';
 import WelcomeOfferBanner from '@/components/welcome/WelcomeOfferBanner.vue';
 import WelcomePlanCard from '@/components/welcome/WelcomePlanCard.vue';
+import date from '@/date';
 import WelcomeLayout from '@/layouts/WelcomeLayout.vue';
+import { index as scheduleIndex } from '@/routes/app/posts';
 import { store } from '@/routes/app/welcome/plan';
 import type { SharedData, WelcomeStep } from '@/types';
+import type { ComplimentaryPlan } from '@/types/billing';
 import type { Offer } from '@/types/offer';
 import type {
     BillingInterval,
@@ -20,7 +24,7 @@ import type {
     WelcomePlanTrial,
 } from '@/types/plan';
 
-type Translate = (key: string) => string;
+type Translate = (key: string, replace?: Record<string, string>) => string;
 
 const props = defineProps<{
     plans: WelcomePlan[];
@@ -29,9 +33,14 @@ const props = defineProps<{
     trial: WelcomePlanTrial | null;
     retry: WelcomePlanRetry | null;
     countryBlocked: boolean;
+    complimentary: ComplimentaryPlan | null;
 }>();
 
 const layoutTitle = ($t: Translate): string => {
+    if (props.complimentary !== null) {
+        return $t('rxdesk.complimentary.plan_given');
+    }
+
     if (props.retry !== null) {
         return $t('rxdesk.welcome_plan.payment_retry.title');
     }
@@ -39,7 +48,11 @@ const layoutTitle = ($t: Translate): string => {
     return $t('rxdesk.welcome_plan.title');
 };
 
-const layoutDescription = ($t: Translate): string => {
+const layoutDescription = ($t: Translate): string | undefined => {
+    if (props.complimentary !== null) {
+        return undefined;
+    }
+
     if (props.retry !== null) {
         return $t('rxdesk.welcome_plan.payment_retry.description');
     }
@@ -56,11 +69,31 @@ const layoutStep = (): WelcomeStep | undefined => {
 };
 
 const layoutSize = (): 'lg' | '6xl' => {
+    if (props.complimentary !== null) {
+        return 'lg';
+    }
+
     if (props.retry !== null) {
         return 'lg';
     }
 
     return '6xl';
+};
+
+const complimentaryUntilLine = ($t: Translate): string => {
+    const endsAt = props.complimentary?.ends_at ?? null;
+
+    if (endsAt === null) {
+        return $t('rxdesk.complimentary.no_end');
+    }
+
+    return $t('rxdesk.complimentary.until', {
+        date: date.formatDate(endsAt),
+    });
+};
+
+const continueToApp = (): void => {
+    router.visit(scheduleIndex());
 };
 
 const page = usePage<SharedData>();
@@ -129,6 +162,40 @@ const closeVerifyDialog = (open: boolean): void => {
             }}</AlertDescription>
         </Alert>
 
+        <div
+            v-else-if="complimentary !== null"
+            class="flex w-full flex-col gap-6"
+        >
+            <div
+                class="mx-auto flex w-full max-w-md flex-col gap-3 rounded-xl border border-border bg-card p-6 text-start"
+                data-testid="welcome-plan-complimentary"
+            >
+                <p
+                    class="text-xl leading-tight font-emphasis text-foreground"
+                    data-testid="welcome-plan-complimentary-plan"
+                >
+                    {{ complimentary.plan_name }}
+                </p>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t('rxdesk.complimentary.plan_given') }}
+                </p>
+                <p
+                    v-if="complimentary.ends_at"
+                    class="text-sm text-foreground"
+                    data-testid="welcome-plan-complimentary-until"
+                >
+                    {{ complimentaryUntilLine($t) }}
+                </p>
+                <p
+                    v-else
+                    class="text-sm text-foreground"
+                    data-testid="welcome-plan-complimentary-no-end"
+                >
+                    {{ $t('rxdesk.complimentary.no_end') }}
+                </p>
+            </div>
+        </div>
+
         <div v-else-if="retry === null" class="flex w-full flex-col gap-6">
             <WelcomeOfferBanner
                 v-if="offer?.show_banner"
@@ -154,6 +221,14 @@ const closeVerifyDialog = (open: boolean): void => {
         </div>
 
         <PaymentRetryState v-else :update-card-url="retry.update_card_url" />
+
+        <template v-if="complimentary !== null" #actions>
+            <WelcomeContinueButton
+                :disabled="false"
+                testid="welcome-plan-complimentary-continue"
+                @continue="continueToApp"
+            />
+        </template>
 
         <VerifyEmailDialog
             :open="verifyOpen"

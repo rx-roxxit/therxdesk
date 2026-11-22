@@ -13,6 +13,10 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   `@plan-save-two-months`), a card per Plan (`@plan-card-<slug>`, `@plan-price-<slug>`, `@plan-select-<slug>`).
   Choosing a Plan swaps the subscription's price at once (proration charged to the card); without a subscription
   it opens Checkout.
+- A Complimentary Account (ADR 0006, `features/complimentary.md`) keeps the Plan name but hides the price, Change
+  plan, Subscribe, payment methods, Manage on Stripe, the plan dialog and the Invoices tab; a strip says the Plan was
+  given by The RX Desk with its end date. Checkout, Change plan, Subscribe and the portal answer with the toast
+  "Your plan was given by The RX Desk; contact The RX Desk to subscribe."
 - "Change plan" and "Subscribe" refuse an Account whose Owner country is blocked, or whose completed checkout was
   billed to a blocked country (`accounts.blocked_country_at`), with the toast "Not available in the EU/UK yet": no
   swap and no Checkout Session.

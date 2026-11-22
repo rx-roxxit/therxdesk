@@ -3,6 +3,11 @@ export interface Subscription {
     ends_at: string | null;
 }
 
+export interface ComplimentaryPlan {
+    plan_name: string | null;
+    ends_at: string | null;
+}
+
 export interface PaymentMethod {
     id: string;
     brand: string;
