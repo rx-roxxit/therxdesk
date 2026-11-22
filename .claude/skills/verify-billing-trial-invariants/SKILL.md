@@ -160,7 +160,7 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **616578a8**. Confirmed against these files and functions:
+Sync commit: **33ab087d**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
@@ -178,6 +178,7 @@ Sync commit: **616578a8**. Confirmed against these files and functions:
 | `StripeCheckoutSessionListener::handle()` — records `accounts.blocked_country*`, then cancels the subscription | `BlockedCheckoutCancel` / `BlockedCheckoutCancelFails` |
 | `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
 | `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()` | `CanStartTrial`, `HasAppAccess` |
+| `Account::currentOffer(withTrial: false)` — a billing checkout takes a coupon Offer (even with trial days, which `canStartTrial()` then suppresses) but never a trial-only one | not a Trial-grant rule; `CanStartTrial` still decides |
 | `Account::hasAppAccess()` — a blocked checkout ends access, a paid past-due keeps it | `HasAppAccess`, `BlockedNoAccess` |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
 | `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
