@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => '发送时间 :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => '首月 :discount 优惠',
+            'once_yearly' => '首年 :discount 优惠',
+            'repeating_monthly' => '前 :months 个月 :discount 优惠',
+            'repeating_yearly' => '首年 :discount 优惠',
+            'forever' => '订阅期间一直 :discount 优惠',
+            'forever_until' => '订阅期间一直 :discount 优惠，直到 :date',
+            'trial' => ':days 天免费试用',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => '选择套餐',
         'description' => '按月或按年付费。随时更改或取消。',

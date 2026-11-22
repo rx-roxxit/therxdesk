@@ -23,6 +23,7 @@ test('an internal route answers 404 without a token', function (string $route) {
     'internal.accounts.index',
     'internal.audit-log.index',
     'internal.plans.index',
+    'internal.offers.index',
     'internal.catalog-settings.show',
 ]);
 
@@ -35,6 +36,7 @@ test('an internal route answers 404 with a wrong token', function (string $route
     'internal.accounts.index',
     'internal.audit-log.index',
     'internal.plans.index',
+    'internal.offers.index',
     'internal.catalog-settings.show',
 ]);
 
@@ -64,6 +66,10 @@ test('the site token reaches only the site endpoint', function () {
 
     $this->withHeaders($this->siteHeaders)
         ->getJson(route('internal.audit-log.index'))
+        ->assertNotFound();
+
+    $this->withHeaders($this->siteHeaders)
+        ->getJson(route('internal.offers.index'))
         ->assertNotFound();
 });
 

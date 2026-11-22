@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'أُرسل :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => 'خصم :discount على شهرك الأول',
+            'once_yearly' => 'خصم :discount على عامك الأول',
+            'repeating_monthly' => '{1} خصم :discount على شهرك الأول|[2,10] خصم :discount على أول :months أشهر|[11,*] خصم :discount على أول :months شهرًا',
+            'repeating_yearly' => 'خصم :discount على عامك الأول',
+            'forever' => 'خصم :discount طوال فترة اشتراكك',
+            'forever_until' => 'خصم :discount طوال فترة اشتراكك، حتى :date',
+            'trial' => '{1} تجربة مجانية ليوم واحد|[2,10] تجربة مجانية لمدة :days أيام|[11,*] تجربة مجانية لمدة :days يومًا',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'اختر خطتك',
         'description' => 'ادفع شهريًا أو سنويًا. يمكنك التغيير أو الإلغاء في أي وقت.',

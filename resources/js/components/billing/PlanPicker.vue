@@ -8,8 +8,7 @@ import PlanFeatureList from '@/components/billing/PlanFeatureList.vue';
 import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { activeLocale } from '@/language';
-import { formatMoney } from '@/lib/money';
+import type { ChangePlanOffer, OfferPriceSlot } from '@/types/offer';
 import {
     PLAN_CHANGE_LABELS,
     planChangeAction,
@@ -23,12 +22,14 @@ const props = withDefaults(
     defineProps<{
         plans: PlanOption[];
         interval: BillingInterval;
+        offer?: ChangePlanOffer | null;
         currentPlanId?: string | null;
         currentInterval?: BillingInterval | null;
         disabledPlanIds?: string[];
         processing?: boolean;
     }>(),
     {
+        offer: null,
         currentPlanId: null,
         currentInterval: null,
         disabledPlanIds: () => [],
@@ -41,34 +42,74 @@ const emit = defineEmits<{
     (event: 'select', planId: string): void;
 }>();
 
-const amountPerMonth = (plan: PlanOption): number | null => {
-    if (props.interval === 'yearly') {
-        if (plan.yearly_amount === null) {
-            return null;
-        }
-
-        return Math.round(plan.yearly_amount / 12);
-    }
-
-    return plan.monthly_amount;
-};
-
-const price = (plan: PlanOption): string => {
-    const amount = amountPerMonth(plan);
-
-    if (amount === null) {
-        return '—';
-    }
-
-    return formatMoney(amount, activeLocale.value);
-};
-
-const yearlyTotal = (plan: PlanOption): string | null => {
-    if (plan.yearly_amount === null) {
+const offerSlot = (plan: PlanOption): OfferPriceSlot | null => {
+    if (props.offer === null) {
         return null;
     }
 
-    return formatMoney(plan.yearly_amount, activeLocale.value);
+    const row = props.offer.plans[plan.id];
+
+    if (row === undefined) {
+        return null;
+    }
+
+    return row[props.interval];
+};
+
+const hasOffer = (plan: PlanOption): boolean => offerSlot(plan) !== null;
+
+const price = (plan: PlanOption): string => {
+    const offer = offerSlot(plan);
+
+    if (offer !== null) {
+        return offer.discounted_per_month;
+    }
+
+    if (props.interval === 'yearly') {
+        return plan.yearly_monthly_price ?? '—';
+    }
+
+    return plan.monthly_price ?? '—';
+};
+
+const regularPrice = (plan: PlanOption): string | null => {
+    const offer = offerSlot(plan);
+
+    if (offer === null) {
+        return null;
+    }
+
+    return offer.regular_per_month;
+};
+
+const badge = (plan: PlanOption): string | null => {
+    const offer = offerSlot(plan);
+
+    if (offer === null) {
+        return null;
+    }
+
+    return offer.badge;
+};
+
+const offerLine = (plan: PlanOption): string | null => {
+    const offer = offerSlot(plan);
+
+    if (offer === null) {
+        return null;
+    }
+
+    return offer.line;
+};
+
+const yearlyTotal = (plan: PlanOption): string | null => {
+    const offer = offerSlot(plan);
+
+    if (offer !== null) {
+        return offer.discounted;
+    }
+
+    return plan.yearly_price;
 };
 
 const isCurrentPlan = (plan: PlanOption): boolean =>
@@ -172,10 +213,32 @@ const workspaceLabel = (plan: PlanOption): string =>
                         }}</span>
                     </p>
                     <p
+                        v-if="hasOffer(plan)"
+                        class="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                        <Badge
+                            variant="secondary"
+                            :data-testid="`plan-offer-badge-${plan.slug}`"
+                            >{{ badge(plan) }}</Badge
+                        >
+                        <span
+                            class="line-through"
+                            :data-testid="`plan-offer-regular-${plan.slug}`"
+                            >{{ regularPrice(plan) }}</span
+                        >
+                    </p>
+                    <p
                         class="text-sm text-muted-foreground"
                         :data-testid="`plan-price-note-${plan.slug}`"
                     >
                         {{ billingNote(plan) }}
+                    </p>
+                    <p
+                        v-if="hasOffer(plan)"
+                        class="text-sm text-muted-foreground"
+                        :data-testid="`plan-offer-line-${plan.slug}`"
+                    >
+                        {{ offerLine(plan) }}
                     </p>
                 </div>
 

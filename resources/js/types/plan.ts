@@ -1,3 +1,5 @@
+import type { OfferPriceSlot, OfferTrialSlot } from '@/types/offer';
+
 export const BILLING_INTERVALS = ['monthly', 'yearly'] as const;
 
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];
@@ -14,11 +16,16 @@ export interface PlanOption {
     ai_credits_per_month: number | null;
     monthly_amount: number | null;
     yearly_amount: number | null;
+    monthly_price: string | null;
+    yearly_price: string | null;
+    yearly_monthly_price: string | null;
 }
 
 export interface WelcomePlan extends PlanOption {
     quota_label: string | null;
     ai_credits_label: string | null;
+    offer: Record<BillingInterval, OfferPriceSlot | null>;
+    trial: Record<BillingInterval, OfferTrialSlot | null>;
 }
 
 export interface WelcomePlanTrial {

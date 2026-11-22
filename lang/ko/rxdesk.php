@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => '보낸 시각 :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => '첫 달 :discount 할인',
+            'once_yearly' => '첫해 :discount 할인',
+            'repeating_monthly' => '첫 :months개월 :discount 할인',
+            'repeating_yearly' => '첫해 :discount 할인',
+            'forever' => '구독하는 동안 :discount 할인',
+            'forever_until' => '구독하는 동안 :discount 할인, :date까지',
+            'trial' => ':days일 무료 체험',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => '플랜 선택',
         'description' => '월간 또는 연간으로 결제하세요. 언제든 변경하거나 해지할 수 있습니다.',

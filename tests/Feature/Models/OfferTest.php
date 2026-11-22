@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Enums\Billing\Interval;
 use App\Models\Account;
 use App\Models\Offer;
+use App\Models\Plan;
 
 test('an offer that started and has no end is available', function () {
     $offer = Offer::factory()->create();
@@ -43,26 +45,36 @@ test('claims do not use up places', function () {
     expect(Offer::available()->count())->toBe(1);
 });
 
-test('current offer is the latest claimed unredeemed available offer', function () {
+test('a general offer needs no claim and the latest one to start wins', function () {
     $account = Account::factory()->create();
-    [$earlier, $later, $redeemed] = Offer::factory()->count(3)->create();
+    $earlier = Offer::factory()->general()->create(['starts_at' => now()->subDays(2)]);
+    $later = Offer::factory()->general()->create(['starts_at' => now()->subDay()]);
 
-    $account->offers()->attach($earlier, ['claimed_at' => now()->subDays(2)]);
-    $account->offers()->attach($later, ['claimed_at' => now()->subDay()]);
-    $account->offers()->attach($redeemed, ['claimed_at' => now(), 'redeemed_at' => now()]);
-
-    expect($account->currentOffer()?->id)->toBe($later->id);
+    expect($account->currentOffer()?->id)->toBe($later->id)
+        ->and($earlier->id)->not->toBe($account->currentOffer()?->id);
 });
 
-test('current offer ignores expired claims', function () {
+test('a link offer the account claimed beats the general offer', function () {
     $account = Account::factory()->create();
-    $account->offers()->attach(Offer::factory()->expired()->create(), ['claimed_at' => now()]);
+    $link = Offer::factory()->link()->create();
+    Offer::factory()->general()->create();
+    $account->offers()->attach($link, ['claimed_at' => now()]);
 
-    expect($account->currentOffer())->toBeNull();
+    expect($account->currentOffer()?->id)->toBe($link->id);
 });
 
-test('lang key replaces dashes', function () {
-    expect(Offer::factory()->make(['slug' => 'black-friday-2026'])->langKey())->toBe('black_friday_2026');
+test('current offer ignores expired link claims and uses the general offer', function () {
+    $account = Account::factory()->create();
+    $general = Offer::factory()->general()->create();
+    $account->offers()->attach(Offer::factory()->link()->expired()->create(), ['claimed_at' => now()]);
+
+    expect($account->currentOffer()?->id)->toBe($general->id);
+});
+
+test('current offer is empty without a link claim or a general offer', function () {
+    Offer::factory()->link()->create();
+
+    expect(Account::factory()->create()->currentOffer())->toBeNull();
 });
 
 test('deleting an account removes its offer claims', function () {
@@ -76,7 +88,7 @@ test('deleting an account removes its offer claims', function () {
 });
 
 test('an offer the account redeemed is no longer available to it, only to others', function () {
-    $offer = Offer::factory()->create();
+    $offer = Offer::factory()->link()->create();
     $account = Account::factory()->create();
     $account->offers()->attach($offer, ['claimed_at' => now(), 'redeemed_at' => now()]);
 
@@ -84,51 +96,62 @@ test('an offer the account redeemed is no longer available to it, only to others
         ->and(Offer::availableTo(Account::factory()->create())->whereKey($offer->id)->exists())->toBeTrue();
 });
 
-test('a first-subscription offer is not available to an account that was billed before', function () {
-    $offer = Offer::factory()->firstSubscriptionOnly()->create();
+test('a general offer the account redeemed is skipped for that account', function () {
     $account = Account::factory()->create();
-    $account->subscriptions()->create([
-        'type' => Account::SUBSCRIPTION_NAME,
-        'stripe_id' => 'sub_former',
-        'stripe_status' => 'canceled',
-        'stripe_price' => 'price_monthly_test',
-    ]);
+    $first = Offer::factory()->general()->create(['starts_at' => now()->subDay()]);
+    $second = Offer::factory()->general()->create(['starts_at' => now()->subDays(2)]);
+    $account->offers()->attach($first, ['claimed_at' => now(), 'redeemed_at' => now()]);
 
-    expect(Offer::availableTo($account)->whereKey($offer->id)->exists())->toBeFalse()
-        ->and(Offer::availableTo(Account::factory()->create())->whereKey($offer->id)->exists())->toBeTrue();
+    expect($account->currentOffer()?->id)->toBe($second->id);
 });
 
-test('current offer is empty without a claim', function () {
-    Offer::factory()->create();
+test('a billing checkout takes a coupon offer but never a trial-only one', function () {
+    $account = Account::factory()->create();
+    $trialOnly = Offer::factory()->link()->trial(14)->create();
+    $account->offers()->attach($trialOnly, ['claimed_at' => now()]);
 
-    expect(Account::factory()->create()->currentOffer())->toBeNull();
+    expect($account->currentOffer(withTrial: false))->toBeNull();
+
+    $coupon = Offer::factory()->link()->percent(20)->create(['trial_days' => 14]);
+    $account->offers()->attach($coupon, ['claimed_at' => now()->addMinute()]);
+
+    expect($account->currentOffer(withTrial: false)?->id)->toBe($coupon->id);
 });
 
-test('the factory builds the three real offers with their copy', function (string $state, string $slug) {
-    $offer = Offer::factory()->{$state}()->create();
+test('a general offer is reachable without a claim but not by its link', function () {
+    $offer = Offer::factory()->general()->create(['slug' => 'general-offer']);
 
-    expect($offer->slug)->toBe($slug)
-        ->and(__("offers.{$offer->langKey()}.price"))->not->toBe("offers.{$offer->langKey()}.price");
-})->with([
-    'black friday' => ['blackFriday', 'bf26'],
-    'first month' => ['firstMonth', 'fm1'],
-    'free trial' => ['freeTrial', 'ft7d'],
-]);
+    expect(Offer::findAvailable('general-offer'))->toBeNull()
+        ->and(Account::factory()->create()->currentOffer()?->id)->toBe($offer->id);
+});
 
-test('a first-subscription offer is not available to an account that had a trial without a card, even once Cashier cleared it', function () {
-    $offer = Offer::factory()->firstSubscriptionOnly()->create();
-    $account = Account::factory()->create(['trial_ends_at' => null]);
-    $account->offers()->attach(Offer::factory()->trial(7)->withoutCard()->create(), ['claimed_at' => now()->subWeek(), 'redeemed_at' => now()->subWeek()]);
+test('a link offer is found by its exact slug', function () {
+    $offer = Offer::factory()->link()->create(['slug' => 'spring-sale']);
 
-    expect(Offer::availableTo($account)->whereKey($offer->id)->exists())->toBeFalse()
-        ->and($account->isFirstTimeSubscriber())->toBeFalse();
+    expect(Offer::findAvailable('spring-sale')?->id)->toBe($offer->id)
+        ->and(Offer::findAvailable('SPRING-SALE'))->toBeNull();
+});
+
+test('an offer covers only its plans and intervals', function () {
+    $monthly = Plan::factory()->create();
+    $yearly = Plan::factory()->create();
+    $offer = Offer::factory()->covering([$monthly], [Interval::Monthly])->make();
+
+    expect($offer->covers($monthly, Interval::Monthly))->toBeTrue()
+        ->and($offer->covers($monthly, Interval::Yearly))->toBeFalse()
+        ->and($offer->covers($yearly, Interval::Monthly))->toBeFalse();
+});
+
+test('an ended offer is read-only', function () {
+    expect(Offer::factory()->expired()->make()->hasEnded())->toBeTrue()
+        ->and(Offer::factory()->make()->hasEnded())->toBeFalse()
+        ->and(Offer::factory()->make(['ends_at' => now()->addDay()])->hasEnded())->toBeFalse();
 });
 
 test('a trial needs at least one day', function (?int $days, bool $hasTrial) {
-    $offer = Offer::factory()->withoutCard()->make(['trial_days' => $days]);
+    $offer = Offer::factory()->make(['trial_days' => $days]);
 
-    expect($offer->hasTrial())->toBe($hasTrial)
-        ->and($offer->startsWithoutCard())->toBe($hasTrial);
+    expect($offer->hasTrial())->toBe($hasTrial);
 })->with([
     'no trial' => [null, false],
     'zero days' => [0, false],

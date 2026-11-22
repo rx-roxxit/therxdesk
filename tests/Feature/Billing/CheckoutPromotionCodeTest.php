@@ -96,7 +96,7 @@ test('a coupon offer sends its coupon and no promotion code field, which Stripe 
     app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials, $offer);
 
     expect(data_get($this->stripe->session, 'discounts.0.coupon'))->toBe('BF26_TEST')
-        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('false')
+        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBeNull()
         ->and(data_get($this->stripe->session, 'subscription_data.trial_end'))->not->toBeNull();
 });
 

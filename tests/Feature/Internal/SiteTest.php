@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Offer;
 use App\Models\Plan;
 
 beforeEach(function () {
@@ -39,4 +40,21 @@ test('an archived Plan never appears', function () {
     $response->assertOk()
         ->assertJsonCount(4, 'plans')
         ->assertJsonMissing(['slug' => 'legacy']);
+});
+
+test('the site carries the running general offer and only its covered prices', function () {
+    $mini = Plan::query()->where('slug', 'mini')->firstOrFail();
+    Offer::factory()->general()->percent(20)->covering([$mini], ['monthly'])->create(['name' => 'Spring sale']);
+    Offer::factory()->link()->percent(50)->covering([$mini], ['monthly'])->create(['name' => 'Partner only']);
+
+    $response = $this->withHeaders($this->siteHeaders)->getJson(route('internal.site'));
+
+    $response->assertOk()
+        ->assertJsonPath('offer.name', 'Spring sale')
+        ->assertJsonPath('offer.discount.percent_off', 20)
+        ->assertJsonPath('plans.0.slug', 'mini')
+        ->assertJsonPath('plans.0.offer.monthly.regular', 1190)
+        ->assertJsonPath('plans.0.offer.monthly.discounted', 952)
+        ->assertJsonPath('plans.0.offer.yearly', null)
+        ->assertJsonPath('plans.1.offer.monthly', null);
 });

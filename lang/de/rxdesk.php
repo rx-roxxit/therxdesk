@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Gesendet :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount Rabatt auf deinen ersten Monat',
+            'once_yearly' => ':discount Rabatt auf dein erstes Jahr',
+            'repeating_monthly' => '{1} :discount Rabatt auf deinen ersten Monat|[2,*] :discount Rabatt auf deine ersten :months Monate',
+            'repeating_yearly' => ':discount Rabatt auf dein erstes Jahr',
+            'forever' => ':discount Rabatt, solange du abonniert bleibst',
+            'forever_until' => ':discount Rabatt, solange du abonniert bleibst, bis :date',
+            'trial' => '{1} :days Tag kostenlos testen|[2,*] :days Tage kostenlos testen',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Wähle deinen Tarif',
         'description' => 'Monatlich oder jährlich zahlen. Jederzeit wechseln oder kündigen.',

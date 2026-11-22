@@ -28,7 +28,8 @@ final class ConfigureSubscriptionCheckout
     /**
      * The trial and the discount. A first checkout gets the Catalog's trial,
      * or the offer's longer one; an Account that already had a trial gets
-     * none. The coupon applies whenever the offer carries one.
+     * none. A trial always needs a card, so it always goes through Stripe
+     * Checkout. The coupon applies whenever the offer carries one.
      *
      * Promotion codes are never allowed: an Account pays the Catalog price, or
      * what its offer grants.
@@ -66,15 +67,25 @@ final class ConfigureSubscriptionCheckout
      * `auto`), a required billing address, required Terms consent, and no
      * promotion code field.
      *
+     * Stripe refuses a session that names both `allow_promotion_codes` and a
+     * discount, so the field is left out entirely when the Offer carries a
+     * coupon. Naming it `false` is not enough: Stripe counts the parameter as
+     * specified.
+     *
      * @return array<string, mixed>
      */
-    public static function sessionOptions(Locale $locale): array
+    public static function sessionOptions(Locale $locale, bool $withCoupon = false): array
     {
-        return [
+        $options = [
             'locale' => StripeLocale::for($locale),
             'billing_address_collection' => 'required',
             'consent_collection' => ['terms_of_service' => 'required'],
-            'allow_promotion_codes' => false,
         ];
+
+        if (! $withCoupon) {
+            $options['allow_promotion_codes'] = false;
+        }
+
+        return $options;
     }
 }

@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Στάλθηκε :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount έκπτωση στον πρώτο μήνα',
+            'once_yearly' => ':discount έκπτωση στον πρώτο χρόνο',
+            'repeating_monthly' => '{1} :discount έκπτωση στον πρώτο μήνα|[2,*] :discount έκπτωση στους πρώτους :months μήνες',
+            'repeating_yearly' => ':discount έκπτωση στον πρώτο χρόνο',
+            'forever' => ':discount έκπτωση για όσο παραμένετε συνδρομητής',
+            'forever_until' => ':discount έκπτωση για όσο παραμένετε συνδρομητής, έως :date',
+            'trial' => '{1} Δωρεάν δοκιμή :days ημέρας|[2,*] Δωρεάν δοκιμή :days ημερών',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Διάλεξε το πρόγραμμά σου',
         'description' => 'Πληρώνεις μηνιαία ή ετήσια. Αλλαγή ή ακύρωση οποιαδήποτε στιγμή.',

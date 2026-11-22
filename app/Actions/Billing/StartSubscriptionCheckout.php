@@ -34,6 +34,19 @@ class StartSubscriptionCheckout
 
         $subscription = $account->newSubscription(Account::SUBSCRIPTION_NAME, $priceId);
 
+        $interval = Interval::Monthly;
+
+        if (filled($plan)) {
+            $interval = $plan->intervalFor($priceId) ?? Interval::Monthly;
+        }
+
+        // One Offer per checkout, and only when it covers the Plan and
+        // interval being bought. A leftover offer from another Plan gives
+        // neither its coupon nor its trial.
+        if (filled($offer) && (blank($plan) || ! $offer->covers($plan, $interval))) {
+            $offer = null;
+        }
+
         $offerMetadata = array_filter([
             ConfigureSubscriptionCheckout::OFFER_METADATA_KEY => $offer?->id,
             ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
@@ -43,12 +56,6 @@ class StartSubscriptionCheckout
 
         $subscription->withMetadata($offerMetadata);
 
-        $interval = Interval::Monthly;
-
-        if (filled($plan)) {
-            $interval = $plan->intervalFor($priceId) ?? Interval::Monthly;
-        }
-
         $session = $subscription->checkout([
             'success_url' => route('app.billing.processing', ['from' => $origin->value]).'&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => $cancelUrl,
@@ -57,7 +64,10 @@ class StartSubscriptionCheckout
                 ConfigureSubscriptionCheckout::INTERVAL_METADATA_KEY => $interval->value,
                 ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
             ], filled(...)),
-            ...ConfigureSubscriptionCheckout::sessionOptions($account->owner?->locale ?? Locale::DEFAULT),
+            ...ConfigureSubscriptionCheckout::sessionOptions(
+                $account->owner?->locale ?? Locale::DEFAULT,
+                $offer?->hasCoupon() ?? false,
+            ),
         ]);
 
         rescue(function () use ($account, $plan, $interval, $offer): void {

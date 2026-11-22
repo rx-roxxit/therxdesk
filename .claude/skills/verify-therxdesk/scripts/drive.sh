@@ -23,6 +23,16 @@ if [ -n "${VERIFY_TEST_CARD:-}" ]; then
     card_env+=(-e "VERIFY_TEST_CARD=$VERIFY_TEST_CARD")
 fi
 
+# The welcome-offer journey reads its two link Offers from offer.sh up.
+offer_env=()
+
+if [ -s "$STATE_DIR/offers.env" ]; then
+    # shellcheck disable=SC1090
+    source "$STATE_DIR/offers.env"
+    [ -n "${VERIFY_OFFER_BANNER:-}" ] && offer_env+=(-e "VERIFY_OFFER_BANNER=$VERIFY_OFFER_BANNER")
+    [ -n "${VERIFY_OFFER_NO_BANNER:-}" ] && offer_env+=(-e "VERIFY_OFFER_NO_BANNER=$VERIFY_OFFER_NO_BANNER")
+fi
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -32,6 +42,7 @@ docker run --rm --network host --ipc=host \
     -e VERIFY_GUEST_EMAIL_LIKE="$GUEST_EMAIL_LIKE" \
     -e VERIFY_MAILPIT_URL="$MAILPIT_URL" \
     "${card_env[@]}" \
+    "${offer_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

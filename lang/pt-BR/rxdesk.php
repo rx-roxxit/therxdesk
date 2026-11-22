@@ -151,6 +151,18 @@ return [
         ],
         'sent_at' => 'Enviado em :time',
     ],
+    'offer' => [
+        'line' => [
+            'once_monthly' => ':discount de desconto no seu primeiro mês',
+            'once_yearly' => ':discount de desconto no seu primeiro ano',
+            'repeating_monthly' => '{1} :discount de desconto no seu primeiro mês|[2,*] :discount de desconto nos seus primeiros :months meses',
+            'repeating_yearly' => ':discount de desconto no seu primeiro ano',
+            'forever' => ':discount de desconto enquanto você continuar assinante',
+            'forever_until' => ':discount de desconto enquanto você continuar assinante, até :date',
+            'trial' => '{1} Teste grátis de :days dia|[2,*] Teste grátis de :days dias',
+        ],
+    ],
+
     'welcome_plan' => [
         'title' => 'Escolha seu plano',
         'description' => 'Pague mensal ou anualmente. Mude ou cancele quando quiser.',

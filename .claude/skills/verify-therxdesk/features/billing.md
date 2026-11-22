@@ -53,5 +53,5 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 - The fixture Owner's country is `TH`, so the plan actions work. To see the refusal, set `users.country` to an EU/UK
   code (or `accounts.blocked_country_at`) on the fixture Owner and press "Change plan": the page stays and the toast
   shows the notice.
-- Not driven yet: the Invoices tab, Subscribe on a generic trial, a downgrade, a yearly swap (which drops the
-  discount).
+- Not driven yet: the Invoices tab, Subscribe on a generic trial, a downgrade, a yearly swap (the discount is kept
+  only when its Offer covers yearly, and dropped otherwise).

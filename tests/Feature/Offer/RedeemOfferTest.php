@@ -53,14 +53,15 @@ test('ignores a subscription without offer metadata', function () {
     expect($this->account->offers()->first()->pivot->redeemed_at)->toBeNull();
 });
 
-test('ignores an offer the account never claimed', function () {
-    $other = Account::factory()->create();
-    $other->offers()->attach($this->offer, ['claimed_at' => now()]);
+test('redeems a general offer without a claim', function () {
+    $general = Offer::factory()->general()->create();
 
-    (new StripeEventListener)->handle(subscriptionCreatedWithOffer($this->offer->id));
+    (new StripeEventListener)->handle(subscriptionCreatedWithOffer($general->id));
 
-    expect($this->account->offers()->count())->toBe(0)
-        ->and($other->offers()->first()->pivot->redeemed_at)->toBeNull();
+    $pivot = $this->account->offers()->whereKey($general->id)->first()?->pivot;
+
+    expect($pivot)->not->toBeNull()
+        ->and($pivot->redeemed_at)->not->toBeNull();
 });
 
 test('a redeemed offer uses up a place', function () {

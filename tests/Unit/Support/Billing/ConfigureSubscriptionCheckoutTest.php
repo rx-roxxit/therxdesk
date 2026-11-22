@@ -119,8 +119,8 @@ test('clamps a one-day trial to the Stripe Checkout minimum of two days', functi
     expect(trialExpiresAt(configureCheckout($this->account->fresh()))?->toDateTimeString())->toBe('2026-08-09 12:00:00');
 });
 
-test('a coupon offer still applies its coupon and keeps promotion codes off', function () {
-    claimOfferFor($this->account, Offer::factory()->allowingPromotionCodes()->create(['stripe_coupon_id' => 'BF26_50']));
+test('a coupon offer applies its coupon once and keeps promotion codes off', function () {
+    claimOfferFor($this->account, Offer::factory()->create(['stripe_coupon_id' => 'BF26_50']));
 
     $subscription = configureCheckout($this->account->fresh());
 
@@ -129,8 +129,19 @@ test('a coupon offer still applies its coupon and keeps promotion codes off', fu
         ->and(trialExpiresAt($subscription))->not->toBeNull();
 });
 
+test('an account that had a trial gets the coupon without another trial', function () {
+    $this->account->update(['trial_ends_at' => now()->subDay()]);
+    $offer = Offer::factory()->percent(20)->create(['trial_days' => 14]);
+    claimOfferFor($this->account, $offer);
+
+    $subscription = configureCheckout($this->account->fresh());
+
+    expect($subscription->couponId)->toBe($offer->stripe_coupon_id)
+        ->and(trialExpiresAt($subscription))->toBeNull();
+});
+
 test('an offer never turns the promotion code field on', function () {
-    claimOfferFor($this->account, Offer::factory()->trial(8)->allowingPromotionCodes()->create());
+    claimOfferFor($this->account, Offer::factory()->trial(8)->create());
 
     expect(configureCheckout($this->account->fresh())->allowPromotionCodes)->toBeFalse();
 });
@@ -147,4 +158,11 @@ test('session options carry the locale, the billing address, Terms consent and n
 
 test('session options never ask Stripe to pick the language', function () {
     expect(ConfigureSubscriptionCheckout::sessionOptions(Locale::Arabic)['locale'])->toBe('en');
+});
+
+test('a coupon session leaves the promotion code parameter out entirely', function () {
+    $withCoupon = ConfigureSubscriptionCheckout::sessionOptions(Locale::English, true);
+
+    expect($withCoupon)->not->toHaveKey('allow_promotion_codes')
+        ->and(ConfigureSubscriptionCheckout::sessionOptions(Locale::English, false)['allow_promotion_codes'])->toBeFalse();
 });

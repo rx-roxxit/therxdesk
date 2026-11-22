@@ -131,8 +131,9 @@ const closeVerifyDialog = (open: boolean): void => {
 
         <div v-else-if="retry === null" class="flex w-full flex-col gap-6">
             <WelcomeOfferBanner
-                v-if="offer?.has_banner"
-                :offer-key="offer.key"
+                v-if="offer?.show_banner"
+                :name="offer.name"
+                :line="offer.lines[interval]"
             />
 
             <PlanIntervalSwitch v-model="interval" />
@@ -145,8 +146,6 @@ const closeVerifyDialog = (open: boolean): void => {
                     :key="plan.id"
                     :plan="plan"
                     :interval="interval"
-                    :trial="trial"
-                    :offer="offer"
                     :selected="isSelected(plan)"
                     :processing="isProcessing(plan)"
                     @select="selectPlan(plan.slug)"
