@@ -15,11 +15,7 @@ const supportMailto = 'mailto:support@therxdesk.com';
 <template>
     <Head :title="$t('rxdesk.suspension.title')" />
 
-    <WelcomeLayout
-        :title="$t('rxdesk.suspension.title')"
-        :description="$t('rxdesk.suspension.description')"
-        size="lg"
-    >
+    <WelcomeLayout :title="$t('rxdesk.suspension.title')" size="lg">
         <div
             class="flex flex-col items-center gap-4 text-center"
             data-testid="welcome-suspended"
