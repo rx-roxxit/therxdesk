@@ -1,8 +1,9 @@
 # Selling mode
 
-The app sells Plans: an Owner without app access (no subscription and no no-card trial) is held at Welcome until
-they check out; a member of such an Account waits on "Waiting for the account owner". A no-card trial already has
-app access, so its Owner goes straight to the Schedule. Self-hosted mode skips all of it.
+The app sells Plans: an Owner without app access (no subscription, no generic trial and no Complimentary Plan) is
+held at Welcome until they check out; a member of such an Account waits on "Waiting for the account owner". A
+legacy generic trial or a Complimentary Plan already has app access, so its Owner goes straight to the Schedule.
+Every new Trial now needs a card and goes through Stripe Checkout. Self-hosted mode skips all of it.
 
 ## Sub-features
 
