@@ -42,6 +42,7 @@ class CatalogSetting extends Model
         'trial_days',
         'tokens_per_credit',
         'trial_ai_credits',
+        'stripe_billing_portal_configuration_id',
     ];
 
     /**

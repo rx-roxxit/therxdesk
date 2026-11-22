@@ -14,6 +14,7 @@ use App\Http\Resources\App\InvoiceResource;
 use App\Http\Resources\App\PlanResource;
 use App\Models\Account;
 use App\Models\Plan;
+use App\Support\Billing\BillingPortal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,6 +36,10 @@ class BillingController extends Controller
 
         $account = $request->user()->accountOrFail();
         $returnsToBilling = $request->query('from') === CheckoutOrigin::Billing->value;
+
+        if ($account->hasPendingFirstCharge()) {
+            return redirect()->route('app.welcome.plan');
+        }
 
         return Inertia::render('billing/Processing', [
             'ready' => $returnsToBilling ? $account->planMatchesSubscription() : $account->hasAppAccess(),
@@ -113,8 +118,6 @@ class BillingController extends Controller
 
         abort_unless($request->user()->isAccountOwner(), SymfonyResponse::HTTP_FORBIDDEN);
 
-        return $account->redirectToBillingPortal(
-            route('app.billing.index')
-        );
+        return BillingPortal::redirect($account, route('app.billing.index'));
     }
 }

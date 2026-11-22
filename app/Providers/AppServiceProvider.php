@@ -41,6 +41,7 @@ use App\Models\RssFeedItem;
 use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Models\TrialCard;
 use App\Models\User;
 use App\Models\VideoRecord;
 use App\Models\Webhook;
@@ -179,6 +180,7 @@ class AppServiceProvider extends ServiceProvider
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,
+            'trialCard' => TrialCard::class,
             'user' => User::class,
             'webhook' => Webhook::class,
             'webhookLog' => WebhookLog::class,

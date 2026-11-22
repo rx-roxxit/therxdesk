@@ -92,6 +92,7 @@ test('user with past_due subscription can access the app instead of being forced
     $account = Account::factory()->create([
         'trial_ends_at' => null,
         'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => now()->subMonth(),
     ]);
     $user = User::factory()->create(['account_id' => $account->id]);
     $account->update(['owner_id' => $user->id]);
@@ -114,6 +115,34 @@ test('user with past_due subscription can access the app instead of being forced
 
     $response->assertOk();
     $response->assertSessionMissing('errors');
+});
+
+test('a past_due subscription that never paid is sent to the plan step', function () {
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => null,
+    ]);
+    $user = User::factory()->create(['account_id' => $account->id]);
+    $account->update(['owner_id' => $user->id]);
+
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_123',
+    ]);
+
+    $workspace = Workspace::factory()->create([
+        'account_id' => $account->id,
+        'user_id' => $user->id,
+    ]);
+    $workspace->members()->attach($user->id, membershipPivot('member'));
+    $user->update(['current_workspace_id' => $workspace->id]);
+
+    $this->actingAs($user->fresh())
+        ->get(route('app.workspace.channels'))
+        ->assertRedirect(route('app.welcome.plan'));
 });
 
 test('a trial without a card can use the app until it ends', function () {

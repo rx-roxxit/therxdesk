@@ -23,6 +23,7 @@ use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
 use App\Services\PostHogService;
+use App\Support\Billing\BillingPortal;
 use App\Support\Billing\ConfigureSubscriptionCheckout;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -176,7 +177,23 @@ class WelcomeController extends Controller
             ],
             'offer' => filled($offer) ? OfferResource::make($offer)->resolve($request) : null,
             'trial' => $this->trial($account, $offer),
+            'retry' => $this->retry($account),
         ]);
+    }
+
+    /**
+     * The Owner retries the first charge of a Trial at Stripe's billing portal:
+     * the same step, with the card form, and back to the plan when done.
+     */
+    public function planPortal(Request $request): RedirectResponse
+    {
+        if (config('trypost.self_hosted')) {
+            return redirect()->route('app.calendar');
+        }
+
+        abort_unless($request->user()->isAccountOwner(), Response::HTTP_FORBIDDEN);
+
+        return BillingPortal::redirect($request->user()->accountOrFail(), route('app.welcome.plan'));
     }
 
     public function storePlan(
@@ -299,6 +316,24 @@ class WelcomeController extends Controller
         return [
             'days' => $days,
             'first_charge_at' => now()->addDays($days)->toIso8601String(),
+        ];
+    }
+
+    /**
+     * The retry step after a Trial's first charge failed: the plan the Account
+     * is on, and where it updates the card. Null in every other state.
+     *
+     * @return array{plan: string|null, update_card_url: string}|null
+     */
+    private function retry(Account $account): ?array
+    {
+        if (! $account->hasPendingFirstCharge()) {
+            return null;
+        }
+
+        return [
+            'plan' => $account->plan?->name,
+            'update_card_url' => route('app.welcome.plan.portal'),
         ];
     }
 

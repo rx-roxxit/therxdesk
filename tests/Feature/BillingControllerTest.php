@@ -363,6 +363,7 @@ test('billing index exposes the end date of a cancelled subscription', function 
 test('billing index exposes a past due subscription', function () {
     config(['trypost.self_hosted' => false]);
 
+    $this->account->forceFill(['first_paid_at' => now()->subMonth()])->save();
     $this->account->subscriptions()->create([
         'type' => Account::SUBSCRIPTION_NAME,
         'stripe_id' => 'sub_test_'.fake()->uuid(),

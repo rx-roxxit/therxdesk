@@ -404,6 +404,7 @@ test('change-plan does not write plan_id when the matching price is still past d
     $user = User::factory()->create();
     $account = $user->account;
     $account->update(['plan_id' => $this->socials->id]);
+    $account->forceFill(['first_paid_at' => now()->subMonth()])->save();
     $withWorkspace($user);
 
     $account->subscriptions()->create([
