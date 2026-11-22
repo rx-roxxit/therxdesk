@@ -146,10 +146,28 @@ test('a repeat card ends the trial at creation and its first charge is marked pa
         ],
     ]));
 
+    // Stripe turns the subscription `active` before it attempts the charge;
+    // only the paid invoice proves the repeat card was charged.
     $subscription = $subscription->fresh();
 
-    expect($subscription->paid_without_trial_at)->not->toBeNull()
-        ->and($account->fresh()->first_paid_at)->not->toBeNull();
+    expect($subscription->paid_without_trial_at)->toBeNull()
+        ->and($account->fresh()->first_paid_at)->toBeNull();
+
+    (new StripeInvoiceListener)->handle(new WebhookReceived([
+        'id' => 'evt_repeat_invoice',
+        'type' => 'invoice.payment_succeeded',
+        'data' => ['object' => [
+            'id' => 'in_repeat',
+            'customer' => 'cus_trial',
+            'subscription' => 'sub_repeat',
+            'status' => 'paid',
+            'amount_paid' => 1190,
+        ]],
+    ]));
+
+    expect($subscription->fresh()->paid_without_trial_at)->not->toBeNull()
+        ->and($account->fresh()->first_paid_at)->not->toBeNull()
+        ->and($account->fresh()->first_invoice_id)->toBe('in_repeat');
 });
 
 test('a first-ever card keeps its trial and is claimed', function () {

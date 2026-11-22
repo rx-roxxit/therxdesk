@@ -84,7 +84,6 @@ class StripeEventListener
         $this->recordFirstPayment($account, $payload);
         $this->redeemOffer($account, $payload);
         $this->recordTrialStart($account, $subscription, $payload);
-        $this->recordPaidWithoutTrial($subscription, $payload);
 
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Created, $payload, $previousPlan);
         TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $convertsTrialWithoutCard, (string) $account->id, $payload, withRevenue: false);
@@ -101,11 +100,13 @@ class StripeEventListener
         $convertsTrialWithoutCard = $this->convertsTrialWithoutCard($account, $payload);
 
         $this->syncPlanFromSubscription($account, $payload);
-        $this->recordFirstPayment($account, $payload);
+        // No first payment here: a trial's end sends an `active` update
+        // before Stripe attempts the charge (it turns `past_due` when that
+        // charge fails), so only a paid invoice proves the Account paid. The
+        // same holds for `paid_without_trial_at` (see StripeInvoiceListener).
         $this->redeemOffer($account, $payload);
         $this->recordTrialEnd($subscription, $payload);
         $this->recordCancellationFacts($subscription, $payload);
-        $this->recordPaidWithoutTrial($subscription, $payload);
 
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Updated, $payload, $previousPlan);
         TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && (($this->convertedFromTrial($payload) && $this->isNowActive($payload)) || $convertsTrialWithoutCard), (string) $account->id, $payload);
@@ -310,25 +311,6 @@ class StripeEventListener
             is_string($feedback) ? $feedback : null,
             $canceledAt,
         );
-    }
-
-    /**
-     * The repeat card that skipped its Trial was charged after all.
-     *
-     * @param  array<string, mixed>  $payload
-     */
-    private function recordPaidWithoutTrial(?Subscription $subscription, array $payload): void
-    {
-        if ($subscription === null || ! $this->isNowActive($payload)) {
-            return;
-        }
-
-        if (blank($subscription->trial_skipped_at) || filled($subscription->paid_without_trial_at)) {
-            return;
-        }
-
-        $subscription->paid_without_trial_at = now();
-        $subscription->save();
     }
 
     /**

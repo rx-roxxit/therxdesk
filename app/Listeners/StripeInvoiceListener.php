@@ -49,6 +49,8 @@ class StripeInvoiceListener
                 return;
             }
 
+            $this->recordPaidWithoutTrial($account, $event->payload);
+
             if (filled($account->first_invoice_id)) {
                 return;
             }
@@ -71,5 +73,35 @@ class StripeInvoiceListener
                 'payload' => $event->payload,
             ]);
         }
+    }
+
+    /**
+     * The repeat card whose Trial was skipped was actually charged: the
+     * subscription's own active update cannot tell that charge from the
+     * `active` moment before Stripe attempts it, so the paid invoice does.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordPaidWithoutTrial(Account $account, array $payload): void
+    {
+        $stripeSubscriptionId = data_get($payload, 'data.object.subscription');
+
+        if (! is_string($stripeSubscriptionId) || blank($stripeSubscriptionId)) {
+            return;
+        }
+
+        $subscription = $account->subscriptions()
+            ->where('stripe_id', $stripeSubscriptionId)
+            ->first();
+
+        if ($subscription === null) {
+            return;
+        }
+
+        if (blank($subscription->trial_skipped_at) || filled($subscription->paid_without_trial_at)) {
+            return;
+        }
+
+        $subscription->forceFill(['paid_without_trial_at' => now()])->save();
     }
 }
