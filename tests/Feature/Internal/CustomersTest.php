@@ -138,7 +138,7 @@ test('customer detail returns the owner, plan, Subscription, usage, members and 
         ->assertJsonPath('owner.email', 'ann@example.com')
         ->assertJsonPath('plan.slug', 'standard')
         ->assertJsonPath('plan.quota_bytes', 5368709120)
-        ->assertJsonPath('plan.ai_credits_per_month', 6250)
+        ->assertJsonPath('plan.ai_credits_per_month', 10000)
         ->assertJsonPath('subscription.status', 'active')
         ->assertJsonPath('subscription.interval', 'monthly')
         ->assertJsonPath('subscription.amount', 1790)

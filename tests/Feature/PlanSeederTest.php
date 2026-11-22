@@ -17,11 +17,11 @@ test('seeder creates the four plans of the catalog', function () {
         ->and($mini->quota_bytes)->toBe(2147483648)
         ->and($mini->ai_credits_per_month)->toBe(2500)
         ->and($standard->quota_bytes)->toBe(5368709120)
-        ->and($standard->ai_credits_per_month)->toBe(6250)
+        ->and($standard->ai_credits_per_month)->toBe(10000)
         ->and($plus->quota_bytes)->toBe(21474836480)
         ->and($plus->ai_credits_per_month)->toBe(25000)
         ->and($max->quota_bytes)->toBe(53687091200)
-        ->and($max->ai_credits_per_month)->toBe(62500)
+        ->and($max->ai_credits_per_month)->toBe(40000)
         ->and(Plan::count())->toBe(4);
 });
 
