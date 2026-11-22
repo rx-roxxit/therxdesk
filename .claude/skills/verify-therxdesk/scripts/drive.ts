@@ -195,6 +195,8 @@ const SELLING_JOURNEYS = [
     'welcome-checkout',
     'welcome-offer',
     'billing',
+    'complimentary',
+    'complimentary-ended',
     'payment-retry',
     'past-due',
     'lapsed',
@@ -1442,6 +1444,169 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             new URL(page.url()).hostname === 'billing.stripe.com' &&
                 (await portalPlan.count()) > 0,
             new URL(page.url()).hostname,
+        );
+    },
+
+    /**
+     * features/complimentary.md
+     *
+     * The fixture Account was given a Complimentary Plan (`complimentary.sh
+     * up`): the plan step shows the Plan with no cards and no Checkout,
+     * continuing opens the Schedule, and billing shows the same state with no
+     * price, payment section or invoices.
+     */
+    complimentary: async (run) => {
+        const { page } = run;
+        const planName = process.env.VERIFY_COMPLIMENTARY_PLAN;
+        const accountId = process.env.VERIFY_COMPLIMENTARY_ACCOUNT;
+
+        if (!planName || !accountId) {
+            throw new Error(
+                'run complimentary.sh up first (no VERIFY_COMPLIMENTARY_* env)',
+            );
+        }
+
+        await signIn(run);
+        await page.goto(`${run.baseUrl}/welcome/plan`);
+
+        await page.locator(tid('@welcome-persona-continue')).waitFor();
+        await page.locator(tid('@welcome-persona-creator')).click();
+        await page.locator(tid('@welcome-persona-continue')).click();
+
+        await page.locator(tid('@welcome-goals-continue')).waitFor();
+        await page.locator(tid('@welcome-goal-save_time')).click();
+        await page.locator(tid('@welcome-goals-continue')).click();
+
+        await page.locator(tid('@welcome-software-continue')).waitFor();
+        await page.locator(tid('@welcome-software-none')).click();
+        await page.locator(tid('@welcome-software-continue')).click();
+
+        await page.locator(tid('@welcome-plan-complimentary')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('complimentary-plan');
+
+        const shownName = await page
+            .locator(tid('@welcome-plan-complimentary-plan'))
+            .innerText();
+        const block = await page
+            .locator(tid('@welcome-plan-complimentary'))
+            .innerText();
+        run.check(
+            'the plan step shows the given Plan',
+            shownName.trim() === planName,
+            shownName,
+        );
+        run.check(
+            'the plan step says The RX Desk gave the Plan',
+            block.includes('Plan given by The RX Desk'),
+            block,
+        );
+        run.check(
+            'the plan step shows no end date',
+            (await page
+                .locator(tid('@welcome-plan-complimentary-no-end'))
+                .count()) === 1,
+            block,
+        );
+
+        const cards = await page
+            .locator('[data-testid^="plan-card-"]')
+            .count();
+        const interval = await page.locator(tid('@plan-interval-monthly')).count();
+        run.check(
+            'the plan step shows no Plan cards and no interval switch',
+            cards === 0 && interval === 0,
+            { cards, interval },
+        );
+
+        await page.locator(tid('@welcome-plan-complimentary-continue')).click();
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 30_000,
+        });
+        await page.waitForLoadState('networkidle');
+        await page.locator(tid('@schedule-view-list')).waitFor();
+        await run.step('complimentary-schedule');
+
+        await page.goto(`${run.baseUrl}/settings/account/billing`);
+        await page.locator(tid('@billing-current-plan')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('complimentary-billing');
+
+        const billingName = await page
+            .locator(tid('@billing-current-plan-name'))
+            .innerText();
+        const billingBlock = await page
+            .locator(tid('@billing-current-plan-complimentary'))
+            .innerText();
+        run.check(
+            'billing shows the given Plan',
+            billingName.includes(planName),
+            billingName,
+        );
+        run.check(
+            'billing says The RX Desk gave the Plan',
+            billingBlock.includes('Plan given by The RX Desk'),
+            billingBlock,
+        );
+        run.check(
+            'billing shows no end date',
+            (await page
+                .locator(tid('@billing-current-plan-complimentary-no-end'))
+                .count()) === 1,
+            billingBlock,
+        );
+
+        const hidden = [
+            'billing-change-plan',
+            'billing-subscribe',
+            'billing-manage-stripe',
+            'billing-payment-methods',
+            'billing-tab-invoices',
+            'billing-plan-dialog',
+        ];
+        const shown: string[] = [];
+
+        for (const testid of hidden) {
+            if ((await page.locator(tid(`@${testid}`)).count()) > 0) {
+                shown.push(testid);
+            }
+        }
+
+        run.check(
+            'billing hides checkout, payments, invoices and the plan dialog',
+            shown.length === 0,
+            shown,
+        );
+    },
+
+    /**
+     * features/complimentary.md (run after complimentary.sh end on the same fixture)
+     *
+     * The Complimentary Plan has ended, so the Account is Lapsed: the Schedule
+     * sends it to the plan step, which offers the cards again.
+     */
+    'complimentary-ended': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('complimentary-ended-plan');
+
+        run.check(
+            'the plan step offers the cards again',
+            (await page.locator(tid('@plan-card-mini')).count()) === 1,
+            null,
+        );
+        run.check(
+            'the Complimentary state is gone',
+            (await page.locator(tid('@welcome-plan-complimentary')).count()) ===
+                0,
+            null,
         );
     },
 

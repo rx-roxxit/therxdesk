@@ -19,6 +19,9 @@ source "$(dirname "$0")/env.sh"
 # The journey env for the sandbox Offers (Offers themselves are never deleted).
 "$(dirname "$0")/offer.sh" down
 
+# Ends the fixture's Complimentary Plan and removes the journey env.
+"$(dirname "$0")/complimentary.sh" down
+
 # Back to .env's mode: stop the Stripe listener, recreate app without the overlay.
 "$(dirname "$0")/selling.sh" down
 

@@ -27,9 +27,17 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/accounts/{uuid}` (admin): the Customer detail, top level. `id`, `name`, `created_at`, `owner`
   (`id`, `name`, `email`, `email_verified_at`), `access_state` (null until its source exists), `plan` (`id`, `slug`,
   `name`, `quota_bytes`, `ai_credits_per_month`), `subscription` (`status`, `interval`, `amount` in cents,
-  `trial_ends_at`, `ends_at`, `created_at`, or null), `storage` (`used_bytes`, `quota_bytes`), `members_count`,
+  `trial_ends_at`, `ends_at`, `created_at`, or null), `complimentary` (`in_force`, `since`, `until`, or null until one
+  was ever given), `storage` (`used_bytes`, `quota_bytes`), `members_count`,
   `recent_posts` (the 10 newest; `status`, `publish_status`, `error_message`, `platform`, timestamps, never
   content) and `lifecycle_emails` (null until the email log exists).
+- `POST /internal/v1/accounts/{uuid}/complimentary` (admin): `plan_id` (any Plan, archived included) and an optional
+  `ends_at` (after now, at most `2037-12-31`). Gives the Plan outside Stripe: access, Quota and AI credits follow it at
+  once. Answers `{ "id", "plan": { "id", "slug", "name" }, "complimentary": { "since", "until", "in_force" } }`. An
+  Account whose `blocked_country_at` is set or that has an active Subscription answers 422 and nothing changes.
+- `POST /internal/v1/accounts/{uuid}/complimentary/end` (admin): an optional `ends_at`, defaulting to 30 days ahead;
+  an earlier date is allowed, at most `2037-12-31`. When the date passes the Account is Lapsed. An Account that never
+  had a Complimentary Plan answers 422.
 - `GET /internal/v1/audit-log` (admin): paginated, newest first. A row has `id`, `actor`, `action`, `target_type`
   (the table), `target_id`, `before`, `after` and `created_at`. Every internal write and every CLI write records
   one (the CLI actor is `cli`); a password or secret key is never stored.
@@ -70,7 +78,8 @@ prints them. `selling.sh down` removes the file.
 - `POST /internal/v1/offers/{uuid}/end` (admin): ends the Offer now; a second call is a no-op and records nothing.
   Offers are never deleted and an ended Offer is read-only.
 - A Stripe failure answers `502` and saves nothing. Every write above that changes something records an audit row
-  with the admin email from `X-Internal-Admin-Email` (`offer.create`, `offer.update`, `offer.end`).
+  with the admin email from `X-Internal-Admin-Email` (`offer.create`, `offer.update`, `offer.end`,
+  `account.complimentary.give`, `account.complimentary.end`).
 
 ## Helper
 
@@ -100,6 +109,8 @@ $V/internal.sh GET /offers --token admin
 $V/internal.sh POST /offers --token admin --body '{"slug":"spring-sale","name":"Spring sale","reach":"general","coupon":{"type":"percent","percent_off":20,"duration":"repeating","duration_in_months":3},"trial_days":14,"starts_at":"2026-11-22T00:00:00Z","show_banner":true}'
 $V/internal.sh PATCH /offers/<uuid> --token admin --body '{"name":"Spring sale extended","show_banner":false}'
 $V/internal.sh POST /offers/<uuid>/end --token admin
+$V/internal.sh POST /accounts/<uuid>/complimentary --token admin --body '{"plan_id":"<uuid>"}'
+$V/internal.sh POST /accounts/<uuid>/complimentary/end --token admin --body '{"ends_at":"2037-12-31"}'
 $V/internal.sh GET /health --token admin
 ```
 
