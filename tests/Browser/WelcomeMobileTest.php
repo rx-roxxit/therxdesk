@@ -137,5 +137,30 @@ test('the welcome header fits a phone and the continue button stays on screen', 
         'persona' => Persona::Agency->value,
         'goals' => [Goal::SaveTime->value],
         'previous_software' => PreviousSoftware::Buffer->value,
-    ], 'welcome-plan-continue', 'plan-card-', true],
+    ], null, 'plan-card-', true],
 ]);
+
+test('the plan step shows the four cards on a phone without JavaScript errors', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $this->actingAs(welcomeMobileOwner([
+        'persona' => Persona::Agency->value,
+        'goals' => [Goal::SaveTime->value],
+        'previous_software' => PreviousSoftware::Buffer->value,
+    ]));
+
+    $page = visit(route('app.welcome.plan'))->resize(390, 844);
+    waitFor($page, '@plan-card-mini');
+    waitForWebFonts($page);
+
+    expect($page->script(
+        "document.querySelectorAll('[data-testid^=\"plan-card-\"]').length",
+    ))->toBe(4);
+
+    expect($page->script(
+        "[...document.querySelectorAll('[data-testid^=\"plan-select-\"]')].every((button) => button.getBoundingClientRect().width > 0)",
+    ))->toBeTrue();
+
+    $page->assertMissing('@welcome-actions')
+        ->assertNoJavaScriptErrors();
+});

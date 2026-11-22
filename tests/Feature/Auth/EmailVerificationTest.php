@@ -96,6 +96,70 @@ test('already verified user visiting verification link is redirected without fir
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 });
 
+test('a selling mode owner without access goes back to the plan step after verifying', function () {
+    config(['trypost.self_hosted' => false]);
+    $user = User::factory()->unverified()->create();
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    );
+
+    $this->actingAs($user)
+        ->get($verificationUrl)
+        ->assertRedirect(route('app.welcome.plan'));
+
+    expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+});
+
+test('a selling mode owner already verified without access goes back to the plan step', function () {
+    config(['trypost.self_hosted' => false]);
+    $user = User::factory()->create();
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    );
+
+    $this->actingAs($user)
+        ->get($verificationUrl)
+        ->assertRedirect(route('app.welcome.plan'));
+});
+
+test('a selling mode member without access is held on the subscription required screen', function () {
+    config(['trypost.self_hosted' => false]);
+    $owner = User::factory()->create();
+    $member = User::factory()->unverified()->create(['account_id' => $owner->account_id]);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $member->id, 'hash' => sha1($member->email)]
+    );
+
+    $this->actingAs($member)
+        ->get($verificationUrl)
+        ->assertRedirect(route('app.welcome.subscription-required'));
+});
+
+test('a selling mode owner with app access keeps the calendar redirect', function () {
+    config(['trypost.self_hosted' => false]);
+    $user = User::factory()->unverified()->create();
+    subscribeAccount($user->account);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)]
+    );
+
+    $this->actingAs($user)
+        ->get($verificationUrl)
+        ->assertRedirect(route('app.calendar', absolute: false).'?verified=1');
+});
+
 test('verification email has no manage-notifications link — it is a transactional, unauthenticated email', function () {
     $user = User::factory()->unverified()->create();
 

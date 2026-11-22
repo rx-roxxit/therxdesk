@@ -146,7 +146,7 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 `ok`/`FAIL` per check and exits non-zero when the journey fails.
 
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
-`selling-mode`, `welcome-checkout`, `billing`, `media-on-r2` (selling mode, listed in `SELLING_JOURNEYS`;
+`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `media-on-r2` (selling mode, listed in `SELLING_JOURNEYS`;
 `media-on-r2` also needs `media.sh up`). Every journey first checks the mode php-fpm serves and stops
 with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
 journey.

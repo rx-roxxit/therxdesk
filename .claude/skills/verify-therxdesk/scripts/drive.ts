@@ -187,6 +187,7 @@ const servedMode = async (page: Page): Promise<Mode | null> => {
 const SELLING_JOURNEYS = [
     'register',
     'selling-mode',
+    'welcome-plan',
     'welcome-checkout',
     'billing',
     'media-on-r2',
@@ -206,6 +207,104 @@ const testCardExpiry = (): string => {
     const year = (new Date().getUTCFullYear() + 2) % 100;
 
     return `12${String(year).padStart(2, '0')}`;
+};
+
+/** Mailpit, where the dev stack sends every email. */
+const MAILPIT_URL = process.env.VERIFY_MAILPIT_URL ?? 'http://localhost:8025';
+
+type MailpitMessage = {
+    ID: string;
+    To?: Array<{ Address: string }>;
+};
+
+/**
+ * Ticks the Terms of Service consent checkbox Stripe Checkout requires. The
+ * hosted page draws it differently from release to release and may keep it in
+ * a frame, so it is found at runtime; `false` when the session does not ask.
+ */
+const tickTermsConsent = async (page: Page): Promise<boolean> => {
+    const checkboxes = [
+        page.getByRole('checkbox', {
+            name: /terms of service|terms and conditions|i agree/i,
+        }),
+        page.locator('#termsOfServiceConsentCheckbox'),
+        page.locator('input[name="terms_of_service_consent"]'),
+    ];
+
+    for (const box of checkboxes) {
+        const count = await box.count();
+
+        if (count > 0 && (await box.first().isVisible())) {
+            await box.first().check();
+
+            return true;
+        }
+    }
+
+    for (const frame of page.frames()) {
+        const box = frame
+            .getByRole('checkbox', {
+                name: /terms of service|terms and conditions|i agree/i,
+            })
+            .first();
+
+        if ((await box.count()) > 0 && (await box.isVisible())) {
+            await box.check();
+
+            return true;
+        }
+    }
+
+    return false;
+};
+
+/**
+ * The newest Mailpit message to that address, read through its HTTP API (the
+ * same inbox mail.sh prints).
+ */
+const newestMailFor = async (
+    email: string,
+): Promise<MailpitMessage | null> => {
+    const response = await fetch(
+        `${MAILPIT_URL}/api/v1/messages?limit=50`,
+    );
+
+    if (!response.ok) {
+        throw new Error(`Mailpit answered ${response.status}`);
+    }
+
+    const body = (await response.json()) as { messages?: MailpitMessage[] };
+
+    return (
+        (body.messages ?? []).find((message) =>
+            (message.To ?? []).some((to) => to.Address === email),
+        ) ?? null
+    );
+};
+
+/** The verification link inside a Mailpit message, or null. */
+const verificationLink = async (message: MailpitMessage): Promise<string | null> => {
+    const response = await fetch(
+        `${MAILPIT_URL}/api/v1/message/${message.ID}`,
+    );
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const detail = (await response.json()) as {
+        Text?: string;
+        HTML?: string;
+    };
+    const source = `${detail.Text ?? ''}\n${detail.HTML ?? ''}`.replace(
+        /&amp;/g,
+        '&',
+    );
+    const match = source.match(
+        /https?:\/\/[^"'<>\\\s]+\/verify-email\/[^"'<>\\\s]+/,
+    );
+
+    return match?.[0] ?? null;
 };
 
 /**
@@ -241,6 +340,7 @@ const payOnStripeCheckout = async (run: Run): Promise<void> => {
     }
 
     await form.locator('#payment-numberInput').waitFor();
+    await tickTermsConsent(page);
     await run.step('stripe-checkout');
 
     await form.locator('#payment-numberInput').fill(TEST_CARD);
@@ -502,6 +602,221 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
     },
 
+    /**
+     * features/welcome-checkout.md
+     *
+     * The plan step alone: the `/register` link's plan and interval, the four
+     * cards, the Monthly/Yearly switch, the verify-email dialog and a Checkout
+     * with Terms consent and no promotion codes, then Processing and Schedule.
+     */
+    'welcome-plan': async (run) => {
+        const { page } = run;
+        const email = guestEmail();
+        run.note('signupEmail', email);
+
+        await page.goto(
+            `${run.baseUrl}/register?plan=plus&interval=yearly`,
+        );
+        await page.locator(tid('@register-user-button')).waitFor();
+        await page.locator(tid('@register-name')).fill('Verify Plan');
+        await page.locator(tid('@register-email')).fill(email);
+        await page
+            .locator(tid('@register-password'))
+            .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-user-button')).click();
+        await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
+            timeout: 30_000,
+        });
+
+        await page.locator(tid('@welcome-persona-continue')).waitFor();
+        await page.locator(tid('@welcome-persona-creator')).click();
+        await page.locator(tid('@welcome-persona-continue')).click();
+        await page.locator(tid('@welcome-goals-continue')).waitFor();
+        await page.locator(tid('@welcome-goal-save_time')).click();
+        await page.locator(tid('@welcome-goals-continue')).click();
+        await page.locator(tid('@welcome-software-continue')).waitFor();
+        await page.locator(tid('@welcome-software-none')).click();
+        await page.locator(tid('@welcome-software-continue')).click();
+
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('welcome-plan');
+
+        const cards = await page
+            .locator('[data-testid^="plan-card-"]')
+            .evaluateAll((elements) =>
+                elements.map((element) => (element as HTMLElement).dataset.testid),
+            );
+        run.check(
+            'the plan step shows four cards in Catalog order',
+            JSON.stringify(cards) ===
+                JSON.stringify([
+                    'plan-card-mini',
+                    'plan-card-standard',
+                    'plan-card-plus',
+                    'plan-card-max',
+                ]),
+            cards,
+        );
+
+        const yearlyPressed = await page
+            .locator(tid('@plan-interval-yearly'))
+            .getAttribute('aria-pressed');
+        run.check(
+            'the yearly interval from the register link is preselected',
+            yearlyPressed === 'true',
+            yearlyPressed,
+        );
+
+        const plusSelected = await page
+            .locator(tid('@plan-card-plus'))
+            .getAttribute('data-selected');
+        run.check(
+            'the Plus plan from the register link is preselected',
+            plusSelected === 'true',
+            plusSelected,
+        );
+
+        const yearlyPlus = await page.locator(tid('@plan-price-plus')).innerText();
+        const yearlyUnit = await page
+            .locator(tid('@plan-price-unit-plus'))
+            .innerText();
+        run.check(
+            'yearly shows Plus at $299.00 a year',
+            yearlyPlus.includes('$299.00') && yearlyUnit.includes('/year'),
+            { yearlyPlus, yearlyUnit },
+        );
+
+        await page.locator(tid('@plan-interval-monthly')).click();
+        await page.waitForFunction(() => {
+            return document
+                .querySelector('[data-testid="plan-price-plus"]')
+                ?.textContent?.includes('$29.90');
+        });
+        const monthlyPlus = await page
+            .locator(tid('@plan-price-plus'))
+            .innerText();
+        run.check(
+            'monthly shows Plus at $29.90 a month',
+            monthlyPlus.includes('$29.90'),
+            monthlyPlus,
+        );
+
+        await page.locator(tid('@plan-interval-yearly')).click();
+        await page.waitForFunction(() => {
+            return document
+                .querySelector('[data-testid="plan-price-plus"]')
+                ?.textContent?.includes('$299.00');
+        });
+        await run.step('welcome-plan-yearly');
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        const clipped = await page
+            .locator('[data-testid^="plan-select-"]')
+            .evaluateAll((elements) =>
+                elements
+                    .filter(
+                        (element) =>
+                            element.scrollWidth > element.clientWidth,
+                    )
+                    .map((element) => (element as HTMLElement).dataset.testid),
+            );
+        run.check(
+            'every plan button fits its slot at 390px',
+            clipped.length === 0,
+            clipped,
+        );
+        await run.step('welcome-plan-phone');
+        await page.setViewportSize({ width: 1440, height: 900 });
+
+        // The new Owner's email is unverified: the first press opens the dialog.
+        await page.locator(tid('@plan-select-plus')).click();
+        await page.locator(tid('@verify-email-dialog')).waitFor();
+        await run.step('verify-dialog');
+
+        await page.locator(tid('@verify-email-resend')).click();
+
+        let message: MailpitMessage | null = null;
+
+        for (let attempt = 0; attempt < 30 && message === null; attempt++) {
+            message = await newestMailFor(email);
+
+            if (message === null) {
+                await page.waitForTimeout(1_000);
+            }
+        }
+
+        const link =
+            message === null ? null : await verificationLink(message);
+        run.check(
+            'the resend delivers a verification link',
+            typeof link === 'string',
+            link,
+        );
+
+        if (link === null) {
+            throw new Error('no verification link in Mailpit');
+        }
+
+        await page.goto(link);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await run.step('after-verification');
+
+        await page.locator(tid('@plan-select-plus')).click();
+        await page.waitForURL(
+            (url) => url.hostname === 'checkout.stripe.com',
+            { timeout: 60_000 },
+        );
+
+        const hasTerms = await tickTermsConsent(page);
+        run.check(
+            'Stripe Checkout asks for Terms consent',
+            hasTerms,
+            hasTerms,
+        );
+
+        const promotionCode = page.getByText('Promotion code', {
+            exact: false,
+        });
+        run.check(
+            'Stripe Checkout offers no promotion code field',
+            (await promotionCode.count()) === 0,
+            await promotionCode.count(),
+        );
+        await run.step('stripe-checkout-terms');
+
+        await payOnStripeCheckout(run);
+
+        await page.waitForURL((url) => url.pathname === '/billing/processing', {
+            timeout: 90_000,
+        });
+        await run.step('processing');
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 90_000,
+        });
+        await page.waitForLoadState('networkidle');
+        await run.step('after-checkout');
+
+        const auth = await page.evaluate(() => {
+            const props = window.history.state?.page?.props?.auth;
+
+            return {
+                hasActiveSubscription: props?.hasActiveSubscription ?? null,
+                plan: props?.plan?.name ?? null,
+            };
+        });
+        run.check(
+            'the Account has an active subscription after the webhook',
+            auth.hasActiveSubscription === true,
+            auth,
+        );
+        run.check('the Account is on Plus', auth.plan === 'Plus', auth.plan);
+    },
+
     /** features/welcome-checkout.md */
     'welcome-checkout': async (run) => {
         const { page } = run;
@@ -529,6 +844,11 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             (await page.locator(tid('@welcome-plan-reviews')).count()) === 0,
             await page.locator(tid('@welcome-plan-reviews')).count(),
         );
+        run.check(
+            'the plan step shows the four Plans',
+            (await page.locator('[data-testid^="plan-card-"]').count()) === 4,
+            await page.locator('[data-testid^="plan-card-"]').count(),
+        );
         await run.step('welcome-plan');
 
         const price = await page.locator(tid('@plan-price-mini')).innerText();
@@ -538,7 +858,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             price,
         );
 
-        await page.locator(tid('@welcome-plan-continue')).click();
+        await page.locator(tid('@plan-select-mini')).click();
         await payOnStripeCheckout(run);
 
         // Back in the app, Processing waits for the webhook to give the
@@ -597,11 +917,14 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 .locator(tid('@billing-current-plan-badge'))
                 .innerText(),
         };
+        // After welcome-checkout the first checkout is on the Catalog trial,
+        // so the badge says "Free trial"; a run after the trial says "Active".
         run.check(
-            'the current plan is Mini, $11.90/month, Active',
+            'the current plan is Mini, $11.90/month, on a Free trial or Active',
             currentPlan.name.includes('Mini') &&
                 currentPlan.price.includes('$11.90') &&
-                currentPlan.badge.includes('Active'),
+                (currentPlan.badge.includes('Free trial') ||
+                    currentPlan.badge.includes('Active')),
             currentPlan,
         );
 

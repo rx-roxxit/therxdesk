@@ -26,11 +26,12 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 
 - Journey: `$V/drive.sh billing`, right after `welcome-checkout` on the same fixture (it needs the Mini monthly
   subscription that journey makes; do not run `fixture.sh up` in between).
-- Checks: Mini, `$11.90`, Active; the `4242` card listed; the dialog's Yearly shows `$9.92` a month; choosing
-  Standard (`@plan-select-standard`) makes it the current plan at `$17.90`; "Manage on Stripe" opens
-  `billing.stripe.com` on the Standard subscription at `$17.90 per month`.
-- Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | active | <the Standard monthly
-  Price id in plan_prices>`.
+- Checks: Mini, `$11.90`, Free trial (after `welcome-checkout` the first checkout is on the Catalog trial; the
+  journey also accepts Active for a subscription past its trial); the `4242` card listed; the dialog's Yearly shows
+  `$9.92` a month; choosing Standard (`@plan-select-standard`) makes it the current plan at `$17.90`; "Manage on
+  Stripe" opens `billing.stripe.com` on the Standard subscription at `$17.90 per month`.
+- Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | trialing | <the Standard monthly
+  Price id in plan_prices>` right after the run (the swap keeps the trial).
 
 ## Gotchas
 

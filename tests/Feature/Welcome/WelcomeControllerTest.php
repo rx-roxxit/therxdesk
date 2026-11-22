@@ -12,10 +12,12 @@ use App\Enums\User\Goal;
 use App\Enums\User\Locale;
 use App\Enums\User\Persona;
 use App\Enums\User\PreviousSoftware;
+use App\Http\Middleware\App\CapturePlan;
 use App\Jobs\PostHog\CaptureAccountEvent;
 use App\Jobs\PostHog\SendEvent;
 use App\Jobs\PostHog\SyncUser;
 use App\Models\Account;
+use App\Models\CatalogSetting;
 use App\Models\Offer;
 use App\Models\Plan;
 use App\Models\SocialAccount;
@@ -184,11 +186,12 @@ test('plan redirects to software until a tool is selected', function () {
         ->assertRedirect(route('app.welcome.software'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect(route('app.welcome.software'));
 });
 
-test('plan shows the entry plan', function () {
+test('plan shows every active plan in catalog order with its labels and the trial', function () {
+    $this->travelTo(now()->startOfSecond());
     completeWelcomeThroughSoftware($this->user);
 
     $this->actingAs($this->user->fresh())
@@ -196,14 +199,95 @@ test('plan shows the entry plan', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('welcome/Plan', false)
-            ->where('plan.slug', 'mini')
-            ->where('plan.workspace_limit', null)
-            ->where('plan.quota_bytes', 2147483648)
-            ->where('plan.ai_credits_per_month', 2500)
-            ->where('plan.monthly_amount', 1190)
-            ->where('plan.yearly_amount', 11900)
+            ->has('plans', 4)
+            ->where('plans.0.slug', 'mini')
+            ->where('plans.0.name', 'Mini')
+            ->where('plans.0.workspace_limit', null)
+            ->where('plans.0.quota_bytes', 2147483648)
+            ->where('plans.0.quota_label', '2 GB')
+            ->where('plans.0.ai_credits_per_month', 2500)
+            ->where('plans.0.ai_credits_label', '2,500')
+            ->where('plans.0.monthly_amount', 1190)
+            ->where('plans.0.yearly_amount', 11900)
+            ->where('plans.1.slug', 'standard')
+            ->where('plans.2.slug', 'plus')
+            ->where('plans.3.slug', 'max')
+            ->where('selected.plan', 'mini')
+            ->where('selected.interval', 'monthly')
+            ->where('offer', null)
+            ->where('trial.days', 7)
+            ->where('trial.first_charge_at', now()->addDays(7)->toIso8601String())
         );
 });
+
+test('the trial days come from the catalog', function () {
+    CatalogSetting::factory()->create(['id' => 1, 'trial_days' => 14]);
+    completeWelcomeThroughSoftware($this->user);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertInertia(fn ($page) => $page->where('trial.days', 14));
+});
+
+test('the plan step preselects the plan and interval kept from the register link', function () {
+    completeWelcomeThroughSoftware($this->user);
+
+    $this->actingAs($this->user->fresh())
+        ->withSession([
+            CapturePlan::PLAN_SESSION_KEY => 'plus',
+            CapturePlan::INTERVAL_SESSION_KEY => 'yearly',
+        ])
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('selected.plan', 'plus')
+            ->where('selected.interval', 'yearly')
+        );
+});
+
+test('the plan step drops a kept plan or interval that is no longer valid', function () {
+    completeWelcomeThroughSoftware($this->user);
+
+    $this->actingAs($this->user->fresh())
+        ->withSession([
+            CapturePlan::PLAN_SESSION_KEY => 'enterprise',
+            CapturePlan::INTERVAL_SESSION_KEY => 'weekly',
+        ])
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('selected.plan', 'mini')
+            ->where('selected.interval', 'monthly')
+        )
+        ->assertSessionMissing(CapturePlan::PLAN_SESSION_KEY)
+        ->assertSessionMissing(CapturePlan::INTERVAL_SESSION_KEY);
+});
+
+test('an account that had a trial gets no new one', function (Closure $setup) {
+    completeWelcomeThroughSoftware($this->user);
+    $setup($this->user->account->fresh());
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertInertia(fn ($page) => $page->where('trial', null));
+})->with([
+    'a generic trial' => [fn (Account $account) => $account->update(['trial_ends_at' => now()->subDay()])],
+    'a subscription that started on a trial' => [fn (Account $account) => $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_trial',
+        'stripe_status' => 'canceled',
+        'stripe_price' => 'price_monthly_test',
+        'trial_ends_at' => now()->subMonth(),
+        'ends_at' => now()->subDay(),
+    ])],
+    'a cancelled billable subscription' => [fn (Account $account) => $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_canceled',
+        'stripe_status' => 'canceled',
+        'stripe_price' => 'price_monthly_test',
+        'ends_at' => now()->subDay(),
+    ])],
+]);
 
 test('plan sends a claimed trial offer only to an account that may use it', function (Closure $setup, bool $claims, bool $offered) {
     $trial = Offer::factory()->freeTrial()->create();
@@ -240,7 +324,16 @@ test('plan sends a claimed trial offer only to an account that may use it', func
     ]), true, false],
 ]);
 
-test('plan store sends the owner to Stripe checkout on the entry plan monthly price', function () {
+test('plan store requires a plan and an interval', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->post(route('app.welcome.plan.store'))
+        ->assertSessionHasErrors(['plan', 'interval']);
+});
+
+test('plan store sends the owner to Stripe checkout on the selected plan and monthly price', function () {
     completeWelcomeThroughSoftware($this->user);
     $socials = Plan::where('slug', 'mini')->firstOrFail();
     givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
@@ -256,18 +349,52 @@ test('plan store sends the owner to Stripe checkout on the entry plan monthly pr
         ->andReturn(redirect('https://checkout.stripe.test/session'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
-        ->assertRedirect('https://checkout.stripe.test/session');
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertRedirect('https://checkout.stripe.test/session')
+        ->assertSessionHas(CapturePlan::PLAN_SESSION_KEY, 'mini')
+        ->assertSessionHas(CapturePlan::INTERVAL_SESSION_KEY, 'monthly');
 });
 
-test('plan store fails loudly when the entry plan price is not configured', function () {
+test('plan store opens the yearly price when yearly is picked', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $plus = Plan::where('slug', 'plus')->firstOrFail();
+    givePlanPrice($plus, Interval::Monthly, 'price_plus_monthly');
+    givePlanPrice($plus, Interval::Yearly, 'price_plus_yearly');
+
+    $this->mock(StartSubscriptionCheckout::class)
+        ->shouldReceive('redirect')
+        ->once()
+        ->withArgs(fn ($account, $priceId, $cancelUrl, $plan): bool => $priceId === 'price_plus_yearly'
+            && $plan->is($plus))
+        ->andReturn(redirect('https://checkout.stripe.test/session'));
+
+    $this->actingAs($this->user->fresh())
+        ->post(route('app.welcome.plan.store'), ['plan' => 'plus', 'interval' => 'yearly'])
+        ->assertRedirect('https://checkout.stripe.test/session')
+        ->assertSessionHas(CapturePlan::PLAN_SESSION_KEY, 'plus')
+        ->assertSessionHas(CapturePlan::INTERVAL_SESSION_KEY, 'yearly');
+});
+
+test('an unverified owner cannot start checkout', function () {
+    $this->user->update(['email_verified_at' => null]);
+    completeWelcomeThroughSoftware($this->user);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
+
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertStatus(403);
+});
+
+test('plan store fails loudly when the selected plan price is not configured', function () {
     completeWelcomeThroughSoftware($this->user);
     Plan::where('slug', 'mini')->firstOrFail()->priceFor(Interval::Monthly)?->update(['stripe_price_id' => null]);
 
     $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertStatus(500);
 });
 
@@ -339,7 +466,7 @@ test('welcome funnel captures every step up to the plan, in order', function () 
         ->assertRedirect(route('app.welcome.plan'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect('https://checkout.stripe.test/session');
 
     $funnel = array_values(array_diff(WelcomeEvent::funnel(), [CheckoutEvent::Started->value]));
@@ -381,7 +508,7 @@ test('welcome steps redirect to calendar for subscribed accounts', function (str
     'software' => ['app.welcome.software', 'get'],
     'software store' => ['app.welcome.software.store', 'post', ['previous_software' => PreviousSoftware::Buffer->value]],
     'plan' => ['app.welcome.plan', 'get'],
-    'plan store' => ['app.welcome.plan.store', 'post'],
+    'plan store' => ['app.welcome.plan.store', 'post', ['plan' => 'mini', 'interval' => 'monthly']],
 ]);
 
 test('welcome steps redirect to calendar in self hosted mode', function (string $routeName, string $method, array $payload = []) {
@@ -402,7 +529,7 @@ test('welcome steps redirect to calendar in self hosted mode', function (string 
     'software' => ['app.welcome.software', 'get'],
     'software store' => ['app.welcome.software.store', 'post', ['previous_software' => PreviousSoftware::Buffer->value]],
     'plan' => ['app.welcome.plan', 'get'],
-    'plan store' => ['app.welcome.plan.store', 'post'],
+    'plan store' => ['app.welcome.plan.store', 'post', ['plan' => 'mini', 'interval' => 'monthly']],
 ]);
 
 test('old onboarding routes are not registered', function (string $routeName) {
@@ -460,7 +587,7 @@ test('members without app access are held on the subscription required screen', 
     'software' => ['app.welcome.software', 'get'],
     'software store' => ['app.welcome.software.store', 'post', ['previous_software' => PreviousSoftware::Buffer->value]],
     'plan' => ['app.welcome.plan', 'get'],
-    'plan store' => ['app.welcome.plan.store', 'post'],
+    'plan store' => ['app.welcome.plan.store', 'post', ['plan' => 'mini', 'interval' => 'monthly']],
 ]);
 
 test('subscription required screen renders for members without app access', function () {
@@ -586,7 +713,7 @@ test('plan store hands checkout the offer it tracked', function () {
         ->andReturn(redirect('https://checkout.stripe.test/session'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect('https://checkout.stripe.test/session');
 });
 
@@ -639,7 +766,7 @@ test('a trial without a card starts in the app, without Stripe', function () {
     $this->mock(StartSubscriptionCheckout::class)->shouldReceive('redirect')->never();
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect(route('app.billing.processing', ['from' => 'welcome']));
 
     $account = $this->user->account->fresh();
@@ -651,9 +778,28 @@ test('a trial without a card starts in the app, without Stripe', function () {
         ->and($account->offers()->first()->pivot->redeemed_at)->not->toBeNull();
 
     Bus::assertDispatched(CaptureAccountEvent::class, fn (CaptureAccountEvent $job): bool => $job->event === TrialEvent::Started
-        && $job->properties['offer'] === 'ft7dnc');
+        && $job->properties['offer'] === 'ft7dnc'
+        && $job->properties['interval'] === 'monthly');
     Bus::assertDispatched(SyncUser::class, fn (SyncUser $job): bool => $job->userId === (string) $this->user->id);
     Bus::assertNotDispatched(CaptureAccountEvent::class, fn (CaptureAccountEvent $job): bool => $job->event === CheckoutEvent::Started);
+});
+
+test('a trial without a card records the interval picked', function () {
+    config(['services.posthog.enabled' => true, 'services.posthog.api_key' => 'phc_test']);
+    Bus::fake();
+    completeWelcomeThroughSoftware($this->user);
+    givePlanPrice(Plan::where('slug', 'plus')->firstOrFail(), Interval::Yearly, 'price_plus_yearly');
+    $offer = Offer::factory()->trial(7)->withoutCard()->create(['slug' => 'ft7dnc']);
+    $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
+
+    $this->actingAs($this->user->fresh())
+        ->post(route('app.welcome.plan.store'), ['plan' => 'plus', 'interval' => 'yearly'])
+        ->assertRedirect(route('app.billing.processing', ['from' => 'welcome']));
+
+    expect($this->user->account->fresh()->plan->slug)->toBe('plus');
+
+    Bus::assertDispatched(CaptureAccountEvent::class, fn (CaptureAccountEvent $job): bool => $job->event === TrialEvent::Started
+        && $job->properties['interval'] === 'yearly');
 });
 
 test('a second submit does not start the trial without a card again', function () {
@@ -665,8 +811,8 @@ test('a second submit does not start the trial without a card again', function (
     $offer = Offer::factory()->trial(7)->withoutCard()->create(['slug' => 'ft7dnc']);
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
 
-    StartGenericTrial::execute($this->user->fresh(), $socials, $offer);
-    StartGenericTrial::execute($this->user->fresh(), $socials, $offer);
+    StartGenericTrial::execute($this->user->fresh(), $socials, Interval::Monthly, $offer);
+    StartGenericTrial::execute($this->user->fresh(), $socials, Interval::Monthly, $offer);
 
     Bus::assertDispatchedTimes(CaptureAccountEvent::class, 1);
 });
@@ -685,7 +831,7 @@ test('a trial without a card whose last place went opens the full price checkout
         ->andReturn(redirect('https://checkout.stripe.test/session'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect('https://checkout.stripe.test/session');
 
     expect($this->user->account->fresh()->trial_ends_at)->toBeNull()
@@ -707,7 +853,7 @@ test('an offer that ends before the plan is submitted opens the full price check
         ->andReturn(redirect('https://checkout.stripe.test/session'));
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect('https://checkout.stripe.test/session');
 });
 
@@ -716,7 +862,7 @@ test('when a trial without a card ends the owner loses access and is back at the
     $socials = Plan::where('slug', 'mini')->firstOrFail();
     $offer = Offer::factory()->trial(7)->withoutCard()->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
-    StartGenericTrial::execute($this->user->fresh(), $socials, $offer);
+    StartGenericTrial::execute($this->user->fresh(), $socials, Interval::Monthly, $offer);
 
     $this->travel(8)->days();
 
@@ -728,7 +874,10 @@ test('when a trial without a card ends the owner loses access and is back at the
 
     $this->actingAs($this->user->fresh())
         ->get(route('app.welcome.plan'))
-        ->assertInertia(fn ($page) => $page->where('offer', null));
+        ->assertInertia(fn ($page) => $page
+            ->where('offer', null)
+            ->where('trial', null)
+        );
 });
 
 test('an owner on a trial without a card never reaches checkout or a second trial from Welcome', function () {
@@ -737,14 +886,14 @@ test('an owner on a trial without a card never reaches checkout or a second tria
     givePlanPrice($socials, Interval::Monthly, 'price_socials_monthly');
     $offer = Offer::factory()->trial(7)->withoutCard()->create();
     $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
-    StartGenericTrial::execute($this->user->fresh(), $socials, $offer);
+    StartGenericTrial::execute($this->user->fresh(), $socials, Interval::Monthly, $offer);
     $trialEndsAt = $this->user->account->fresh()->trial_ends_at;
     $this->user->account->offers()->attach(Offer::factory()->trial(14)->withoutCard()->create(), ['claimed_at' => now()->addMinute()]);
 
     $this->mock(StartSubscriptionCheckout::class)->shouldReceive('redirect')->never();
 
     $this->actingAs($this->user->fresh())
-        ->post(route('app.welcome.plan.store'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
         ->assertRedirect(route('app.calendar'));
 
     expect($this->user->account->fresh()->trial_ends_at->equalTo($trialEndsAt))->toBeTrue();
