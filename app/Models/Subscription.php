@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\Billing\CancellationType;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Subscription as CashierSubscription;
 use Stripe\Subscription as StripeSubscription;
 
@@ -45,46 +46,70 @@ class Subscription extends CashierSubscription
     }
 
     /**
-     * Records why the subscription ended. A System admin's cancellation is
-     * never replaced by a later Stripe reason.
+     * Records why the subscription ended. The row is re-read under a lock, so
+     * a System admin cancellation written between this handler's load and its
+     * save is seen and never replaced by a later Stripe reason.
      */
     public function recordCancellation(?CancellationType $type, ?string $reason, ?CarbonInterface $at = null): void
     {
-        $changed = false;
+        DB::transaction(function () use ($type, $reason, $at): void {
+            $stored = static::query()->whereKey($this->getKey())->lockForUpdate()->first();
 
-        if ($type !== null && $this->cancellation_type !== CancellationType::Admin && $this->cancellation_type !== $type) {
-            $this->cancellation_type = $type;
-            $changed = true;
-        }
+            if ($stored === null || $stored->cancellation_type === CancellationType::Admin) {
+                return;
+            }
 
-        if (filled($reason) && $this->cancellation_reason !== $reason) {
-            $this->cancellation_reason = $reason;
-            $changed = true;
-        }
+            $changed = false;
 
-        if (blank($this->cancelled_at)) {
-            $this->cancelled_at = $at ?? now();
-            $changed = true;
-        }
+            if ($type !== null && $stored->cancellation_type !== $type) {
+                $stored->cancellation_type = $type;
+                $changed = true;
+            }
 
-        if ($changed) {
-            $this->save();
-        }
+            if (filled($reason) && $stored->cancellation_reason !== $reason) {
+                $stored->cancellation_reason = $reason;
+                $changed = true;
+            }
+
+            if (blank($stored->cancelled_at)) {
+                $stored->cancelled_at = $at ?? now();
+                $changed = true;
+            }
+
+            if (! $changed) {
+                return;
+            }
+
+            $stored->save();
+
+            $this->setRawAttributes($stored->getAttributes(), true);
+        });
     }
 
     /**
      * The Owner resumed before the period ended: the cancellation never
-     * happened, so its facts go.
+     * happened, so its facts go, unless the System admin recorded it.
      */
     public function clearCancellation(): void
     {
-        if (blank($this->cancellation_type) && blank($this->cancellation_reason) && blank($this->cancelled_at)) {
-            return;
-        }
+        DB::transaction(function (): void {
+            $stored = static::query()->whereKey($this->getKey())->lockForUpdate()->first();
 
-        $this->cancellation_type = null;
-        $this->cancellation_reason = null;
-        $this->cancelled_at = null;
-        $this->save();
+            if ($stored === null || $stored->cancellation_type === CancellationType::Admin) {
+                return;
+            }
+
+            if (blank($stored->cancellation_type) && blank($stored->cancellation_reason) && blank($stored->cancelled_at)) {
+                return;
+            }
+
+            $stored->forceFill([
+                'cancellation_type' => null,
+                'cancellation_reason' => null,
+                'cancelled_at' => null,
+            ])->save();
+
+            $this->setRawAttributes($stored->getAttributes(), true);
+        });
     }
 }

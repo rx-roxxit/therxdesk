@@ -2,16 +2,19 @@
 \* The facts of ticket #56 outside the trial race, as the code derives them:
 \*   Account::hasPendingFirstCharge() / hasAppAccess() (Account.php:315,328)
 \*   StripeInvoiceListener::handle() records first_paid_at only for a paid
-\*     invoice above zero (StripeInvoiceListener.php:42-69)
-\*   Subscription::recordCancellation() keeps CancellationType::Admin
-\*     (Subscription.php:51-75), but it checks the row it loaded earlier
-\*     in StripeEventListener::subscriptionFor() (line 150).
+\*     invoice above zero (StripeInvoiceListener.php:42-69); a subscription
+\*     created active records nothing itself (StripeEventListener:78-93).
+\*   Subscription::recordCancellation() / clearCancellation() re-read the row
+\*     under a lock and leave a CancellationType::Admin row alone
+\*     (Subscription.php:51-113), so a webhook that loaded the row earlier
+\*     cannot replace an admin write.
 EXTENDS Naturals, TLC
 
 Statuses == {"none", "trialing", "active", "past_due", "canceled"}
 Writers == {"w1", "w2"}
 Types == {"none", "voluntary", "payment_failed", "admin"}
 Amounts == {0, 1900}
+Outcomes == {"cancel", "resume"}
 
 VARIABLES status, firstPaid, positiveInvoice, zeroCoupon,
           subType, readDone, readVal, wrote, wasAdmin
@@ -37,15 +40,13 @@ StartTrial ==
   /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin>>
 
 \* A checkout with a 100% coupon and no trial: Stripe creates the
-\* subscription active and its first invoice is $0. recordFirstPayment()
-\* runs on customer.subscription.created and writes first_paid_at anyway.
+\* subscription active and its first invoice is $0. The created webhook
+\* records no payment; the $0 invoice proves none either.
 SubscriptionBornActiveZeroCoupon ==
   /\ status = "none"
   /\ status' = "active"
   /\ zeroCoupon' = TRUE
-  /\ firstPaid' = TRUE
-  /\ positiveInvoice' = FALSE
-  /\ UNCHANGED <<subType, readDone, readVal, wrote, wasAdmin>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, subType, readDone, readVal, wrote, wasAdmin>>
 
 \* The trial's end: Stripe sends `active` before it attempts the charge.
 TrialEndsActive ==
@@ -73,12 +74,16 @@ WebhookRead(w) ==
   /\ readVal' = [readVal EXCEPT ![w] = subType]
   /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, wrote, wasAdmin>>
 
-\* ... and later writes the reason it carries, from the value it loaded.
-WebhookWrite(w) ==
+\* ... and later writes its outcome. The write re-reads the row under a lock
+\* and decides from the stored value, not from the value it loaded earlier.
+WebhookWrite(w, outcome) ==
   /\ readDone[w] = TRUE
   /\ wrote[w] = FALSE
+  /\ outcome \in Outcomes
   /\ wrote' = [wrote EXCEPT ![w] = TRUE]
-  /\ subType' = IF readVal[w] = "admin" THEN "admin" ELSE "voluntary"
+  /\ subType' = IF subType = "admin"
+                THEN subType
+                ELSE IF outcome = "cancel" THEN "voluntary" ELSE "none"
   /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wasAdmin>>
 
 \* The System admin ends the subscription (admin app).
@@ -106,7 +111,7 @@ Next ==
   \/ ChargeFails
   \/ \E amount \in Amounts : InvoicePaid(amount)
   \/ \E w \in Writers : WebhookRead(w)
-  \/ \E w \in Writers : WebhookWrite(w)
+  \/ \E w \in Writers, outcome \in Outcomes : WebhookWrite(w, outcome)
   \/ AdminCancel
   \/ StripeDeletes
   \/ Done

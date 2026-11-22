@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\Billing\CancellationType;
 use App\Enums\Billing\Interval;
+use App\Exceptions\Billing\TrialEndFailed;
 use App\Jobs\PostHog\TrackTrialStarted;
 use App\Listeners\StripeEventListener;
 use App\Listeners\StripeInvoiceListener;
@@ -14,6 +15,7 @@ use App\Models\Subscription;
 use App\Models\TrialCard;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Cashier\Events\WebhookHandled;
 use Laravel\Cashier\Events\WebhookReceived;
 use Stripe\ApiRequestor;
@@ -29,7 +31,7 @@ function fakeTrialWebhookStripe(array $failures = []): ClientInterface
         /**
          * @param  array<string, string>  $failures
          */
-        public function __construct(private array $failures) {}
+        public function __construct(public array $failures) {}
 
         public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
         {
@@ -200,13 +202,13 @@ test('a first-ever card keeps its trial and is claimed', function () {
     ))->toBeFalse();
 });
 
-test('a trial whose card cannot be ended reverts the skip facts', function () {
+test('a trial-end call that fails answers non-2xx, keeps the facts and is retried', function () {
     $account = trialAccount();
-    fakeTrialWebhookStripe(['/v1/subscriptions/' => 'Stripe is down']);
+    $stripe = fakeTrialWebhookStripe(['/v1/subscriptions/' => 'Stripe is down']);
 
     TrialCard::query()->create(['fingerprint' => 'fp_repeat', 'account_id' => $account->id]);
 
-    (new StripeEventListener)->handle(new WebhookHandled([
+    $payload = [
         'id' => 'evt_repeat_failed',
         'type' => 'customer.subscription.created',
         'data' => ['object' => [
@@ -219,12 +221,27 @@ test('a trial whose card cannot be ended reverts the skip facts', function () {
                 'card' => ['fingerprint' => 'fp_repeat'],
             ],
         ]],
-    ]));
+    ];
+
+    expect(fn () => (new StripeEventListener)->handle(new WebhookHandled($payload)))
+        ->toThrow(TrialEndFailed::class);
 
     $subscription = Subscription::query()->where('stripe_id', 'sub_repeat')->firstOrFail();
 
-    expect($subscription->trial_skipped_at)->toBeNull()
-        ->and($subscription->trial_ended_at)->toBeNull();
+    expect($subscription->trial_skipped_at)->not->toBeNull()
+        ->and($subscription->trial_ended_at)->not->toBeNull();
+
+    $stripe->failures = [];
+
+    (new StripeEventListener)->handle(new WebhookHandled($payload));
+
+    $endAttempts = collect($stripe->requests)->filter(
+        fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+            && str_contains($request['url'], '/v1/subscriptions/sub_repeat'),
+    );
+
+    expect($endAttempts)->toHaveCount(2)
+        ->and($subscription->fresh()->trial_skipped_at)->not->toBeNull();
 });
 
 test('a past_due subscription that never paid has no app access and waits for its first charge', function () {
@@ -436,6 +453,177 @@ test('the first paid invoice records the first payment and is never replaced', f
     ]));
 
     expect($account->fresh()->first_invoice_id)->toBe('in_first');
+});
+
+test('a repeat delivery of a created event never ends its own trial', function () {
+    $account = trialAccount();
+    $stripe = fakeTrialWebhookStripe();
+
+    $payload = [
+        'id' => 'evt_redelivered_created',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_redelivered',
+            'customer' => 'cus_trial',
+            'status' => 'trialing',
+            'trial_start' => now()->timestamp,
+            'default_payment_method' => 'pm_redelivered',
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ];
+
+    (new StripeEventListener)->handle(new WebhookHandled($payload));
+
+    // The event-id key lives one day; Stripe retries for three.
+    Cache::forget('stripe_webhook_event:evt_redelivered_created');
+
+    (new StripeEventListener)->handle(new WebhookHandled($payload));
+
+    $subscription = Subscription::query()->where('stripe_id', 'sub_redelivered')->firstOrFail();
+
+    expect($subscription->trial_skipped_at)->toBeNull()
+        ->and($subscription->trial_ended_at)->toBeNull();
+
+    expect(collect($stripe->requests)->contains(
+        fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+            && str_contains($request['url'], '/v1/subscriptions/sub_redelivered'),
+    ))->toBeFalse();
+});
+
+test('a second trial on one account is ended at once even with another card', function () {
+    $account = trialAccount();
+    $stripe = fakeTrialWebhookStripe();
+
+    (new StripeEventListener)->handle(new WebhookHandled([
+        'id' => 'evt_account_first_trial',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_first_trial',
+            'customer' => 'cus_trial',
+            'status' => 'trialing',
+            'trial_start' => now()->timestamp,
+            'default_payment_method' => 'pm_first_account_card',
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ]));
+
+    (new StripeEventListener)->handle(new WebhookHandled([
+        'id' => 'evt_account_second_trial',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_second_trial',
+            'customer' => 'cus_trial',
+            'status' => 'trialing',
+            'trial_start' => now()->timestamp,
+            'default_payment_method' => 'pm_second_account_card',
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ]));
+
+    $first = Subscription::query()->where('stripe_id', 'sub_first_trial')->firstOrFail();
+    $second = Subscription::query()->where('stripe_id', 'sub_second_trial')->firstOrFail();
+
+    expect($first->trial_skipped_at)->toBeNull()
+        ->and($first->trial_ended_at)->toBeNull()
+        ->and($second->trial_skipped_at)->not->toBeNull()
+        ->and($second->trial_ended_at)->not->toBeNull();
+
+    expect(collect($stripe->requests)->contains(
+        fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+            && str_contains($request['url'], '/v1/subscriptions/sub_second_trial'),
+    ))->toBeTrue()
+        ->and(collect($stripe->requests)->contains(
+            fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+                && str_contains($request['url'], '/v1/subscriptions/sub_first_trial'),
+        ))->toBeFalse();
+});
+
+test('a subscription born active with a zero first invoice records no first payment', function () {
+    $account = trialAccount();
+    fakeTrialWebhookStripe();
+
+    (new StripeEventListener)->handle(new WebhookHandled([
+        'id' => 'evt_zero_coupon_created',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_zero_coupon',
+            'customer' => 'cus_trial',
+            'status' => 'active',
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ]));
+
+    expect($account->fresh()->first_paid_at)->toBeNull();
+
+    (new StripeInvoiceListener)->handle(new WebhookReceived([
+        'id' => 'evt_zero_coupon_invoice',
+        'type' => 'invoice.payment_succeeded',
+        'data' => ['object' => [
+            'id' => 'in_zero_coupon',
+            'customer' => 'cus_trial',
+            'subscription' => 'sub_zero_coupon',
+            'status' => 'paid',
+            'amount_paid' => 0,
+        ]],
+    ]));
+
+    $account = $account->fresh();
+
+    expect($account->first_paid_at)->toBeNull()
+        ->and($account->first_invoice_id)->toBeNull()
+        ->and($account->hasPaidSubscription())->toBeFalse();
+});
+
+test('a webhook that loaded the row before an admin cancellation never overwrites it', function () {
+    $account = trialAccount();
+
+    $subscription = $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_admin_race',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_x',
+    ]);
+
+    $stale = Subscription::query()->findOrFail($subscription->id);
+
+    Subscription::query()->whereKey($subscription->id)->update([
+        'cancellation_type' => CancellationType::Admin->value,
+        'cancellation_reason' => 'ended by the System admin',
+        'cancelled_at' => now(),
+    ]);
+
+    $stale->recordCancellation(CancellationType::Voluntary, 'too_expensive', now());
+
+    expect($subscription->fresh()->cancellation_type)->toBe(CancellationType::Admin)
+        ->and($subscription->fresh()->cancellation_reason)->toBe('ended by the System admin');
+});
+
+test('resuming never clears an admin cancellation', function () {
+    $account = trialAccount();
+
+    $subscription = $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_admin_resume',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_x',
+    ]);
+
+    Subscription::query()->whereKey($subscription->id)->update([
+        'cancellation_type' => CancellationType::Voluntary->value,
+        'cancelled_at' => now(),
+    ]);
+
+    $stale = Subscription::query()->findOrFail($subscription->id);
+
+    Subscription::query()->whereKey($subscription->id)->update([
+        'cancellation_type' => CancellationType::Admin->value,
+        'cancellation_reason' => 'ended by the System admin',
+    ]);
+
+    $stale->clearCancellation();
+
+    expect($subscription->fresh()->cancellation_type)->toBe(CancellationType::Admin)
+        ->and($subscription->fresh()->cancelled_at)->not->toBeNull();
 });
 
 test('an invoice that paid nothing records no first payment', function () {

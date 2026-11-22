@@ -1051,7 +1051,7 @@ test('subscription deleted still clears plan_id when TrackBilling dispatch fails
 // first payment
 // ========================================
 
-test('a subscription born active records the first payment on the account', function () {
+test('a subscription born active records no payment until an invoice proves one', function () {
     $this->freezeTime();
 
     $this->listener->handle(new WebhookHandled([
@@ -1062,6 +1062,21 @@ test('a subscription born active records the first payment on the account', func
             'id' => 'sub_123',
             'status' => 'active',
             'items' => ['data' => [['price' => ['id' => 'price_socials_monthly']]]],
+        ]],
+    ]));
+
+    expect($this->account->fresh()->first_paid_at)->toBeNull();
+
+    (new StripeInvoiceListener)->handle(new WebhookReceived([
+        'id' => 'evt_first_paid_invoice',
+        'type' => 'invoice.payment_succeeded',
+        'data' => ['object' => [
+            'id' => 'in_first_paid',
+            'customer' => 'cus_test123',
+            'subscription' => 'sub_123',
+            'status' => 'paid',
+            'amount_paid' => 1900,
+            'status_transitions' => ['paid_at' => now()->timestamp],
         ]],
     ]));
 

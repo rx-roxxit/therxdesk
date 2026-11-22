@@ -6,7 +6,9 @@ namespace App\Listeners;
 
 use App\Actions\Offer\RedeemOffer;
 use App\Enums\Billing\CancellationType;
+use App\Enums\Billing\TrialClaim;
 use App\Enums\PostHog\BillingEvent;
+use App\Exceptions\Billing\TrialEndFailed;
 use App\Jobs\PostHog\TrackBilling;
 use App\Jobs\PostHog\TrackCheckoutCompleted;
 use App\Jobs\PostHog\TrackPlanChanged;
@@ -20,6 +22,7 @@ use App\Support\Billing\CardFingerprint;
 use App\Support\Billing\ConfigureSubscriptionCheckout;
 use App\Support\Billing\StripeValue;
 use App\Support\Billing\SubscriptionPlanSync;
+use App\Support\Billing\TrialAccounts;
 use App\Support\Billing\TrialCards;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -33,11 +36,13 @@ class StripeEventListener
 {
     public function handle(WebhookHandled $event): void
     {
-        try {
-            if ($this->alreadyProcessed(data_get($event->payload, 'id'))) {
-                return;
-            }
+        $eventId = data_get($event->payload, 'id');
 
+        if ($this->alreadyProcessed($eventId)) {
+            return;
+        }
+
+        try {
             $type = data_get($event->payload, 'type');
             $stripeCustomerId = data_get($event->payload, 'data.object.customer');
 
@@ -60,6 +65,15 @@ class StripeEventListener
                 StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_DELETED => $this->handleSubscriptionDeleted($account, $subscription, $event->payload),
                 default => null,
             };
+        } catch (TrialEndFailed $e) {
+            $this->releaseProcessed($eventId);
+
+            Log::error("Stripe webhook error: {$e->getMessage()}", [
+                'exception' => $e,
+                'payload' => $event->payload,
+            ]);
+
+            throw $e;
         } catch (Throwable $e) {
             Log::error("Stripe webhook error: {$e->getMessage()}", [
                 'exception' => $e,
@@ -81,7 +95,6 @@ class StripeEventListener
         $convertsTrialWithoutCard = $this->convertsTrialWithoutCard($account, $payload);
 
         $this->syncPlanFromSubscription($account, $payload);
-        $this->recordFirstPayment($account, $payload);
         $this->redeemOffer($account, $payload);
         $this->recordTrialStart($account, $subscription, $payload);
 
@@ -207,46 +220,39 @@ class StripeEventListener
         $subscription->trial_started_at = StripeValue::timestamp(data_get($payload, 'data.object.trial_start')) ?? now();
         $subscription->save();
 
+        if (TrialAccounts::claim($account, $subscription->stripe_id) === TrialClaim::Taken) {
+            $this->endRepeatTrial($subscription);
+
+            return;
+        }
+
         $fingerprint = CardFingerprint::forSubscription($account, $payload);
 
         if (blank($fingerprint)) {
             return;
         }
 
-        if (TrialCards::claim($fingerprint, $account, $subscription->stripe_id)) {
-            return;
+        if (TrialCards::claim($fingerprint, $account, $subscription->stripe_id) === TrialClaim::Taken) {
+            $this->endRepeatTrial($subscription);
         }
-
-        $this->endRepeatCardTrial($subscription);
     }
 
     /**
-     * The card already had a Trial: Stripe ends it now, so the first charge
-     * happens at once. The facts are written before the call because the
-     * updated webhook it sends meanwhile has to see them; a failed call puts
-     * them back and the outer handler logs it.
+     * The skip facts are written before the Stripe call because the updated
+     * webhook it sends meanwhile has to see them; a failed call keeps them and
+     * raises TrialEndFailed, so the webhook answers non-2xx and Stripe
+     * redelivers the event.
      */
-    private function endRepeatCardTrial(Subscription $subscription): void
+    private function endRepeatTrial(Subscription $subscription): void
     {
-        $previousSkippedAt = $subscription->trial_skipped_at;
-        $previousEndedAt = $subscription->trial_ended_at;
-
-        $subscription->trial_skipped_at = now();
-        $subscription->trial_ended_at = now();
+        $subscription->trial_skipped_at ??= now();
+        $subscription->trial_ended_at ??= now();
         $subscription->save();
 
         try {
             Cashier::stripe()->subscriptions->update($subscription->stripe_id, ['trial_end' => 'now']);
         } catch (Throwable $e) {
-            $subscription->trial_skipped_at = $previousSkippedAt;
-            $subscription->trial_ended_at = $previousEndedAt;
-            $subscription->save();
-
-            Log::warning("Stripe trial could not be ended for subscription {$subscription->stripe_id}: {$e->getMessage()}", [
-                'exception' => $e,
-            ]);
-
-            throw $e;
+            throw new TrialEndFailed($subscription->stripe_id, $e);
         }
     }
 
@@ -344,6 +350,19 @@ class StripeEventListener
     }
 
     /**
+     * A handler that will answer non-2xx gives the event id back, so Stripe's
+     * redelivery runs the handler again instead of being skipped.
+     */
+    private function releaseProcessed(?string $eventId): void
+    {
+        if (! $eventId) {
+            return;
+        }
+
+        Cache::forget("stripe_webhook_event:{$eventId}");
+    }
+
+    /**
      * A subscription created during a trial without a card the account took
      * from an offer (`Account::subscribedDuringTrialWithoutCard()`) turns
      * active: on created, or when an incomplete one is paid. The conversion is
@@ -377,21 +396,6 @@ class StripeEventListener
             data_get($payload, 'type') === StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_CREATED
             || data_get($payload, 'data.previous_attributes.status') === StripeSubscription::STATUS_INCOMPLETE
         );
-    }
-
-    /**
-     * The first time a subscription is active the account has been charged:
-     * kept on the account because Cashier clears `trial_ends_at` on delete.
-     *
-     * @param  array<string, mixed>  $payload
-     */
-    private function recordFirstPayment(Account $account, array $payload): void
-    {
-        if (! $this->isNowActive($payload) || filled($account->first_paid_at)) {
-            return;
-        }
-
-        Account::withoutTimestamps(fn (): bool => $account->forceFill(['first_paid_at' => now()])->saveQuietly());
     }
 
     /**

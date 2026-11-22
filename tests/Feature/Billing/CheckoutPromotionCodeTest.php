@@ -27,8 +27,24 @@ beforeEach(function () {
         /** @var array<string, mixed> */
         public array $session = [];
 
+        /** @var list<array<string, mixed>> */
+        public array $openSessions = [];
+
+        /** @var list<string> */
+        public array $expired = [];
+
         public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
         {
+            if (preg_match('#/v1/checkout/sessions/([^/?]+)/expire#', $absUrl, $matches) === 1) {
+                $this->expired[] = $matches[1];
+
+                return [json_encode(['id' => $matches[1], 'object' => 'checkout.session', 'status' => 'expired']), 200, []];
+            }
+
+            if (strtoupper((string) $method) === 'GET' && str_contains($absUrl, '/v1/checkout/sessions')) {
+                return [json_encode(['object' => 'list', 'data' => $this->openSessions, 'has_more' => false]), 200, []];
+            }
+
             if (str_contains($absUrl, '/v1/checkout/sessions')) {
                 $this->session = $params;
 
@@ -91,4 +107,16 @@ test('a trial offer that does not allow promotion codes sends the trial without 
 
     expect(data_get($this->stripe->session, 'subscription_data.trial_end'))->not->toBeNull()
         ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('false');
+});
+
+test('a new checkout expires the account other open sessions first', function () {
+    $this->stripe->openSessions = [
+        ['id' => 'cs_old', 'object' => 'checkout.session', 'status' => 'open'],
+        ['id' => 'cs_older', 'object' => 'checkout.session', 'status' => 'open'],
+    ];
+
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials);
+
+    expect($this->stripe->expired)->toBe(['cs_old', 'cs_older'])
+        ->and(data_get($this->stripe->session, 'subscription_data.trial_end'))->not->toBeNull();
 });

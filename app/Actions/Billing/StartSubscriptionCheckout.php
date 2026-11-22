@@ -14,6 +14,7 @@ use App\Models\Offer;
 use App\Models\Plan;
 use App\Services\PostHogService;
 use App\Support\Billing\ConfigureSubscriptionCheckout;
+use App\Support\Billing\OpenCheckoutSessions;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -28,6 +29,8 @@ class StartSubscriptionCheckout
         }
 
         $account->syncOrCreateStripeCustomer();
+
+        OpenCheckoutSessions::expire($account);
 
         $subscription = $account->newSubscription(Account::SUBSCRIPTION_NAME, $priceId);
 
