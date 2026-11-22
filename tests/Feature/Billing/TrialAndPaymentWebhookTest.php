@@ -231,8 +231,6 @@ test('a trial-end call that fails answers non-2xx, keeps the facts and is retrie
     expect($subscription->trial_skipped_at)->not->toBeNull()
         ->and($subscription->trial_ended_at)->not->toBeNull();
 
-    // The event key was released, so Stripe's redelivery runs the handler
-    // again instead of being skipped as already processed.
     $stripe->failures = [];
 
     (new StripeEventListener)->handle(new WebhookHandled($payload));

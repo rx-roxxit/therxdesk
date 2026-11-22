@@ -73,8 +73,6 @@ class StripeEventListener
                 'payload' => $event->payload,
             ]);
 
-            // Non-2xx: Stripe redelivers the event, and the handler's steps
-            // are idempotent.
             throw $e;
         } catch (Throwable $e) {
             Log::error("Stripe webhook error: {$e->getMessage()}", [
@@ -97,8 +95,6 @@ class StripeEventListener
         $convertsTrialWithoutCard = $this->convertsTrialWithoutCard($account, $payload);
 
         $this->syncPlanFromSubscription($account, $payload);
-        // No first payment here: an active created event (a 100% coupon, for
-        // one) is not proof of money. Only a paid invoice above zero is.
         $this->redeemOffer($account, $payload);
         $this->recordTrialStart($account, $subscription, $payload);
 
@@ -225,7 +221,7 @@ class StripeEventListener
         $subscription->save();
 
         if (TrialAccounts::claim($account, $subscription->stripe_id) === TrialClaim::Taken) {
-            $this->endRepeatCardTrial($subscription);
+            $this->endRepeatTrial($subscription);
 
             return;
         }
@@ -237,18 +233,17 @@ class StripeEventListener
         }
 
         if (TrialCards::claim($fingerprint, $account, $subscription->stripe_id) === TrialClaim::Taken) {
-            $this->endRepeatCardTrial($subscription);
+            $this->endRepeatTrial($subscription);
         }
     }
 
     /**
-     * The card or the Account already had a Trial: Stripe ends it now, so the
-     * first charge happens at once. The facts are written before the call
-     * because the updated webhook it sends meanwhile has to see them. A failed
-     * call keeps them and raises TrialEndFailed, so the webhook answers non-2xx
-     * and Stripe redelivers the event.
+     * The skip facts are written before the Stripe call because the updated
+     * webhook it sends meanwhile has to see them; a failed call keeps them and
+     * raises TrialEndFailed, so the webhook answers non-2xx and Stripe
+     * redelivers the event.
      */
-    private function endRepeatCardTrial(Subscription $subscription): void
+    private function endRepeatTrial(Subscription $subscription): void
     {
         $subscription->trial_skipped_at ??= now();
         $subscription->trial_ended_at ??= now();

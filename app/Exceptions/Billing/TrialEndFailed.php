@@ -8,8 +8,8 @@ use RuntimeException;
 use Throwable;
 
 /**
- * The repeat card's Trial could not be ended at Stripe. The webhook answers
- * non-2xx so Stripe redelivers the event, whose steps are idempotent.
+ * The webhook answers non-2xx so Stripe redelivers the event, whose steps are
+ * idempotent.
  */
 class TrialEndFailed extends RuntimeException
 {
