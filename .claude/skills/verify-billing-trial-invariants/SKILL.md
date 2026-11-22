@@ -24,12 +24,15 @@ explores every order; everything runs in Docker.
    that never paid keeps app access while its next charge is retried.
 6. **An Account that never paid has no access while its first charge is
    retried**; **an Account that paid before keeps access while past due,** unless
-   a blocked checkout ended it (rule 8).
+   a blocked checkout ended it (rule 8) or it is suspended (rule 9).
 7. **A repeat card's Trial is ended at once** even when the trial-end call
    fails. Harm: the card that should have been refused keeps its Trial.
 8. **A checkout billed to a blocked country leaves the Account without access,**
    even when the local cancel did not land. Harm: the service is used where it
    is not sold.
+9. **A suspended Account has no access, whatever its billing state,** and
+   lifting the Suspension returns it to whatever state the billing facts give.
+   Harm: an Account the System admin turned off keeps publishing.
 
 ## Run it
 
@@ -135,6 +138,19 @@ ever given one, and `StartSubscriptionCheckout::redirect()` /
 side; `ComplimentaryNoTrial` checks that a given Account's Checkout Sessions
 open without a Trial.
 
+### 8. A suspension outranks every state (`suspended-no-access`)
+
+`SuspendAccount` / `LiftSuspension` (#61) write `accounts.suspended_at` and
+audit the change through `/internal/v1`. `Account::isSuspended()` reads that
+fact, and `hasAppAccess()` checks it **first**, before self-hosted, a blocked
+checkout or any Subscription state; `accessDenial()` reports `Suspended` before
+`Lapsed`. The model's `SuspendAccount` / `LiftSuspension` change only
+`suspended`, and `HasAppAccess` includes `suspended = FALSE`. `PaidKeepsAccess`
+and `ComplimentaryHasAccess` carry the same exception, which is the rule in
+words: a paid or complimentary Account keeps access **unless** it is suspended.
+The deletion clock (#62) reads `suspended_at` to freeze; that is not modelled
+here.
+
 ### Not modelled: two subscriptions can coexist
 
 Nothing stops a second Stripe subscription from being created while the first
@@ -192,13 +208,16 @@ Sync commit: **33ab087d**. Confirmed against these files and functions:
 | `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
 | `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()` | `CanStartTrial`, `HasAppAccess` |
 | `Account::currentOffer(withTrial: false)` — a billing checkout takes a coupon Offer (even with trial days, which `canStartTrial()` then suppresses) but never a trial-only one | not a Trial-grant rule; `CanStartTrial` still decides |
-| `Account::hasAppAccess()` — a blocked checkout ends access, a paid past-due keeps it | `HasAppAccess`, `BlockedNoAccess` |
+| `Account::hasAppAccess()` — a Suspension ends access first, a blocked checkout ends it, a paid past-due keeps it unless suspended | `HasAppAccess`, `BlockedNoAccess`, `SuspendedNoAccess` |
+| `Account::isSuspended()` / `accessDenial()` — `accounts.suspended_at` is read every time; Suspended outranks Lapsed | `SuspendedNoAccess`, `suspended` |
+| `SuspendAccount` / `LiftSuspension` — the Account's own `suspended_at` / `suspension_reason` plus an audit row; the reason is internal only | `SuspendAccount` / `LiftSuspension` (the reason is not modelled) |
 | `Account::isComplimentary()` / `hadComplimentaryPlan()` — the Complimentary columns are read every time, so a passed end date ends access; ever given is permanent | `ComplimentaryHasAccess`, `ComplimentaryEndedNoAccess`, `ComplimentaryEndedIsLapsed`; `comp` |
 | `Account::isLapsed()` — no Subscription and no generic trial, and the Account paid before or was ever given a Complimentary Plan | `Lapsed` |
 | `Account::canStartTrial()` — false for good once a Complimentary Plan was given | `CanStartTrial`'s `comp[a] = FALSE` |
 | `ComplimentaryPlans::give()` / `end()` — the Account's own columns plus an audit row; give refuses a Subscription or a blocked country, end defaults 30 days ahead | `GiveComplimentary` / `EndComplimentary` (the refusal is the action's precondition) |
 | `ChangePlan::execute()` — a Complimentary Account is refused before a swap or Checkout | `OpenCheckout` disabled while `comp` |
 | `2026_11_23_000000_add_complimentary_plan_to_accounts_table.php` — `accounts.complimentary_since` / `complimentary_until` | the facts `GiveComplimentary` / `EndComplimentary` write |
+| `2026_11_23_020000_add_suspension_to_accounts_table.php` — `accounts.suspended_at` / `suspension_reason` | the facts `SuspendAccount` / `LiftSuspension` write |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
 | `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
 | `2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php` — `users.country`, `accounts.blocked_country*` | the facts `BlockedCheckoutCancel` writes |

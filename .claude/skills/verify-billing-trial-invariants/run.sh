@@ -38,6 +38,7 @@ COVERED=(
   database/migrations/2026_11_22_130000_add_trial_accounts.php
   database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php
   database/migrations/2026_11_23_000000_add_complimentary_plan_to_accounts_table.php
+  database/migrations/2026_11_23_020000_add_suspension_to_accounts_table.php
 )
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
@@ -96,13 +97,15 @@ add_check zero-coupon-first-payment BillingFacts MC_ZeroCouponIsNoProof.cfg \
 add_check never-paid-no-access BillingFacts MC_NeverPaidNoAccess.cfg \
   "An Account that never paid has no access while its first charge is retried."
 add_check paid-before-keeps-access BillingFacts MC_PaidKeepsAccess.cfg \
-  "An Account that paid before keeps access while past due."
+  "An Account that paid before keeps access while past due, unless it is suspended."
 add_check blocked-checkout-no-access BillingFacts MC_BlockedNoAccess.cfg \
   "A checkout billed to a blocked country leaves the Account without access."
 add_check complimentary-access BillingFacts MC_ComplimentaryAccess.cfg \
-  "A Complimentary Plan in force grants access; once it ends the Account has none and is Lapsed."
+  "A Complimentary Plan in force grants access unless the Account is suspended; once it ends the Account has none and is Lapsed."
 add_check complimentary-no-trial TrialGrant MC_ComplimentaryNoTrial.cfg \
   "An Account given a Complimentary Plan never starts a Trial."
+add_check suspended-no-access BillingFacts MC_SuspendedNoAccess.cfg \
+  "A suspended Account has no app access, whatever its billing state."
 add_check selftest-card-fixed TrialGrantFixed FIX_CardOneTrial.cfg \
   "Self-test: the card rule passes on the fixed model."
 add_check selftest-account-fixed TrialGrantFixed FIX_AccountOneTrial.cfg \
