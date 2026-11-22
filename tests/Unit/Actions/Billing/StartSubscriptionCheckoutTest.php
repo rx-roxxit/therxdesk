@@ -35,6 +35,10 @@ function fakeStripeCustomerClient(): ClientInterface
         {
             $this->requests[] = ['method' => $method, 'url' => $absUrl, 'params' => $params];
 
+            if (strtoupper((string) $method) === 'GET' && str_contains($absUrl, '/v1/checkout/sessions')) {
+                return [json_encode(['object' => 'list', 'data' => [], 'has_more' => false]), 200, []];
+            }
+
             $id = str_contains($absUrl, 'cus_existing') ? 'cus_existing' : 'cus_new';
 
             return [json_encode(['id' => $id, 'object' => 'customer', 'email' => data_get($params, 'email')]), 200, []];
@@ -277,10 +281,13 @@ test('redirect creates a new stripe customer with the owner email, the owner nam
 
     app(StartSubscriptionCheckout::class)->redirect($accountMock, 'price_monthly_test', route('app.welcome.software'));
 
-    expect($client->requests)->toHaveCount(1)
-        ->and($client->requests[0]['method'])->toBe('post')
-        ->and($client->requests[0]['url'])->toEndWith('/v1/customers')
-        ->and($client->requests[0]['params'])->toMatchArray([
+    $customerWrites = collect($client->requests)->filter(
+        fn (array $request): bool => $request['method'] === 'post' && str_contains($request['url'], '/v1/customers'),
+    );
+
+    expect($customerWrites)->toHaveCount(1)
+        ->and($customerWrites->first()['url'])->toEndWith('/v1/customers')
+        ->and($customerWrites->first()['params'])->toMatchArray([
             'email' => 'ada@example.test',
             'name' => 'Ada Lovelace',
             'metadata' => ['utm_source' => 'google', 'previous_software' => 'metricool'],
@@ -311,14 +318,17 @@ test('redirect updates an existing stripe customer with the current details and 
 
     app(StartSubscriptionCheckout::class)->redirect($accountMock, 'price_monthly_test', route('app.welcome.software'));
 
-    expect($client->requests)->toHaveCount(1)
-        ->and($client->requests[0]['method'])->toBe('post')
-        ->and($client->requests[0]['url'])->toEndWith('/v1/customers/cus_existing')
-        ->and($client->requests[0]['params'])->toMatchArray([
+    $customerWrites = collect($client->requests)->filter(
+        fn (array $request): bool => $request['method'] === 'post' && str_contains($request['url'], '/v1/customers'),
+    );
+
+    expect($customerWrites)->toHaveCount(1)
+        ->and($customerWrites->first()['url'])->toEndWith('/v1/customers/cus_existing')
+        ->and($customerWrites->first()['params'])->toMatchArray([
             'email' => 'new-owner@example.test',
             'name' => 'New Owner',
         ])
-        ->and($client->requests[0]['params']['metadata'])->toMatchArray(['persona' => 'agency', 'referral_source' => ''])
+        ->and($customerWrites->first()['params']['metadata'])->toMatchArray(['persona' => 'agency', 'referral_source' => ''])
         ->and($account->fresh()->stripe_id)->toBe('cus_existing');
 });
 
