@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Subskrybuj',
         'trial_terms' => 'Potem :price od :date. Anuluj w dowolnym momencie. Jeden okres próbny na kartę.',
         'subscribe_terms' => 'Dziś pobierzemy :price. Anuluj w dowolnym momencie.',
+        'payment_retry' => [
+            'title' => 'Pierwsza płatność nie powiodła się',
+            'description' => 'Konto pozostaje wstrzymane, dopóki płatność nie zostanie zaksięgowana. Zaktualizuj kartę, aby rozpocząć plan.',
+            'update_card' => 'Zaktualizuj kartę',
+        ],
         'verify_email' => [
             'title' => 'Potwierdź e-mail',
             'description' => 'Wysłaliśmy link na :email. Otwórz go i wróć tutaj, aby zacząć.',

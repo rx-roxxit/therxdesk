@@ -156,6 +156,11 @@ return [
         'subscribe' => '订阅',
         'trial_terms' => '此后自 :date 起 :price。可随时取消。每张卡一次免费试用。',
         'subscribe_terms' => '今天将收取 :price。可随时取消。',
+        'payment_retry' => [
+            'title' => '首次付款未成功',
+            'description' => '付款完成前你的账户将保持暂停。更新银行卡以开始你的套餐。',
+            'update_card' => '更新银行卡',
+        ],
         'verify_email' => [
             'title' => '验证你的邮箱',
             'description' => '我们已向 :email 发送链接。打开链接后回到这里开始。',

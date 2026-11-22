@@ -3,26 +3,63 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
+import PaymentRetryState from '@/components/welcome/PaymentRetryState.vue';
 import VerifyEmailDialog from '@/components/welcome/VerifyEmailDialog.vue';
 import WelcomeOfferBanner from '@/components/welcome/WelcomeOfferBanner.vue';
 import WelcomePlanCard from '@/components/welcome/WelcomePlanCard.vue';
 import WelcomeLayout from '@/layouts/WelcomeLayout.vue';
 import { store } from '@/routes/app/welcome/plan';
-import type { SharedData } from '@/types';
+import type { SharedData, WelcomeStep } from '@/types';
 import type { Offer } from '@/types/offer';
 import type {
     BillingInterval,
     WelcomePlan,
+    WelcomePlanRetry,
     WelcomePlanSelection,
     WelcomePlanTrial,
 } from '@/types/plan';
+
+type Translate = (key: string) => string;
 
 const props = defineProps<{
     plans: WelcomePlan[];
     selected: WelcomePlanSelection;
     offer: Offer | null;
     trial: WelcomePlanTrial | null;
+    retry: WelcomePlanRetry | null;
 }>();
+
+const layoutTitle = ($t: Translate): string => {
+    if (props.retry !== null) {
+        return $t('rxdesk.welcome_plan.payment_retry.title');
+    }
+
+    return $t('rxdesk.welcome_plan.title');
+};
+
+const layoutDescription = ($t: Translate): string => {
+    if (props.retry !== null) {
+        return $t('rxdesk.welcome_plan.payment_retry.description');
+    }
+
+    return $t('rxdesk.welcome_plan.description');
+};
+
+const layoutStep = (): WelcomeStep | undefined => {
+    if (props.retry !== null) {
+        return undefined;
+    }
+
+    return 'plan';
+};
+
+const layoutSize = (): 'lg' | '6xl' => {
+    if (props.retry !== null) {
+        return 'lg';
+    }
+
+    return '6xl';
+};
 
 const page = usePage<SharedData>();
 const interval = ref<BillingInterval>(props.selected.interval);
@@ -71,15 +108,15 @@ const closeVerifyDialog = (open: boolean): void => {
 </script>
 
 <template>
-    <Head :title="$t('rxdesk.welcome_plan.title')" />
+    <Head :title="layoutTitle($t)" />
 
     <WelcomeLayout
-        :title="$t('rxdesk.welcome_plan.title')"
-        :description="$t('rxdesk.welcome_plan.description')"
-        step="plan"
-        size="6xl"
+        :title="layoutTitle($t)"
+        :description="layoutDescription($t)"
+        :step="layoutStep()"
+        :size="layoutSize()"
     >
-        <div class="flex w-full flex-col gap-6">
+        <div v-if="retry === null" class="flex w-full flex-col gap-6">
             <WelcomeOfferBanner
                 v-if="offer?.has_banner"
                 :offer-key="offer.key"
@@ -103,6 +140,8 @@ const closeVerifyDialog = (open: boolean): void => {
                 />
             </div>
         </div>
+
+        <PaymentRetryState v-else :update-card-url="retry.update_card_url" />
 
         <VerifyEmailDialog
             :open="verifyOpen"

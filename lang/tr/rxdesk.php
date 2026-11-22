@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Abone ol',
         'trial_terms' => 'Sonra :date tarihinden itibaren :price. İstediğin zaman iptal et. Kart başına bir ücretsiz deneme.',
         'subscribe_terms' => 'Bugün :price tahsil edilecek. İstediğin zaman iptal et.',
+        'payment_retry' => [
+            'title' => 'İlk ödemeniz alınamadı',
+            'description' => 'Ödeme alınana kadar hesabınız duraklatılır. Planınıza başlamak için kartınızı güncelleyin.',
+            'update_card' => 'Kartı güncelle',
+        ],
         'verify_email' => [
             'title' => 'E-postanı doğrula',
             'description' => ':email adresine bir bağlantı gönderdik. Aç ve başlamak için buraya dön.',

@@ -37,9 +37,7 @@ const subscriptionPastDue = computed<boolean>(() =>
 );
 
 const { canCreateWorkspace } = useWorkspaceAbilities();
-const { createOrUpgrade } = useWorkspaceLimit(
-    () => workspaces.value.length,
-);
+const { createOrUpgrade } = useWorkspaceLimit(() => workspaces.value.length);
 
 const workspaceUpgradeDialogOpen = ref(false);
 
@@ -57,6 +55,7 @@ const handleCreateWorkspace = (): void => {
         <div
             v-if="subscriptionPastDue"
             class="mx-4 mb-2 rounded-xl border border-destructive bg-destructive/10 p-3 group-data-[collapsible=icon]:hidden"
+            data-testid="sidebar-past-due"
         >
             <div class="flex items-center gap-2 text-destructive">
                 <IconAlertTriangle class="size-4 shrink-0" />
@@ -84,7 +83,7 @@ const handleCreateWorkspace = (): void => {
                 <DropdownMenuTrigger as-child>
                     <button
                         type="button"
-                        class="-ms-1.5 flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg py-1 ps-2 pe-0 text-start outline-hidden transition-control hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:ms-0 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:py-0 group-data-[collapsible=icon]:ps-0"
+                        class="-ms-1.5 flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg py-1 ps-2 pe-0 text-start outline-hidden transition-control group-data-[collapsible=icon]:ms-0 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:py-0 group-data-[collapsible=icon]:ps-0 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent"
                         data-test="sidebar-menu-button"
                         data-testid="sidebar-workspace-menu"
                     >

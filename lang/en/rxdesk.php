@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Subscribe',
         'trial_terms' => 'Then :price from :date. Cancel anytime. One free trial per card.',
         'subscribe_terms' => "You'll be charged :price today. Cancel anytime.",
+        'payment_retry' => [
+            'title' => "Your first payment didn't go through",
+            'description' => "Your account stays paused until it's paid. Update your card to start your plan.",
+            'update_card' => 'Update card',
+        ],
         'verify_email' => [
             'title' => 'Verify your email',
             'description' => 'We sent a link to :email. Open it, then come back here to start.',

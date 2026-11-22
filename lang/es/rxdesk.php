@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Suscribirse',
         'trial_terms' => 'Después :price desde :date. Cancela cuando quieras. Una prueba gratis por tarjeta.',
         'subscribe_terms' => 'Se te cobrará :price hoy. Cancela cuando quieras.',
+        'payment_retry' => [
+            'title' => 'Tu primer pago no se completó',
+            'description' => 'Tu cuenta sigue en pausa hasta que se pague. Actualiza tu tarjeta para empezar tu plan.',
+            'update_card' => 'Actualizar tarjeta',
+        ],
         'verify_email' => [
             'title' => 'Verifica tu correo',
             'description' => 'Te enviamos un enlace a :email. Ábrelo y vuelve aquí para empezar.',

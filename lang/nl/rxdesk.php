@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Abonneren',
         'trial_terms' => 'Daarna :price vanaf :date. Altijd opzegbaar. Eén gratis proefperiode per kaart.',
         'subscribe_terms' => 'Je betaalt vandaag :price. Altijd opzegbaar.',
+        'payment_retry' => [
+            'title' => 'Je eerste betaling is niet gelukt',
+            'description' => 'Je account blijft gepauzeerd tot de betaling binnen is. Werk je kaart bij om je abonnement te starten.',
+            'update_card' => 'Kaart bijwerken',
+        ],
         'verify_email' => [
             'title' => 'Verifieer je e-mail',
             'description' => 'We hebben een link naar :email gestuurd. Open die en kom hier terug om te beginnen.',
