@@ -8,6 +8,7 @@ use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
 use App\Models\Account;
 use App\Models\Plan;
+use App\Support\Billing\BlockedCountries;
 use App\Support\Billing\SubscriptionPlanSync;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Cashier\Exceptions\IncompletePayment;
@@ -26,6 +27,10 @@ class ChangePlan
      */
     public function execute(Account $account, Plan $plan, Interval $interval): Response
     {
+        if (BlockedCountries::isBlocked($account->owner?->country)) {
+            return back()->with('flash.error', __('rxdesk.country.blocked'));
+        }
+
         $authorization = Gate::inspect('swapPlan', [$account, $plan]);
 
         if ($authorization->denied()) {

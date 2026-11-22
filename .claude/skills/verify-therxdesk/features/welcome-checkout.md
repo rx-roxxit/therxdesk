@@ -32,9 +32,15 @@ until the webhook gives the Account access, and lands on the Schedule.
   sandbox does not guarantee, so the journeys always take the full-price path.
 - Stripe Checkout (hosted, sandbox): the Owner's language (never `auto`), a required billing address, a required
   Terms consent checkbox, no promotion code field, and `subscription_data.trial_end` on a first checkout.
-- Processing (`/billing/processing`) polls until the Account has access, then opens the Schedule.
+- The billing country must be allowed: the completed-checkout webhook cancels a subscription billed to an EU/UK
+  country at once and the plan step then shows "Not available in the EU/UK yet". A blocked Owner country never
+  opens Checkout at all.
+- Processing (`/billing/processing`) polls until the Account has access, then opens the Schedule; it also polls
+  `countryBlocked` and returns to `/welcome/plan` when the webhook cancelled the checkout.
 - The webhooks: Cashier's handlers write the `subscriptions` row, and `customer.subscription.created` / `updated`
-  writes the Account's Plan (`accounts.plan_id`).
+  writes the Account's Plan (`accounts.plan_id`). `checkout.session.completed` (subscription mode) cancels a
+  blocked billing country and records `blocked_country`, `blocked_country_at` and
+  `blocked_country_payment_status` on the Account (first fact wins).
 
 ## How to get to it (user POV)
 
@@ -54,8 +60,10 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   then fills card `4242 4242 4242 4242` (or `VERIFY_TEST_CARD`, which `drive.sh` passes through) with an expiry two
   years ahead, CVC `123` and a name in the Elements frame.
   When the session collects a billing address, it fills the billing name, address line 1, city and postal code in the
-  Checkout frame, then presses `[data-testid="payment-form-submit-button"]`. The billing country follows the IP
-  (Thailand here); a US card form adds `#payment-postalCodeInput`, which the helper fills when shown.
+  Checkout frame and selects Thailand in the country field, asserting `TH`, then presses
+  `[data-testid="payment-form-submit-button"]`. The country is picked explicitly, never left to the IP: an EU/UK
+  billing country would make the new webhook cancel the checkout. A US card form adds `#payment-postalCodeInput`,
+  which the helper fills when shown.
 - Mailpit: `welcome-plan` waits for the signup email through Mailpit's HTTP API (`VERIFY_MAILPIT_URL`, default
   `http://localhost:8025`), clicks Resend, waits for a different message, and opens its `/verify-email/...` link.
 - End state: the path is `/schedule...` and `auth.hasActiveSubscription` is `true`; `auth.plan.name` is `Mini` for
@@ -73,6 +81,9 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
 - Stripe's page loads in about 5 to 15 seconds and its card form in a second iframe: the helper waits up to 60.
 - The Terms consent checkbox belongs to the session (`consent_collection.terms_of_service`), not to one billing
   journey; `payOnStripeCheckout` ticks it whenever it is on screen.
+- The fixture Owner's `users.country` is `TH` (`fixture.php`) and `payOnStripeCheckout` selects `TH` again on
+  Stripe's page. If Stripe's country field moves, the journey fails its `TH` check rather than being silently
+  cancelled by the blocked-country webhook.
 - An hCaptcha frame loads with the page; with the test card it has not challenged so far. If it starts to, the
   journey cannot pass it: report it.
 - Each run leaves a sandbox Customer; `fixture.sh up` and `cleanup.sh` delete the fixture's, and

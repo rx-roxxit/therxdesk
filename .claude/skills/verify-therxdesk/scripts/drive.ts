@@ -189,6 +189,7 @@ const servedMode = async (page: Page): Promise<Mode | null> => {
 /** The journeys that need selling mode (selling.sh up); every other one needs self-hosted. */
 const SELLING_JOURNEYS = [
     'register',
+    'blocked-country',
     'selling-mode',
     'welcome-plan',
     'welcome-checkout',
@@ -448,6 +449,40 @@ const payOnStripeCheckout = async (run: Run): Promise<void> => {
         }
     }
 
+    // Select Thailand explicitly: the completed-checkout webhook cancels a
+    // subscription billed to an EU/UK country, so a paid journey must never
+    // rely on the IP deciding the billing country.
+    const country = checkoutFrame?.locator('#billingAddress-countryInput');
+    const countryIsSelect =
+        country !== undefined &&
+        (await country.count()) > 0 &&
+        (await country.evaluate((field) => field.tagName)) === 'SELECT';
+    let billingCountry = '';
+
+    if (country !== undefined && countryIsSelect) {
+        await country.selectOption('TH');
+        billingCountry = await country.inputValue();
+    } else {
+        const combobox = checkoutFrame?.getByRole('combobox', {
+            name: /country/i,
+        });
+
+        if (combobox !== undefined && (await combobox.count()) > 0) {
+            await combobox.click();
+            await checkoutFrame
+                ?.getByRole('option', { name: /Thailand/i })
+                .first()
+                .click();
+            billingCountry = (await combobox.textContent()) ?? '';
+        }
+    }
+
+    run.check(
+        'Stripe Checkout bills to Thailand (an allowed country)',
+        billingCountry.trim() === 'TH' || billingCountry.includes('Thailand'),
+        billingCountry,
+    );
+
     // A US card form keeps its ZIP inside the card element.
     const cardPostalCode = form.locator('#payment-postalCodeInput');
 
@@ -587,6 +622,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page
             .locator(tid('@register-password'))
             .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-country')).selectOption('TH');
         await run.step('register-filled');
 
         await page.locator(tid('@register-user-button')).click();
@@ -616,6 +652,60 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             'the new Account has no subscription yet',
             hasActiveSubscription === false,
             hasActiveSubscription,
+        );
+    },
+
+    /** features/registration.md (the EU/UK block) */
+    'blocked-country': async (run) => {
+        const { page } = run;
+
+        const email = guestEmail();
+        run.note('blockedSignupEmail', email);
+
+        await page.goto(`${run.baseUrl}/register`);
+        await page.locator(tid('@register-user-button')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('blocked-country-form');
+
+        await page.locator(tid('@register-name')).fill('Verify Blocked');
+        await page.locator(tid('@register-email')).fill(email);
+        await page
+            .locator(tid('@register-password'))
+            .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-country')).selectOption('DE');
+        await run.step('blocked-country-filled');
+
+        await page.locator(tid('@register-user-button')).click();
+
+        const notice = page.getByText('Not available in the EU/UK yet', {
+            exact: false,
+        });
+
+        await notice
+            .first()
+            .waitFor({ timeout: 15_000 })
+            .catch(() => null);
+
+        await page.waitForLoadState('networkidle');
+        await run.step('blocked-country-refused');
+
+        const path = new URL(page.url()).pathname;
+        run.check(
+            'the blocked signup stays on the register page',
+            path === '/register',
+            path,
+        );
+        run.check(
+            'the blocked notice is shown',
+            (await notice.count()) > 0,
+            await notice.count(),
+        );
+
+        const signedIn = await signedInEmail(page);
+        run.check(
+            'the blocked signup is not signed in',
+            signedIn === null,
+            signedIn,
         );
     },
 
@@ -732,6 +822,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page
             .locator(tid('@register-password'))
             .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-country')).selectOption('TH');
         await page.locator(tid('@register-user-button')).click();
         await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
             timeout: 30_000,
@@ -1157,9 +1248,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             title,
         );
 
-        const cards = await page
-            .locator('[data-testid^="plan-card-"]')
-            .count();
+        const cards = await page.locator('[data-testid^="plan-card-"]').count();
         run.check('the retry step shows no plan cards', cards === 0, cards);
 
         await page.locator(tid('@plan-payment-retry-update-card')).click();
@@ -1224,9 +1313,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
 
         const planName = await page.evaluate(() => {
-            return (
-                window.history.state?.page?.props?.auth?.plan?.name ?? null
-            );
+            return window.history.state?.page?.props?.auth?.plan?.name ?? null;
         });
         const shownName = await page
             .locator(tid('@billing-current-plan-name'))
@@ -1247,7 +1334,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
      * state, and a card's button says Subscribe because the Trial is not
      * offered again.
      */
-    'lapsed': async (run) => {
+    lapsed: async (run) => {
         const { page } = run;
 
         await signIn(run);
@@ -1261,9 +1348,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         const retry = await page.locator(tid('@plan-payment-retry')).count();
         run.check('a lapsed Account has no retry step', retry === 0, retry);
 
-        const button = await page
-            .locator(tid('@plan-select-mini'))
-            .innerText();
+        const button = await page.locator(tid('@plan-select-mini')).innerText();
         run.check(
             'the lapsed Account is offered a subscription, not a Trial',
             button.includes('Subscribe'),

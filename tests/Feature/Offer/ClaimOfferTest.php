@@ -47,6 +47,7 @@ test('a guest\'s offer is claimed when they register', function () {
         'name' => 'Offer User',
         'email' => 'offer@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -177,6 +178,7 @@ test('a guest\'s link to an offer that has not started is not kept for later', f
         'name' => 'Early User',
         'email' => 'early@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 

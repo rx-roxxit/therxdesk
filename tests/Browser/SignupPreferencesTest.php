@@ -103,6 +103,7 @@ test('signing up with the email form creates the account in the browser language
     $page->fill('@register-name', 'Bia')
         ->fill('@register-email', 'bia-browser@example.com')
         ->fill('@register-password', strongPassword())
+        ->select('@register-country', 'TH')
         ->click('@register-user-button');
     waitForPath($page, parse_url(route('app.welcome.persona'), PHP_URL_PATH));
 

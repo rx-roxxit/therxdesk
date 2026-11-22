@@ -3,6 +3,7 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import PaymentRetryState from '@/components/welcome/PaymentRetryState.vue';
 import VerifyEmailDialog from '@/components/welcome/VerifyEmailDialog.vue';
 import WelcomeOfferBanner from '@/components/welcome/WelcomeOfferBanner.vue';
@@ -27,6 +28,7 @@ const props = defineProps<{
     offer: Offer | null;
     trial: WelcomePlanTrial | null;
     retry: WelcomePlanRetry | null;
+    countryBlocked: boolean;
 }>();
 
 const layoutTitle = ($t: Translate): string => {
@@ -116,7 +118,18 @@ const closeVerifyDialog = (open: boolean): void => {
         :step="layoutStep()"
         :size="layoutSize()"
     >
-        <div v-if="retry === null" class="flex w-full flex-col gap-6">
+        <Alert
+            v-if="countryBlocked"
+            variant="destructive"
+            class="w-full"
+            data-testid="welcome-country-blocked"
+        >
+            <AlertDescription>{{
+                $t('rxdesk.country.blocked')
+            }}</AlertDescription>
+        </Alert>
+
+        <div v-else-if="retry === null" class="flex w-full flex-col gap-6">
             <WelcomeOfferBanner
                 v-if="offer?.has_banner"
                 :offer-key="offer.key"

@@ -11,6 +11,11 @@ return [
     'help' => [
         'source_code' => 'Source code',
     ],
+    'country' => [
+        'label' => '国家或地区',
+        'select' => '选择国家或地区',
+        'blocked' => '暂不在欧盟和英国提供',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

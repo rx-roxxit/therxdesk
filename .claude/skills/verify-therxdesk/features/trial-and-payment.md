@@ -25,6 +25,11 @@ $V/stripe-clock.sh status            # clock id, status, frozen time, customer
 `stripe-clock.sh create` refuses while a clock exists: `delete` it first, or let `cleanup.sh` do it. The clock does
 not change the app; it only changes what Stripe does with that Customer's subscriptions.
 
+Every path starts with `drive.sh welcome-checkout`, whose `payOnStripeCheckout()` picks Thailand as the billing
+country and asserts it. The fixture Owner's `users.country` is `TH` too. Keep it that way: the completed-checkout
+webhook cancels a subscription billed to an EU/UK country, and such a cancellation would end every path below
+before its Trial even starts.
+
 The sandbox refuses raw card numbers sent to its API (`Sending credit card numbers directly to the Stripe API is
 generally unsafe`), so every API command below uses Stripe's magic test PaymentMethods: `pm_card_visa` (the `4242`
 card) and `pm_card_chargeCustomerFail` (`4000000000000341`, which attaches but fails when charged). On Stripe

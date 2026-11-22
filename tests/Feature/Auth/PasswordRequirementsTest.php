@@ -28,6 +28,7 @@ test('a password missing a requirement is rejected', function (string $password)
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => $password,
+        'country' => 'TH',
         'locale' => 'en',
     ])->assertSessionHasErrors('password');
 
@@ -46,6 +47,7 @@ test('a compromised password is rejected', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => compromisedPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ])->assertSessionHasErrors('password');
 
@@ -57,6 +59,7 @@ test('a password meeting every requirement is accepted', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ])->assertSessionHasNoErrors();
 

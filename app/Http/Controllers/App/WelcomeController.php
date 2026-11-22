@@ -24,6 +24,7 @@ use App\Models\Offer;
 use App\Models\Plan;
 use App\Services\PostHogService;
 use App\Support\Billing\BillingPortal;
+use App\Support\Billing\BlockedCountries;
 use App\Support\Billing\ConfigureSubscriptionCheckout;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -178,6 +179,7 @@ class WelcomeController extends Controller
             'offer' => filled($offer) ? OfferResource::make($offer)->resolve($request) : null,
             'trial' => $this->trial($account, $offer),
             'retry' => $this->retry($account),
+            'countryBlocked' => filled($account->blocked_country_at),
         ]);
     }
 
@@ -206,6 +208,10 @@ class WelcomeController extends Controller
 
         $user = $request->user();
         abort_if(blank($user->email_verified_at), Response::HTTP_FORBIDDEN);
+
+        if ($this->countryBlocked($user->accountOrFail())) {
+            return back()->with('flash.error', __('rxdesk.country.blocked'));
+        }
 
         $interval = Interval::from((string) $request->validated('interval'));
         $plan = Plan::query()
@@ -335,6 +341,15 @@ class WelcomeController extends Controller
             'plan' => $account->plan?->name,
             'update_card_url' => route('app.welcome.plan.portal'),
         ];
+    }
+
+    private function countryBlocked(Account $account): bool
+    {
+        if (filled($account->blocked_country_at)) {
+            return true;
+        }
+
+        return BlockedCountries::isBlocked($account->owner?->country);
     }
 
     private function redirectIfStepIncomplete(

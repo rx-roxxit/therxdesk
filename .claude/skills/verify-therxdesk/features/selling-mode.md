@@ -15,7 +15,8 @@ app access, so its Owner goes straight to the Schedule. Self-hosted mode skips a
   price change archives the old row instead of deleting it, so a Plan may hold several inactive rows), and
   `selling.sh` seeds the catalog and fills the Stripe ids (see `SKILL.md`, "Selling mode").
 - Billing and Processing answer only here (they redirect to the Schedule when self-hosted); the Welcome plan step
-  does too.
+  does too. `/register` requires a country, and an EU/UK one is refused; a blocked Owner country or a completed
+  checkout billed to a blocked country never reaches Checkout (see `registration.md` and `welcome-checkout.md`).
 
 ## How to get to it (user POV)
 

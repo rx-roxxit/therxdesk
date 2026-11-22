@@ -11,6 +11,7 @@ enum Result
     case AlreadyAccepted;
     case AlreadyMember;
     case OwnerHasWorkspaces;
+    case BlockedCountry;
     case Accepted;
     case Declined;
 
@@ -21,6 +22,7 @@ enum Result
             self::Gone => __('settings.members.flash.invite_workspace_gone'),
             self::AlreadyAccepted, self::AlreadyMember => __('settings.members.flash.already_member'),
             self::OwnerHasWorkspaces => __('rxdesk.invite.owner_has_workspaces'),
+            self::BlockedCountry => __('rxdesk.country.blocked'),
             self::Accepted => __('settings.members.flash.invite_accepted'),
             self::Declined => __('settings.members.flash.invite_declined'),
         };
@@ -32,7 +34,7 @@ enum Result
     public function flashStyle(): string
     {
         return match ($this) {
-            self::WrongEmail, self::Gone, self::OwnerHasWorkspaces => 'danger',
+            self::WrongEmail, self::Gone, self::OwnerHasWorkspaces, self::BlockedCountry => 'danger',
             self::AlreadyAccepted, self::AlreadyMember, self::Declined => 'info',
             self::Accepted => 'success',
         };

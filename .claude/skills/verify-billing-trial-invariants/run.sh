@@ -30,8 +30,11 @@ COVERED=(
   app/Models/Account.php
   app/Models/Subscription.php
   app/Models/TrialAccount.php
+  app/Listeners/StripeCheckoutSessionListener.php
+  app/Support/Billing/BlockedCountries.php
   database/migrations/2026_11_22_120000_add_billing_facts.php
   database/migrations/2026_11_22_130000_add_trial_accounts.php
+  database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php
 )
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
@@ -91,6 +94,8 @@ add_check never-paid-no-access BillingFacts MC_NeverPaidNoAccess.cfg \
   "An Account that never paid has no access while its first charge is retried."
 add_check paid-before-keeps-access BillingFacts MC_PaidKeepsAccess.cfg \
   "An Account that paid before keeps access while past due."
+add_check blocked-checkout-no-access BillingFacts MC_BlockedNoAccess.cfg \
+  "A checkout billed to a blocked country leaves the Account without access."
 add_check selftest-card-fixed TrialGrantFixed FIX_CardOneTrial.cfg \
   "Self-test: the card rule passes on the fixed model."
 add_check selftest-account-fixed TrialGrantFixed FIX_AccountOneTrial.cfg \

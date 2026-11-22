@@ -6,7 +6,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Feature | File | Journey (`drive.sh <name>`) |
 | --- | --- | --- |
 | Sign in with email and password | [sign-in.md](sign-in.md) | `sign-in` |
-| Register a new Owner at `/register` (`selling.sh up`) | [registration.md](registration.md) | `register` |
+| Register a new Owner at `/register` (`selling.sh up`), and the EU/UK block | [registration.md](registration.md) | `register`, `blocked-country` |
 | Write a post and save it as a draft | [compose-draft.md](compose-draft.md) | `compose-draft` |
 | Storage bar in the account menu | [storage-bar.md](storage-bar.md) | `storage-bar` |
 | Switch the app language from the sidebar | [language-switch.md](language-switch.md) | `language-switch` |

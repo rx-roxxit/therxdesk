@@ -898,3 +898,75 @@ test('an owner on a trial without a card never reaches checkout or a second tria
 
     expect($this->user->account->fresh()->trial_ends_at->equalTo($trialEndsAt))->toBeTrue();
 });
+
+test('the plan step sends countryBlocked for a blocked account', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->user->account->update(['blocked_country_at' => now()]);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('countryBlocked', true));
+});
+
+test('the plan step sends countryBlocked false for an allowed account', function () {
+    completeWelcomeThroughSoftware($this->user);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('countryBlocked', false));
+});
+
+test('plan store refuses a blocked Owner country without opening checkout', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->user->update(['country' => 'DE']);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_monthly_test');
+
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->from(route('app.welcome.plan'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertRedirect(route('app.welcome.plan'))
+        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+
+    expect($this->user->fresh()->account->plan_id)->toBeNull();
+});
+
+test('plan store refuses an account whose completed checkout was billed to a blocked country', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->user->account->update([
+        'blocked_country' => 'GB',
+        'blocked_country_at' => now(),
+        'blocked_country_payment_status' => 'unpaid',
+    ]);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_monthly_test');
+
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->from(route('app.welcome.plan'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertRedirect(route('app.welcome.plan'))
+        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+});
+
+test('a blocked account never starts the no-card trial', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->user->update(['country' => 'DE']);
+
+    $offer = Offer::factory()->trial(7)->withoutCard()->create();
+    $this->user->account->offers()->attach($offer, ['claimed_at' => now()]);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_monthly_test');
+
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->from(route('app.welcome.plan'))
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertRedirect(route('app.welcome.plan'))
+        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+
+    expect($this->user->fresh()->account->trial_ends_at)->toBeNull();
+});

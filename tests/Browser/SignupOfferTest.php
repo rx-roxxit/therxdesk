@@ -26,6 +26,7 @@ test('an offer opened on the register page survives a trip to login and back to 
     $page->type('@register-name', 'Offer Visitor')
         ->type('@register-email', 'offer-visitor@example.com')
         ->type('@register-password', strongPassword())
+        ->select('@register-country', 'TH')
         ->click('@register-user-button');
     waitForPath($page, parse_url(route('app.welcome.persona'), PHP_URL_PATH));
 
@@ -68,6 +69,7 @@ test('a link to an unknown offer signs the visitor up without one', function () 
     $page->type('@register-name', 'Plain Visitor')
         ->type('@register-email', 'plain-visitor@example.com')
         ->type('@register-password', strongPassword())
+        ->select('@register-country', 'TH')
         ->click('@register-user-button');
     waitForPath($page, parse_url(route('app.welcome.persona'), PHP_URL_PATH));
 

@@ -28,6 +28,7 @@ test('email registration saves ad click ids from the register page query string'
         'name' => 'Click User',
         'email' => 'click@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ])
         ->assertRedirect(route('app.welcome', absolute: false));
@@ -43,6 +44,7 @@ test('email registration without click ids saves null columns', function () {
         'name' => 'No Click User',
         'email' => 'no-click@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -66,6 +68,7 @@ test('click id values longer than 255 characters are stored in full, unlike utm 
         'name' => 'Long Click User',
         'email' => 'long-click@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -193,6 +196,7 @@ test('an empty query string value is treated the same as an absent one, not stor
         'name' => 'Empty Param User',
         'email' => 'empty-param@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -213,6 +217,7 @@ test('click ids and utm parameters are both saved when present together', functi
         'name' => 'Mixed User',
         'email' => 'mixed@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 

@@ -19,6 +19,7 @@ test('registration stores the browser time zone', function () {
         'name' => 'Ana',
         'email' => 'ana@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
         'timezone' => 'Europe/Warsaw',
     ]);
@@ -31,6 +32,7 @@ test('registration maps a legacy time zone alias to its canonical identifier', f
         'name' => 'Ravi',
         'email' => 'ravi@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
         'timezone' => 'Asia/Calcutta',
     ]);
@@ -75,6 +77,7 @@ test('registration maps an alias missing from PHP\'s time zone list', function (
         'name' => 'Ravi',
         'email' => 'ravi@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
         'timezone' => 'Canada/East-Saskatchewan',
     ]);
@@ -87,6 +90,7 @@ test('registration falls back to UTC for a missing or invalid time zone', functi
         'name' => 'Bo',
         'email' => 'bo@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ];
 
