@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Envoyé le :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Choisissez votre forfait',
+        'description' => "Payez au mois ou à l'année. Changez ou annulez à tout moment.",
+        'storage' => ':size de stockage',
+        'ai_credits' => ':credits crédits IA par mois',
+        'unlimited' => 'Espaces de travail, canaux, publications et membres illimités.',
+        'start_trial' => 'Essayer :days jours gratuitement',
+        'subscribe' => "S'abonner",
+        'trial_terms' => 'Puis :price à partir du :date. Annulez à tout moment. Un essai gratuit par carte.',
+        'subscribe_terms' => ':price vous sera facturé aujourd’hui. Annulez à tout moment.',
+        'verify_email' => [
+            'title' => 'Vérifiez votre e-mail',
+            'description' => 'Nous avons envoyé un lien à :email. Ouvrez-le, puis revenez ici pour commencer.',
+            'resend' => "Renvoyer l'e-mail",
+            'close' => 'Pas maintenant',
+        ],
+    ],
 ];

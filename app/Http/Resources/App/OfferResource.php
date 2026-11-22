@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Lang;
 class OfferResource extends JsonResource
 {
     /**
-     * @return array{key: string, has_banner: bool, has_checkout_copy: bool, has_unit: bool, has_terms: bool}
+     * @return array{key: string, has_banner: bool, has_checkout_copy: bool, has_unit: bool, has_terms: bool, starts_without_card: bool}
      */
     public function toArray(Request $request): array
     {
@@ -27,6 +27,7 @@ class OfferResource extends JsonResource
 
         return [
             'key' => $key,
+            'starts_without_card' => $this->startsWithoutCard(),
             'has_banner' => $this->show_banner && $this->hasCopy("offers.{$key}.name") && $this->hasCopy("offers.{$key}.headline"),
             'has_checkout_copy' => $this->hasCopy("offers.{$key}.price") && $this->hasCopy("offers.{$key}.period") && $this->hasCopy("offers.{$key}.checkout_button"),
             'has_unit' => $this->hasCopy("offers.{$key}.unit"),

@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => '发送时间 :time',
     ],
+    'welcome_plan' => [
+        'title' => '选择套餐',
+        'description' => '按月或按年付费。随时更改或取消。',
+        'storage' => ':size 存储空间',
+        'ai_credits' => '每月 :credits AI 积分',
+        'unlimited' => '工作区、频道、帖子和成员均无限制。',
+        'start_trial' => '开始 :days 天免费试用',
+        'subscribe' => '订阅',
+        'trial_terms' => '此后自 :date 起 :price。可随时取消。每张卡一次免费试用。',
+        'subscribe_terms' => '今天将收取 :price。可随时取消。',
+        'verify_email' => [
+            'title' => '验证你的邮箱',
+            'description' => '我们已向 :email 发送链接。打开链接后回到这里开始。',
+            'resend' => '重新发送邮件',
+            'close' => '稍后',
+        ],
+    ],
 ];

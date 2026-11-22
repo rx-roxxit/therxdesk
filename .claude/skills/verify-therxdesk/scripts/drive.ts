@@ -64,12 +64,15 @@ const signIn = async (run: Run): Promise<void> => {
  * Mark the first-visit tours as seen, so none covers the page. Browser
  * storage only: the account and its data are untouched.
  */
-const quietFirstVisits = async (run: Run): Promise<void> => {
-    await run.page.evaluate((userId) => {
+const quietFirstVisits = async (
+    run: Run,
+    userId: string = run.fixture.userId,
+): Promise<void> => {
+    await run.page.evaluate((id) => {
         const seen = { status: 'skipped', step: 1 };
 
         localStorage.setItem(
-            `trypost:${userId}`,
+            `trypost:${id}`,
             JSON.stringify({
                 version: 1,
                 user: {
@@ -82,7 +85,7 @@ const quietFirstVisits = async (run: Run): Promise<void> => {
                 workspaces: {},
             }),
         );
-    }, run.fixture.userId);
+    }, userId);
 };
 
 /** Wait until no CSS animation runs (a dialog fading in), so a screenshot shows the end state. */
@@ -187,6 +190,7 @@ const servedMode = async (page: Page): Promise<Mode | null> => {
 const SELLING_JOURNEYS = [
     'register',
     'selling-mode',
+    'welcome-plan',
     'welcome-checkout',
     'billing',
     'media-on-r2',
@@ -208,6 +212,188 @@ const testCardExpiry = (): string => {
     return `12${String(year).padStart(2, '0')}`;
 };
 
+/** Mailpit, where the dev stack sends every email. */
+const MAILPIT_URL = process.env.VERIFY_MAILPIT_URL ?? 'http://localhost:8025';
+
+type MailpitMessage = {
+    ID: string;
+    Date?: string;
+    To?: Array<{ Address: string }>;
+};
+
+/**
+ * Ticks the Terms of Service consent checkbox Stripe Checkout requires. The
+ * hosted page draws it differently from release to release and may keep it in
+ * a frame, so it is found at runtime; `false` when the session does not ask.
+ */
+const tickTermsConsent = async (page: Page): Promise<boolean> => {
+    const frames = [
+        page.mainFrame(),
+        ...page.frames().filter((frame) => frame !== page.mainFrame()),
+    ];
+
+    for (const frame of frames) {
+        const boxes = frame.getByRole('checkbox', {
+            name: /terms of service|terms and conditions|i agree/i,
+        });
+        const box = boxes.first();
+
+        if ((await boxes.count()) === 0 || !(await box.isVisible())) {
+            continue;
+        }
+
+        if ((await box.getAttribute('aria-checked')) === 'true') {
+            return true;
+        }
+
+        // Stripe draws a controlled checkbox: the native state does not flip,
+        // so click its label and read `aria-checked` instead of `check()`.
+        const id = await box.getAttribute('id');
+        const label = id === null ? null : frame.locator(`label[for="${id}"]`);
+
+        if (label !== null && (await label.count()) > 0) {
+            await label.first().click();
+        } else {
+            await box.click({ force: true });
+        }
+
+        for (let attempt = 0; attempt < 20; attempt++) {
+            if ((await box.getAttribute('aria-checked')) === 'true') {
+                return true;
+            }
+
+            await page.waitForTimeout(100);
+        }
+
+        await box.focus();
+        await page.keyboard.press('Space');
+
+        for (let attempt = 0; attempt < 20; attempt++) {
+            if ((await box.getAttribute('aria-checked')) === 'true') {
+                return true;
+            }
+
+            await page.waitForTimeout(100);
+        }
+
+        return false;
+    }
+
+    return false;
+};
+
+/**
+ * Every Mailpit message to that address, newest first, read through its HTTP
+ * API (the same inbox mail.sh prints).
+ */
+const mailsFor = async (email: string): Promise<MailpitMessage[]> => {
+    const response = await fetch(`${MAILPIT_URL}/api/v1/messages?limit=200`);
+
+    if (!response.ok) {
+        throw new Error(`Mailpit answered ${response.status}`);
+    }
+
+    const body = (await response.json()) as { messages?: MailpitMessage[] };
+
+    return (body.messages ?? [])
+        .filter((message) =>
+            (message.To ?? []).some((to) => to.Address === email),
+        )
+        .sort((a, b) => (b.Date ?? '').localeCompare(a.Date ?? ''));
+};
+
+/**
+ * Waits for a Mailpit message to that address whose id is not `notId`, so a
+ * resend is proven by a new email and not by the one signup already sent.
+ */
+const waitForMail = async (
+    email: string,
+    notId: string | null,
+): Promise<MailpitMessage | null> => {
+    for (let attempt = 0; attempt < 30; attempt++) {
+        const message = (await mailsFor(email)).find(
+            (candidate) => candidate.ID !== notId,
+        );
+
+        if (message !== undefined) {
+            return message;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+
+    return null;
+};
+
+/** The verification link inside a Mailpit message, or null. */
+const verificationLink = async (
+    message: MailpitMessage,
+): Promise<string | null> => {
+    const response = await fetch(`${MAILPIT_URL}/api/v1/message/${message.ID}`);
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const detail = (await response.json()) as {
+        Text?: string;
+        HTML?: string;
+    };
+    const source = `${detail.Text ?? ''}\n${detail.HTML ?? ''}`.replace(
+        /&amp;/g,
+        '&',
+    );
+    const match = source.match(
+        /https?:\/\/[^"'<>\\\s]+\/verify-email\/[^"'<>\\\s]+/,
+    );
+
+    return match?.[0] ?? null;
+};
+
+/**
+ * The Stripe Elements frame that holds the card form, once Checkout has drawn
+ * it. Several iframes load, so the form is the one with the number field.
+ */
+const waitForStripeCheckoutForm = async (page: Page): Promise<Frame> => {
+    for (let attempt = 0; attempt < 60; attempt++) {
+        for (const frame of page.frames()) {
+            if ((await frame.locator('#payment-numberInput').count()) > 0) {
+                return frame;
+            }
+        }
+
+        await page.waitForTimeout(1_000);
+    }
+
+    throw new Error('the Stripe card form never appeared');
+};
+
+/**
+ * The frame that holds the Checkout form around the card element (billing
+ * address, consent), which Stripe keeps separate from the card iframe.
+ */
+const waitForStripeCheckoutFrame = async (
+    page: Page,
+): Promise<Frame | null> => {
+    for (let attempt = 0; attempt < 30; attempt++) {
+        for (const frame of page.frames()) {
+            if (
+                (await frame.locator('#billingAddress-nameInput').count()) >
+                    0 ||
+                (await frame
+                    .locator('input[name="termsOfServiceConsent"]')
+                    .count()) > 0
+            ) {
+                return frame;
+            }
+        }
+
+        await page.waitForTimeout(1_000);
+    }
+
+    return null;
+};
+
 /**
  * Pay on Stripe's hosted Checkout page (checkout.stripe.com, a sandbox
  * session) with the test card, as a user does. The card form lives in a
@@ -221,38 +407,49 @@ const payOnStripeCheckout = async (run: Run): Promise<void> => {
         timeout: 60_000,
     });
 
-    // Several Stripe iframes load; the card form is the one with the number field.
-    let form: Frame | null = null;
-
-    for (let attempt = 0; attempt < 60 && form === null; attempt++) {
-        for (const frame of page.frames()) {
-            if ((await frame.locator('#payment-numberInput').count()) > 0) {
-                form = frame;
-            }
-        }
-
-        if (form === null) {
-            await page.waitForTimeout(1_000);
-        }
-    }
-
-    if (form === null) {
-        throw new Error('the Stripe card form never appeared');
-    }
+    const form = await waitForStripeCheckoutForm(page);
 
     await form.locator('#payment-numberInput').waitFor();
+    await page.waitForTimeout(1_000);
+    await tickTermsConsent(page);
     await run.step('stripe-checkout');
 
     await form.locator('#payment-numberInput').fill(TEST_CARD);
     await form.locator('#payment-expiryInput').fill(testCardExpiry());
     await form.locator('#payment-cvcInput').fill('123');
-    await form.locator('#payment-nameInput').fill('Verify Agent');
 
-    // A US billing country adds a ZIP field; the country follows the IP.
-    const postalCode = form.locator('#payment-postalCodeInput');
+    // The card form carries the name unless the Checkout collects a billing
+    // address, in which case the main page does.
+    const cardName = form.locator('#payment-nameInput');
 
-    if (await postalCode.isVisible()) {
-        await postalCode.fill('10001');
+    if (await cardName.isVisible()) {
+        await cardName.fill('Verify Agent');
+    }
+
+    // A required billing address asks for the buyer and the address; Stripe
+    // keeps those fields in the Checkout frame, not the card iframe. Fill what
+    // is on screen. The country follows the IP (Thailand here).
+    const checkoutFrame = await waitForStripeCheckoutFrame(page);
+    const billing = {
+        '#billingAddress-nameInput': 'Verify Agent',
+        '#billingAddress-addressLine1Input': '1 Verify Road',
+        '#billingAddress-localityInput': 'Bangkok',
+        '#billingAddress-postalCodeInput': '10110',
+    };
+
+    for (const [selector, value] of Object.entries(billing)) {
+        const field = checkoutFrame?.locator(selector);
+
+        if (field !== undefined && (await field.isVisible())) {
+            await field.fill(value);
+        }
+    }
+
+    // A US card form keeps its ZIP inside the card element.
+    const cardPostalCode = form.locator('#payment-postalCodeInput');
+
+    if (await cardPostalCode.isVisible()) {
+        await cardPostalCode.fill('10001');
     }
 
     // Stripe Link offers to save the card; leave it off so no Link account is made.
@@ -263,6 +460,17 @@ const payOnStripeCheckout = async (run: Run): Promise<void> => {
     }
 
     await run.step('stripe-checkout-filled');
+
+    const submit = checkoutFrame?.locator(
+        '[data-testid="payment-form-submit-button"]',
+    );
+
+    if (submit !== undefined && (await submit.count()) > 0) {
+        await submit.click();
+
+        return;
+    }
+
     await form.locator('[data-testid="payment-form-submit-button"]').click();
 };
 
@@ -502,6 +710,249 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
     },
 
+    /**
+     * features/welcome-checkout.md
+     *
+     * The plan step alone: the `/register` link's plan and interval, the four
+     * cards, the Monthly/Yearly switch, the verify-email dialog and a Checkout
+     * with Terms consent and no promotion codes, then Processing and Schedule.
+     */
+    'welcome-plan': async (run) => {
+        const { page } = run;
+        const email = guestEmail();
+        run.note('signupEmail', email);
+
+        await page.goto(`${run.baseUrl}/register?plan=plus&interval=yearly`);
+        await page.locator(tid('@register-user-button')).waitFor();
+        await page.locator(tid('@register-name')).fill('Verify Plan');
+        await page.locator(tid('@register-email')).fill(email);
+        await page
+            .locator(tid('@register-password'))
+            .fill('Tr7#pass-Word-2026');
+        await page.locator(tid('@register-user-button')).click();
+        await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
+            timeout: 30_000,
+        });
+
+        await page.locator(tid('@welcome-persona-continue')).waitFor();
+        await page.locator(tid('@welcome-persona-creator')).click();
+        await page.locator(tid('@welcome-persona-continue')).click();
+        await page.locator(tid('@welcome-goals-continue')).waitFor();
+        await page.locator(tid('@welcome-goal-save_time')).click();
+        await page.locator(tid('@welcome-goals-continue')).click();
+        await page.locator(tid('@welcome-software-continue')).waitFor();
+        await page.locator(tid('@welcome-software-none')).click();
+        await page.locator(tid('@welcome-software-continue')).click();
+
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('welcome-plan');
+
+        const cards = await page
+            .locator('[data-testid^="plan-card-"]')
+            .evaluateAll((elements) =>
+                elements.map(
+                    (element) => (element as HTMLElement).dataset.testid,
+                ),
+            );
+        run.check(
+            'the plan step shows four cards in Catalog order',
+            JSON.stringify(cards) ===
+                JSON.stringify([
+                    'plan-card-mini',
+                    'plan-card-standard',
+                    'plan-card-plus',
+                    'plan-card-max',
+                ]),
+            cards,
+        );
+
+        const yearlyPressed = await page
+            .locator(tid('@plan-interval-yearly'))
+            .getAttribute('aria-pressed');
+        run.check(
+            'the yearly interval from the register link is preselected',
+            yearlyPressed === 'true',
+            yearlyPressed,
+        );
+
+        const plusSelected = await page
+            .locator(tid('@plan-card-plus'))
+            .getAttribute('data-selected');
+        run.check(
+            'the Plus plan from the register link is preselected',
+            plusSelected === 'true',
+            plusSelected,
+        );
+
+        const yearlyPlus = await page
+            .locator(tid('@plan-price-plus'))
+            .innerText();
+        const yearlyUnit = await page
+            .locator(tid('@plan-price-unit-plus'))
+            .innerText();
+        run.check(
+            'yearly shows Plus at $299.00 a year',
+            yearlyPlus.includes('$299.00') && yearlyUnit.includes('/year'),
+            { yearlyPlus, yearlyUnit },
+        );
+
+        await page.locator(tid('@plan-interval-monthly')).click();
+        await page.waitForFunction(() => {
+            return document
+                .querySelector('[data-testid="plan-price-plus"]')
+                ?.textContent?.includes('$29.90');
+        });
+        const monthlyPlus = await page
+            .locator(tid('@plan-price-plus'))
+            .innerText();
+        run.check(
+            'monthly shows Plus at $29.90 a month',
+            monthlyPlus.includes('$29.90'),
+            monthlyPlus,
+        );
+
+        await page.locator(tid('@plan-interval-yearly')).click();
+        await page.waitForFunction(() => {
+            return document
+                .querySelector('[data-testid="plan-price-plus"]')
+                ?.textContent?.includes('$299.00');
+        });
+        await run.step('welcome-plan-yearly');
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.evaluate(
+            () =>
+                new Promise((resolve) =>
+                    requestAnimationFrame(() => requestAnimationFrame(resolve)),
+                ),
+        );
+        const clipped = await page
+            .locator('[data-testid^="plan-select-"]')
+            .evaluateAll((elements) =>
+                elements
+                    .filter(
+                        (element) => element.scrollWidth > element.clientWidth,
+                    )
+                    .map((element) => (element as HTMLElement).dataset.testid),
+            );
+        run.check(
+            'every plan button fits its slot at 390px',
+            clipped.length === 0,
+            clipped,
+        );
+        await run.step('welcome-plan-phone');
+        await page.setViewportSize({ width: 1440, height: 900 });
+
+        // The new Owner's email is unverified: the first press opens the dialog.
+        await page.locator(tid('@plan-select-plus')).click();
+        await page.locator(tid('@verify-email-dialog')).waitFor();
+        await run.step('verify-dialog');
+
+        // Signup already sent one verification email; the resend must add another.
+        const signupMail = await waitForMail(email, null);
+        run.check(
+            'signup sends a verification email',
+            signupMail !== null,
+            signupMail?.ID ?? null,
+        );
+
+        await page.locator(tid('@verify-email-resend')).click();
+
+        const resentMail = await waitForMail(email, signupMail?.ID ?? null);
+        run.check(
+            'the resend delivers a new verification email',
+            resentMail !== null,
+            resentMail?.ID ?? null,
+        );
+
+        const link =
+            resentMail === null ? null : await verificationLink(resentMail);
+        run.check(
+            'the verification email carries a working link',
+            typeof link === 'string',
+            link,
+        );
+
+        if (link === null) {
+            throw new Error('no verification link in Mailpit');
+        }
+
+        await page.goto(link);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await run.step('after-verification');
+
+        await page.locator(tid('@plan-select-plus')).click();
+        await page.waitForURL((url) => url.hostname === 'checkout.stripe.com', {
+            timeout: 60_000,
+        });
+        await waitForStripeCheckoutForm(page);
+        await page.waitForTimeout(1_500);
+
+        const hasTerms = await tickTermsConsent(page);
+        run.check('Stripe Checkout asks for Terms consent', hasTerms, hasTerms);
+
+        const promotionField = page.locator(
+            '#promotion-code, input[name="promotion_code"]',
+        );
+        const promotionLink = page.getByText('Add promotion code', {
+            exact: false,
+        });
+        const promotionCount =
+            (await promotionField.count()) + (await promotionLink.count());
+        run.check(
+            'Stripe Checkout offers no promotion code field',
+            promotionCount === 0,
+            {
+                fields: await promotionField.count(),
+                links: await promotionLink.count(),
+            },
+        );
+        await run.step('stripe-checkout-terms');
+
+        await payOnStripeCheckout(run);
+
+        await page.waitForURL((url) => url.pathname === '/billing/processing', {
+            timeout: 90_000,
+        });
+        await run.step('processing');
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 90_000,
+        });
+        await page.waitForLoadState('networkidle');
+        const guestUserId = await page.evaluate(() => {
+            return (
+                window.history.state?.page?.props?.auth?.user?.id ?? undefined
+            );
+        });
+        await quietFirstVisits(run, guestUserId);
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.locator(tid('@schedule-view-list')).waitFor();
+        await run.step('after-checkout');
+
+        const auth = await page.evaluate(() => {
+            const props = window.history.state?.page?.props?.auth;
+
+            return {
+                accountId: props?.account?.id ?? null,
+                hasActiveSubscription: props?.hasActiveSubscription ?? null,
+                plan: props?.plan?.name ?? null,
+            };
+        });
+        run.note('accountId', auth.accountId);
+        run.check(
+            'the Account has an active subscription after the webhook',
+            auth.hasActiveSubscription === true,
+            auth,
+        );
+        run.check('the Account is on Plus', auth.plan === 'Plus', auth.plan);
+    },
+
     /** features/welcome-checkout.md */
     'welcome-checkout': async (run) => {
         const { page } = run;
@@ -529,6 +980,11 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             (await page.locator(tid('@welcome-plan-reviews')).count()) === 0,
             await page.locator(tid('@welcome-plan-reviews')).count(),
         );
+        run.check(
+            'the plan step shows the four Plans',
+            (await page.locator('[data-testid^="plan-card-"]').count()) === 4,
+            await page.locator('[data-testid^="plan-card-"]').count(),
+        );
         await run.step('welcome-plan');
 
         const price = await page.locator(tid('@plan-price-mini')).innerText();
@@ -538,7 +994,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             price,
         );
 
-        await page.locator(tid('@welcome-plan-continue')).click();
+        await page.locator(tid('@plan-select-mini')).click();
         await payOnStripeCheckout(run);
 
         // Back in the app, Processing waits for the webhook to give the
@@ -597,11 +1053,14 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 .locator(tid('@billing-current-plan-badge'))
                 .innerText(),
         };
+        // After welcome-checkout the first checkout is on the Catalog trial,
+        // so the badge says "Free trial"; a run after the trial says "Active".
         run.check(
-            'the current plan is Mini, $11.90/month, Active',
+            'the current plan is Mini, $11.90/month, on a Free trial or Active',
             currentPlan.name.includes('Mini') &&
                 currentPlan.price.includes('$11.90') &&
-                currentPlan.badge.includes('Active'),
+                (currentPlan.badge.includes('Free trial') ||
+                    currentPlan.badge.includes('Active')),
             currentPlan,
         );
 
@@ -939,14 +1398,17 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
         run.check(
             'the storage row has a progress bar',
-            (await page.locator(tid('@sidebar-menu-storage-progress')).count()) ===
-                1,
+            (await page
+                .locator(tid('@sidebar-menu-storage-progress'))
+                .count()) === 1,
             await page.locator(tid('@sidebar-menu-storage-progress')).count(),
         );
         run.note('storage', storage);
 
         await page.locator(tid('@sidebar-menu-storage')).click();
-        await page.waitForURL((url) => url.pathname === '/settings/preferences');
+        await page.waitForURL(
+            (url) => url.pathname === '/settings/preferences',
+        );
         // SettingsSelect puts the test id on its trigger, not on the row.
         const videoPolicy = page.locator('#video-policy');
         await videoPolicy.waitFor();

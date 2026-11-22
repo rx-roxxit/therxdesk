@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Enviado em :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Escolha seu plano',
+        'description' => 'Pague mensal ou anualmente. Mude ou cancele quando quiser.',
+        'storage' => ':size de armazenamento',
+        'ai_credits' => ':credits créditos de IA por mês',
+        'unlimited' => 'Espaços de trabalho, canais, publicações e membros ilimitados.',
+        'start_trial' => 'Teste grátis por :days dias',
+        'subscribe' => 'Assinar',
+        'trial_terms' => 'Depois :price a partir de :date. Cancele quando quiser. Um teste grátis por cartão.',
+        'subscribe_terms' => 'Você será cobrado :price hoje. Cancele quando quiser.',
+        'verify_email' => [
+            'title' => 'Verifique seu e-mail',
+            'description' => 'Enviamos um link para :email. Abra-o e volte aqui para começar.',
+            'resend' => 'Reenviar e-mail',
+            'close' => 'Agora não',
+        ],
+    ],
 ];

@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Wysłano :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Wybierz plan',
+        'description' => 'Płać miesięcznie lub rocznie. Zmień lub anuluj w dowolnym momencie.',
+        'storage' => ':size miejsca',
+        'ai_credits' => ':credits kredytów AI miesięcznie',
+        'unlimited' => 'Nieograniczone przestrzenie, kanały, posty i członkowie.',
+        'start_trial' => 'Zacznij :days-dniowy okres próbny',
+        'subscribe' => 'Subskrybuj',
+        'trial_terms' => 'Potem :price od :date. Anuluj w dowolnym momencie. Jeden okres próbny na kartę.',
+        'subscribe_terms' => 'Dziś pobierzemy :price. Anuluj w dowolnym momencie.',
+        'verify_email' => [
+            'title' => 'Potwierdź e-mail',
+            'description' => 'Wysłaliśmy link na :email. Otwórz go i wróć tutaj, aby zacząć.',
+            'resend' => 'Wyślij ponownie',
+            'close' => 'Nie teraz',
+        ],
+    ],
 ];

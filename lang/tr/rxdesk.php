@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Gönderildi :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Planını seç',
+        'description' => 'Aylık veya yıllık öde. İstediğin zaman değiştir veya iptal et.',
+        'storage' => ':size depolama',
+        'ai_credits' => 'Ayda :credits AI kredisi',
+        'unlimited' => 'Sınırsız çalışma alanı, kanal, gönderi ve üye.',
+        'start_trial' => ':days günlük ücretsiz deneme başlat',
+        'subscribe' => 'Abone ol',
+        'trial_terms' => 'Sonra :date tarihinden itibaren :price. İstediğin zaman iptal et. Kart başına bir ücretsiz deneme.',
+        'subscribe_terms' => 'Bugün :price tahsil edilecek. İstediğin zaman iptal et.',
+        'verify_email' => [
+            'title' => 'E-postanı doğrula',
+            'description' => ':email adresine bir bağlantı gönderdik. Aç ve başlamak için buraya dön.',
+            'resend' => 'E-postayı yeniden gönder',
+            'close' => 'Şimdi değil',
+        ],
+    ],
 ];

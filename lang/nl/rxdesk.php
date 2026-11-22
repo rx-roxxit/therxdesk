@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Verzonden :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Kies je abonnement',
+        'description' => 'Betaal maandelijks of jaarlijks. Wissel of stop wanneer je wilt.',
+        'storage' => ':size opslag',
+        'ai_credits' => ':credits AI-credits per maand',
+        'unlimited' => 'Onbeperkte werkruimtes, kanalen, berichten en leden.',
+        'start_trial' => 'Probeer :days dagen gratis',
+        'subscribe' => 'Abonneren',
+        'trial_terms' => 'Daarna :price vanaf :date. Altijd opzegbaar. Eén gratis proefperiode per kaart.',
+        'subscribe_terms' => 'Je betaalt vandaag :price. Altijd opzegbaar.',
+        'verify_email' => [
+            'title' => 'Verifieer je e-mail',
+            'description' => 'We hebben een link naar :email gestuurd. Open die en kom hier terug om te beginnen.',
+            'resend' => 'E-mail opnieuw sturen',
+            'close' => 'Niet nu',
+        ],
+    ],
 ];

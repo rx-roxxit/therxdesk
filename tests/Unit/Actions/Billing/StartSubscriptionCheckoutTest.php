@@ -49,7 +49,7 @@ function fakeStripeCustomerClient(): ClientInterface
 function checkoutCustomerBuilder(): SubscriptionBuilder
 {
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('withMetadata')->andReturnSelf();
     $builder->shouldReceive('trialDays')->andReturnSelf();
     $builder->shouldReceive('checkout')->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
@@ -89,9 +89,9 @@ test('redirect keeps the attribution metadata on the stripe customer, not on the
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
     $builder->shouldReceive('withMetadata')->once()->with([])->andReturnSelf();
-    $builder->shouldReceive('trialDays')->never();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('withCoupon')->never();
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('checkout')
         ->once()
         ->with([
@@ -100,6 +100,10 @@ test('redirect keeps the attribution metadata on the stripe customer, not on the
             'metadata' => [
                 'trypost_interval' => 'monthly',
             ],
+            'locale' => 'en',
+            'billing_address_collection' => 'required',
+            'consent_collection' => ['terms_of_service' => 'required'],
+            'allow_promotion_codes' => false,
         ])
         ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
 
@@ -149,9 +153,9 @@ test('redirect sends no metadata for an account whose owner left every field emp
     $cancelUrl = route('app.welcome');
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('withMetadata')->once()->with([])->andReturnSelf();
-    $builder->shouldReceive('trialDays')->never();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('checkout')
         ->once()
         ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
@@ -199,9 +203,9 @@ test('checkout session carries the plan and interval of a yearly price', functio
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('withMetadata')->once()->andReturnSelf();
-    $builder->shouldReceive('trialDays')->never();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('checkout')
         ->once()
         ->withArgs(fn (array $options): bool => data_get($options, 'metadata') === [
@@ -232,9 +236,9 @@ test('redirect clears a leftover plan_id before opening checkout', function () {
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('withMetadata')->once()->andReturnSelf();
-    $builder->shouldReceive('trialDays')->never();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('checkout')
         ->once()
         ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
@@ -331,6 +335,7 @@ test('stores the offer id and slug in subscription and checkout metadata', funct
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('withCoupon')->once()->with('BLACK_FRIDAY_50')->andReturnUsing(function () use ($builder): SubscriptionBuilder {
         $builder->couponId = 'BLACK_FRIDAY_50';
 
@@ -371,6 +376,7 @@ test('redirect uses the offer it is given and never looks one up', function () {
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('withCoupon')->once()->with('BLACK_FRIDAY_50')->andReturnUsing(function () use ($builder): SubscriptionBuilder {
         $builder->couponId = 'BLACK_FRIDAY_50';
 
@@ -397,11 +403,12 @@ test('redirect uses the offer it is given and never looks one up', function () {
     );
 });
 
-test('redirect skips the offer on a yearly price', function () {
+test('redirect applies the given offer to any plan and interval', function () {
 
     $plan = Plan::where('slug', 'mini')->firstOrFail();
     givePlanPrice($plan, Interval::Monthly, 'price_socials_monthly');
     givePlanPrice($plan, Interval::Yearly, 'price_socials_yearly');
+    $offer = Offer::factory()->create(['stripe_coupon_id' => 'YEARLY_50']);
 
     $account = Account::factory()->create();
     Workspace::factory()->create(['account_id' => $account->id]);
@@ -409,11 +416,14 @@ test('redirect skips the offer on a yearly price', function () {
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
-    $builder->shouldReceive('withMetadata')->once()->with([])->andReturnSelf();
-    $builder->shouldReceive('withCoupon')->never();
-    $builder->shouldReceive('trialDays')->never();
-    $builder->shouldReceive('checkout')->once()->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
+    $builder->shouldReceive('withCoupon')->once()->with('YEARLY_50')->andReturnSelf();
+    $builder->shouldReceive('withMetadata')->once()->andReturnSelf();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
+    $builder->shouldReceive('checkout')
+        ->once()
+        ->withArgs(fn (array $options): bool => data_get($options, 'metadata.trypost_interval') === 'yearly'
+            && data_get($options, 'metadata.trypost_offer_slug') === $offer->slug)
+        ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
 
     /** @var Account&MockInterface $accountMock */
     $accountMock = Mockery::mock($account)->makePartial();
@@ -425,7 +435,7 @@ test('redirect skips the offer on a yearly price', function () {
         'price_socials_yearly',
         route('app.welcome.plan'),
         $plan,
-        Offer::factory()->create(),
+        $offer,
     );
 });
 
@@ -465,7 +475,7 @@ test('redirect from a generic trial charges at once and keeps the trial plan', f
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
+    $builder->shouldReceive('allowPromotionCodes')->never();
     $builder->shouldReceive('trialUntil')->never();
     $builder->shouldReceive('trialDays')->never();
     $builder->shouldReceive('withMetadata')->once()->andReturnSelf();
@@ -494,6 +504,7 @@ test('redirect tracks checkout.started on the owner with the plan, interval and 
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
     $builder->shouldReceive('withCoupon')->once()->andReturnSelf();
     $builder->shouldReceive('withMetadata')->once()->andReturnSelf();
     $builder->shouldReceive('checkout')->once()->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
@@ -510,18 +521,22 @@ test('redirect tracks checkout.started on the owner with the plan, interval and 
         && $job->properties === ['plan_name' => 'Mini', 'interval' => 'monthly', 'offer' => 'bf26']);
 });
 
-test('redirect gives no offer to a plan other than the entry plan monthly', function () {
+test('redirect gives the offer to a plan other than the first one too', function () {
     $workspaces = Plan::where('slug', 'plus')->firstOrFail();
     givePlanPrice($workspaces, Interval::Monthly, 'price_workspaces_monthly');
+    $offer = Offer::factory()->blackFriday()->create();
 
     $account = Account::factory()->create();
     User::factory()->create(['account_id' => $account->id, 'referral_source' => null]);
     $account->refresh();
 
     $builder = Mockery::mock(SubscriptionBuilder::class);
-    $builder->shouldReceive('allowPromotionCodes')->once()->andReturnSelf();
-    $builder->shouldReceive('withCoupon')->never();
-    $builder->shouldReceive('withMetadata')->once()->with([])->andReturnSelf();
+    $builder->shouldReceive('trialDays')->once()->with(7)->andReturnSelf();
+    $builder->shouldReceive('withCoupon')->once()->with('BF26_50_3M')->andReturnSelf();
+    $builder->shouldReceive('withMetadata')
+        ->once()
+        ->with(['trypost_offer_id' => $offer->id, 'trypost_offer_slug' => $offer->slug])
+        ->andReturnSelf();
     $builder->shouldReceive('checkout')->once()->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
 
     /** @var Account&MockInterface $accountMock */
@@ -529,5 +544,5 @@ test('redirect gives no offer to a plan other than the entry plan monthly', func
     $accountMock->shouldReceive('syncOrCreateStripeCustomer')->once()->andReturnNull();
     $accountMock->shouldReceive('newSubscription')->once()->andReturn($builder);
 
-    app(StartSubscriptionCheckout::class)->redirect($accountMock, 'price_workspaces_monthly', route('app.billing.index'), $workspaces, Offer::factory()->blackFriday()->create());
+    app(StartSubscriptionCheckout::class)->redirect($accountMock, 'price_workspaces_monthly', route('app.billing.index'), $workspaces, $offer);
 });

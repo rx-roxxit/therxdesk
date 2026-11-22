@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\User\Locale;
 use App\Enums\User\ReferralSource;
 use App\Jobs\Billing\SyncStripeCustomer;
 use App\Models\Account;
@@ -82,7 +83,35 @@ test('the sync only sends what TryPost owns on the stripe customer', function ()
 
     $owner->update(['referral_source' => ReferralSource::Google]);
 
-    expect(array_keys($client->requests[0]['params']))->toEqualCanonicalizing(['name', 'email', 'metadata']);
+    expect(array_keys($client->requests[0]['params']))->toEqualCanonicalizing(['name', 'email', 'metadata', 'preferred_locales']);
+});
+
+test('the stripe customer preferred locales follow the owner locale', function () {
+    [, $owner] = stripeCustomerOwner('cus_existing');
+    $client = fakeStripeCustomerSyncClient();
+
+    $owner->update(['locale' => Locale::PortugueseBrazil]);
+
+    expect($client->requests)->toHaveCount(1)
+        ->and($client->requests[0]['params']['preferred_locales'])->toBe(['pt-BR']);
+});
+
+test('a locale the owner locale cannot map to Stripe is sent as English', function () {
+    [, $owner] = stripeCustomerOwner('cus_existing');
+    $client = fakeStripeCustomerSyncClient();
+
+    $owner->update(['locale' => Locale::Ukrainian]);
+
+    expect($client->requests[0]['params']['preferred_locales'])->toBe(['en']);
+});
+
+test('the owner changing their language syncs the stripe customer', function () {
+    [, $owner] = stripeCustomerOwner('cus_existing');
+    Bus::fake();
+
+    $owner->update(['locale' => Locale::German]);
+
+    Bus::assertDispatched(SyncStripeCustomer::class, fn (SyncStripeCustomer $job): bool => $job->userId === $owner->id);
 });
 
 test('the owner changing their email syncs the stripe customer email', function () {

@@ -12,13 +12,19 @@ use App\Enums\PostHog\WelcomeEvent;
 use App\Enums\User\Goal;
 use App\Enums\User\Persona;
 use App\Enums\User\PreviousSoftware;
+use App\Http\Middleware\App\CapturePlan;
 use App\Http\Requests\App\Welcome\StoreWelcomeGoalsRequest;
 use App\Http\Requests\App\Welcome\StoreWelcomePersonaRequest;
+use App\Http\Requests\App\Welcome\StoreWelcomePlanRequest;
 use App\Http\Requests\App\Welcome\StoreWelcomeSoftwareRequest;
 use App\Http\Resources\App\OfferResource;
-use App\Http\Resources\App\PlanResource;
+use App\Http\Resources\App\WelcomePlanResource;
+use App\Models\Account;
+use App\Models\Offer;
 use App\Models\Plan;
 use App\Services\PostHogService;
+use App\Support\Billing\ConfigureSubscriptionCheckout;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -150,19 +156,31 @@ class WelcomeController extends Controller
             return $redirect;
         }
 
-        $plan = Plan::entryPlan();
-        abort_if($plan === null, Response::HTTP_NOT_FOUND);
+        $plans = Plan::query()
+            ->active()
+            ->with('prices')
+            ->orderBy('sort')
+            ->orderBy('name')
+            ->get();
 
-        $offer = $request->user()->account->currentOffer();
+        abort_if($plans->isEmpty(), Response::HTTP_NOT_FOUND);
+
+        $account = $request->user()->account;
+        $offer = $account->currentOffer();
 
         return Inertia::render('welcome/Plan', [
-            'plan' => PlanResource::make($plan)->resolve(),
-            'offer' => filled($offer) ? OfferResource::make($offer)->resolve() : null,
+            'plans' => WelcomePlanResource::collection($plans)->resolve($request),
+            'selected' => [
+                'plan' => $this->selectedPlan($request, $plans)->slug,
+                'interval' => $this->selectedInterval($request)->value,
+            ],
+            'offer' => filled($offer) ? OfferResource::make($offer)->resolve($request) : null,
+            'trial' => $this->trial($account, $offer),
         ]);
     }
 
     public function storePlan(
-        Request $request,
+        StoreWelcomePlanRequest $request,
         StartSubscriptionCheckout $checkout,
     ): Response|RedirectResponse {
         if ($redirect = $this->redirectIfStepIncomplete($request, requireGoals: true, requireSoftware: true)) {
@@ -170,17 +188,28 @@ class WelcomeController extends Controller
         }
 
         $user = $request->user();
-        $plan = Plan::entryPlan();
-        abort_if($plan === null, Response::HTTP_NOT_FOUND);
+        abort_if(blank($user->email_verified_at), Response::HTTP_FORBIDDEN);
 
-        $priceId = $plan->priceFor(Interval::Monthly)?->stripe_price_id;
+        $interval = Interval::from((string) $request->validated('interval'));
+        $plan = Plan::query()
+            ->active()
+            ->with('prices')
+            ->get()
+            ->firstWhere('slug', (string) $request->validated('plan'));
+
+        abort_if(blank($plan), Response::HTTP_NOT_FOUND);
+
+        $request->session()->put(CapturePlan::PLAN_SESSION_KEY, $plan->slug);
+        $request->session()->put(CapturePlan::INTERVAL_SESSION_KEY, $interval->value);
+
+        $priceId = $plan->priceFor($interval)?->stripe_price_id;
 
         abort_if(blank($priceId), Response::HTTP_INTERNAL_SERVER_ERROR, 'Price is not configured.');
 
         $offer = $user->account->currentOffer();
 
-        if ($offer?->startsWithoutCard()) {
-            StartGenericTrial::execute($user, $plan, $offer);
+        if ($offer?->startsWithoutCard() && $user->account->canStartTrial()) {
+            StartGenericTrial::execute($user, $plan, $interval, $offer);
 
             return redirect()->route('app.billing.processing', ['from' => CheckoutOrigin::Welcome->value]);
         }
@@ -203,6 +232,74 @@ class WelcomeController extends Controller
         return Inertia::render('welcome/SubscriptionRequired', [
             'ownerName' => $user->account?->owner?->name,
         ]);
+    }
+
+    /**
+     * The Plan the cards preselect: the one kept from `/register`, else the
+     * first in Catalog order. A stored slug that no longer names an active
+     * Plan is dropped.
+     *
+     * @param  Collection<int, Plan>  $plans
+     */
+    private function selectedPlan(Request $request, Collection $plans): Plan
+    {
+        $stored = $request->session()->get(CapturePlan::PLAN_SESSION_KEY);
+
+        if (is_string($stored) && filled($stored)) {
+            $plan = $plans->firstWhere('slug', $stored);
+
+            if (filled($plan)) {
+                return $plan;
+            }
+        }
+
+        if (filled($stored)) {
+            $request->session()->forget(CapturePlan::PLAN_SESSION_KEY);
+        }
+
+        return $plans->first();
+    }
+
+    /**
+     * The interval the switch preselects: the one kept from `/register`, else
+     * monthly. A stored value that is no longer an Interval is dropped.
+     */
+    private function selectedInterval(Request $request): Interval
+    {
+        $stored = $request->session()->get(CapturePlan::INTERVAL_SESSION_KEY);
+
+        if (is_string($stored) && filled($stored)) {
+            $interval = Interval::tryFrom($stored);
+
+            if ($interval !== null) {
+                return $interval;
+            }
+        }
+
+        if (filled($stored)) {
+            $request->session()->forget(CapturePlan::INTERVAL_SESSION_KEY);
+        }
+
+        return Interval::Monthly;
+    }
+
+    /**
+     * The trial the step promises, or null when the Account already had one.
+     *
+     * @return array{days: int, first_charge_at: string}|null
+     */
+    private function trial(Account $account, ?Offer $offer): ?array
+    {
+        $days = ConfigureSubscriptionCheckout::trialDays($offer, $account);
+
+        if ($days <= 0) {
+            return null;
+        }
+
+        return [
+            'days' => $days,
+            'first_charge_at' => now()->addDays($days)->toIso8601String(),
+        ];
     }
 
     private function redirectIfStepIncomplete(

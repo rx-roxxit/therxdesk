@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Billing\StartSubscriptionCheckout;
 use App\Enums\Billing\Interval;
+use App\Enums\User\Locale;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
@@ -18,7 +19,8 @@ beforeEach(function () {
     givePlanPrice($this->socials, Interval::Monthly, 'price_socials_monthly');
 
     $this->account = Account::factory()->create();
-    $this->account->update(['owner_id' => User::factory()->create(['account_id' => $this->account->id])->id]);
+    $this->owner = User::factory()->create(['account_id' => $this->account->id]);
+    $this->account->update(['owner_id' => $this->owner->id]);
 
     $this->stripe = new class implements ClientInterface
     {
@@ -44,28 +46,49 @@ beforeEach(function () {
     ApiRequestor::setHttpClient($this->stripe);
 });
 
-test('a checkout without an offer charges the full price and takes a promotion code', function () {
-    app(StartSubscriptionCheckout::class)->redirect($this->account, 'price_socials_monthly', route('app.welcome.plan'), $this->socials);
+test('a checkout without an offer charges the full price, takes the catalog trial and no promotion code', function () {
+    $this->travelTo(now()->startOfSecond());
 
-    expect(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('true')
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials);
+
+    expect(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('false')
         ->and(data_get($this->stripe->session, 'discounts'))->toBeNull()
-        ->and(data_get($this->stripe->session, 'subscription_data.trial_end'))->toBeNull();
+        ->and((int) data_get($this->stripe->session, 'subscription_data.trial_end'))->toBe(now()->addDays(7)->getTimestamp());
+});
+
+test('the checkout carries the customer locale, the billing address and Terms consent', function () {
+    $this->owner->update(['locale' => Locale::PortugueseBrazil]);
+
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials);
+
+    expect(data_get($this->stripe->session, 'locale'))->toBe('pt-BR')
+        ->and(data_get($this->stripe->session, 'billing_address_collection'))->toBe('required')
+        ->and(data_get($this->stripe->session, 'consent_collection.terms_of_service'))->toBe('required');
+});
+
+test('an account that already had a trial gets no trial at checkout', function () {
+    $this->account->update(['trial_ends_at' => now()->subDay()]);
+
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials);
+
+    expect(data_get($this->stripe->session, 'subscription_data.trial_end'))->toBeNull();
 });
 
 test('a coupon offer sends its coupon and no promotion code field, which Stripe rejects together', function () {
     $offer = Offer::factory()->create(['stripe_coupon_id' => 'BF26_TEST']);
 
-    app(StartSubscriptionCheckout::class)->redirect($this->account, 'price_socials_monthly', route('app.welcome.plan'), $this->socials, $offer);
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials, $offer);
 
     expect(data_get($this->stripe->session, 'discounts.0.coupon'))->toBe('BF26_TEST')
-        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBeNull();
+        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('false')
+        ->and(data_get($this->stripe->session, 'subscription_data.trial_end'))->not->toBeNull();
 });
 
 test('a trial offer that does not allow promotion codes sends the trial without the field', function () {
     $offer = Offer::factory()->trial(8)->create();
 
-    app(StartSubscriptionCheckout::class)->redirect($this->account, 'price_socials_monthly', route('app.welcome.plan'), $this->socials, $offer);
+    app(StartSubscriptionCheckout::class)->redirect($this->account->fresh(), 'price_socials_monthly', route('app.welcome.plan'), $this->socials, $offer);
 
     expect(data_get($this->stripe->session, 'subscription_data.trial_end'))->not->toBeNull()
-        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBeNull();
+        ->and(data_get($this->stripe->session, 'allow_promotion_codes'))->toBe('false');
 });

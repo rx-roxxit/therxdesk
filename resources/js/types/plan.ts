@@ -16,6 +16,21 @@ export interface PlanOption {
     yearly_amount: number | null;
 }
 
+export interface WelcomePlan extends PlanOption {
+    quota_label: string | null;
+    ai_credits_label: string | null;
+}
+
+export interface WelcomePlanTrial {
+    days: number;
+    first_charge_at: string;
+}
+
+export interface WelcomePlanSelection {
+    plan: string;
+    interval: BillingInterval;
+}
+
 export const deniedPlanIdsFor = (
     plans: PlanOption[],
     workspaceCount: number,
