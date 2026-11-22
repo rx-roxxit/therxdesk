@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Internal\AccountController;
+use App\Http\Controllers\Internal\AccountSuspensionController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\ComplimentaryPlanController;
@@ -32,6 +33,14 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::post('accounts/{account}/complimentary/end', [ComplimentaryPlanController::class, 'end'])
         ->whereUuid('account')
         ->name('internal.accounts.complimentary.end');
+
+    Route::post('accounts/{account}/suspension', [AccountSuspensionController::class, 'store'])
+        ->whereUuid('account')
+        ->name('internal.accounts.suspension.store');
+
+    Route::post('accounts/{account}/suspension/lift', [AccountSuspensionController::class, 'lift'])
+        ->whereUuid('account')
+        ->name('internal.accounts.suspension.lift');
 
     Route::get('audit-log', [AuditLogController::class, 'index'])
         ->name('internal.audit-log.index');

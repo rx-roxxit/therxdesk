@@ -146,8 +146,13 @@ test('customer detail returns the owner, plan, Subscription, usage, members and 
         ->assertJsonPath('storage.quota_bytes', 1048576)
         ->assertJsonPath('members_count', 3);
 
-    expect($response->json('access_state'))->toBeNull()
-        ->and($response->json('lifecycle_emails'))->toBeNull();
+    expect($response->json('access_state'))->toBe([
+        'has_app_access' => true,
+        'lapsed' => false,
+        'suspended' => false,
+        'suspended_at' => null,
+        'suspension_reason' => null,
+    ])->and($response->json('lifecycle_emails'))->toBeNull();
 
     $recent = $response->json('recent_posts');
 
