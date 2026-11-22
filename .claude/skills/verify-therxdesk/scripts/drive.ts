@@ -1608,6 +1608,13 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 0,
             null,
         );
+
+        const miniButton = await page.locator(tid('@plan-select-mini')).innerText();
+        run.check(
+            'a former Complimentary Account is offered a subscription, not a Trial',
+            miniButton.includes('Subscribe'),
+            miniButton,
+        );
     },
 
     /**
