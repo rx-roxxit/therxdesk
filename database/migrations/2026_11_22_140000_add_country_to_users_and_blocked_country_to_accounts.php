@@ -15,8 +15,6 @@ return new class extends Migration
         });
 
         Schema::table('accounts', function (Blueprint $table) {
-            // The country the completed checkout was billed to, when it is one
-            // The RX Desk does not sell in. Recorded once, as a fact.
             $table->string('blocked_country', 2)->nullable();
             $table->timestamp('blocked_country_at')->nullable();
             $table->string('blocked_country_payment_status')->nullable();

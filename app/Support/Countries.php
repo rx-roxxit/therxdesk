@@ -14,8 +14,6 @@ use Illuminate\Support\Str;
 final class Countries
 {
     /**
-     * Every officially assigned ISO 3166-1 alpha-2 code, uppercase.
-     *
      * @var list<string>
      */
     public const ISO = [

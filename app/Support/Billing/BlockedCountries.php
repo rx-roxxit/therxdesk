@@ -15,18 +15,13 @@ use Illuminate\Support\Str;
 final class BlockedCountries
 {
     /**
-     * ISO 3166-1 alpha-2 codes, uppercase.
-     *
      * @var list<string>
      */
     public const CODES = [
-        // European Union
         'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
         'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
         'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
-        // European Economic Area
         'IS', 'LI', 'NO',
-        // United Kingdom and Crown dependencies
         'GB', 'JE', 'GG', 'IM',
     ];
 

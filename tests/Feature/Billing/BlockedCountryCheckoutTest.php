@@ -209,6 +209,16 @@ test('a self-hosted install ignores the completed checkout', function () {
         ->and($account->fresh()->blocked_country_at)->toBeNull();
 });
 
+test('the blocked fact alone ends access while the subscription still looks valid', function () {
+    $account = blockedCheckoutAccount();
+
+    expect($account->hasAppAccess())->toBeTrue();
+
+    $account->forceFill(['blocked_country_at' => now()])->save();
+
+    expect($account->fresh()->hasAppAccess())->toBeFalse();
+});
+
 test('a failed cancel releases the dedupe and rethrows so Stripe redelivers', function () {
     $account = blockedCheckoutAccount();
     $stripe = fakeCheckoutStripe();

@@ -44,7 +44,7 @@ class BillingController extends Controller
         return Inertia::render('billing/Processing', [
             'ready' => $returnsToBilling ? $account->planMatchesSubscription() : $account->hasAppAccess(),
             'returnsToBilling' => $returnsToBilling,
-            'countryBlocked' => filled($account->blocked_country_at) && ! $account->hasAppAccess(),
+            'countryBlocked' => filled($account->blocked_country_at),
         ]);
     }
 

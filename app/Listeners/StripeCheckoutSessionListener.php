@@ -17,11 +17,11 @@ use Stripe\Subscription as StripeSubscription;
 use Throwable;
 
 /**
- * A completed Checkout whose billing country The RX Desk does not sell in
- * (the EU/UK block) is cancelled at once, still in its Trial, so nothing is
- * charged. The Account keeps the country as a fact, and the plan step shows
- * the notice. The register form already refuses a blocked country; this is
- * the guard for a false or changed billing address at Stripe.
+ * A completed Checkout billed to a country The RX Desk does not sell in (the
+ * EU/UK block) is cancelled at once. A normal Checkout is still in its Trial
+ * and nothing is charged; a repeat card's charge is not refunded here, only
+ * recorded as a fact. The register form already refuses a blocked country;
+ * this guards a false or changed billing address at Stripe.
  */
 class StripeCheckoutSessionListener
 {
@@ -87,10 +87,6 @@ class StripeCheckoutSessionListener
         }
     }
 
-    /**
-     * The first fact wins: the country, when it was seen, and the raw payment
-     * status Stripe reported (a fact, never a guess).
-     */
     private function recordBlock(Account $account, string $country, mixed $paymentStatus): void
     {
         if (filled($account->blocked_country_at)) {

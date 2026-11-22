@@ -576,7 +576,7 @@ test('change-plan refuses an Owner whose country is blocked', function () use ($
     expect($user->fresh()->account->plan_id)->toBeNull();
 });
 
-test('change-plan refuses an account whose checkout was billed to a blocked country', function () use ($withWorkspace) {
+test('a blocked checkout keeps the account at the plan step instead of billing', function () use ($withWorkspace) {
     $user = User::factory()->create();
     $withWorkspace($user);
     subscribeAccount($user->account);
@@ -593,6 +593,5 @@ test('change-plan refuses an account whose checkout was billed to a blocked coun
             'plan_id' => $this->socials->id,
             'interval' => 'monthly',
         ])
-        ->assertRedirect(route('app.billing.index'))
-        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+        ->assertRedirect(route('app.welcome.plan'));
 });

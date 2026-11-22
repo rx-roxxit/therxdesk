@@ -335,6 +335,10 @@ class Account extends Model
             return true;
         }
 
+        if (filled($this->blocked_country_at)) {
+            return false;
+        }
+
         if ($this->hasPendingFirstCharge()) {
             return false;
         }

@@ -27,10 +27,6 @@ class ChangePlan
      */
     public function execute(Account $account, Plan $plan, Interval $interval): Response
     {
-        if (filled($account->blocked_country_at)) {
-            return back()->with('flash.error', __('rxdesk.country.blocked'));
-        }
-
         if (BlockedCountries::isBlocked($account->owner?->country)) {
             return back()->with('flash.error', __('rxdesk.country.blocked'));
         }

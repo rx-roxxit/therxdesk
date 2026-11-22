@@ -343,11 +343,6 @@ class WelcomeController extends Controller
         ];
     }
 
-    /**
-     * A blocked billing country ends the Account's checkout: the register
-     * country was blocked, or a completed checkout was billed to a blocked
-     * one and the webhook recorded it.
-     */
     private function countryBlocked(Account $account): bool
     {
         if (filled($account->blocked_country_at)) {

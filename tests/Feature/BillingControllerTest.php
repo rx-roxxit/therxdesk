@@ -868,11 +868,10 @@ test('processing sends countryBlocked when a blocked checkout left the account w
         );
 });
 
-test('processing does not send countryBlocked while the account still has access', function () {
+test('processing does not send countryBlocked without a blocked fact', function () {
     config(['trypost.self_hosted' => false]);
 
     subscribeAccount($this->account);
-    $this->account->update(['blocked_country_at' => now()]);
 
     $this->actingAs($this->user->fresh())
         ->get(route('app.billing.processing'))
