@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { trans } from 'laravel-vue-i18n';
 import { computed } from 'vue';
 import { toast } from 'vue-sonner';
 
@@ -116,9 +115,6 @@ const retry = (): void => {
         {
             preserveScroll: true,
             onError: toastFirstError,
-            onSuccess: () => {
-                toast.success(trans('rxdesk.publishing_block.retry_started'));
-            },
         },
     );
 };
