@@ -31,7 +31,7 @@ class StoreOfferRequest extends FormRequest
             'reach' => ['required', Rule::enum(OfferReach::class)],
             'coupon' => ['nullable', 'array'],
             'coupon.type' => ['required_with:coupon', Rule::enum(OfferDiscountType::class)],
-            'coupon.percent_off' => ['nullable', 'required_if:coupon.type,percent', 'numeric', 'gt:0', 'lte:100'],
+            'coupon.percent_off' => ['nullable', 'required_if:coupon.type,percent', 'numeric', 'decimal:0,2', 'gt:0', 'lte:100'],
             'coupon.amount_off' => ['nullable', 'required_if:coupon.type,amount', 'integer', 'min:1', 'max:99999999'],
             'coupon.duration' => ['required_with:coupon', Rule::enum(OfferDuration::class)],
             'coupon.duration_in_months' => ['nullable', 'required_if:coupon.duration,repeating', 'integer', 'min:1', 'max:60'],

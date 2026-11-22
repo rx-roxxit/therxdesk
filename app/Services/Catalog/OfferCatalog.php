@@ -69,7 +69,7 @@ class OfferCatalog
             'name' => (string) $attributes['name'],
             'reach' => $attributes['reach'],
             'discount_type' => data_get($attributes, 'coupon.type'),
-            'percent_off' => data_get($attributes, 'coupon.percent_off'),
+            'percent_off' => $this->percentOff($attributes),
             'amount_off' => data_get($attributes, 'coupon.amount_off'),
             'duration' => data_get($attributes, 'coupon.duration'),
             'duration_in_months' => data_get($attributes, 'coupon.duration_in_months'),
@@ -228,7 +228,7 @@ class OfferCatalog
         ];
 
         if (data_get($coupon, 'type') === 'percent') {
-            $params['percent_off'] = (float) data_get($coupon, 'percent_off');
+            $params['percent_off'] = $this->percentOff($attributes);
         } else {
             $params['amount_off'] = (int) data_get($coupon, 'amount_off');
             $params['currency'] = self::CURRENCY;
@@ -260,6 +260,19 @@ class OfferCatalog
     public static function couponIdFor(string $slug): string
     {
         return 'rxdesk-offer-'.substr(hash('sha256', $slug), 0, 24);
+    }
+
+    /**
+     * The percentage as Stripe and the row both hold it: two decimals, so the
+     * copy, OfferPricing and the coupon can never disagree.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function percentOff(array $attributes): ?float
+    {
+        $value = data_get($attributes, 'coupon.percent_off');
+
+        return $value === null ? null : round((float) $value, 2);
     }
 
     private function findCoupon(string $id): mixed
