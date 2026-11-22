@@ -66,6 +66,10 @@ const usesOfferCopy = (): boolean => {
         return false;
     }
 
+    if (!props.offer.has_checkout_copy) {
+        return false;
+    }
+
     return props.trial !== null;
 };
 
