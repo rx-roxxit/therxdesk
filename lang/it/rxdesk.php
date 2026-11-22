@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Inviato :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Scegli il tuo piano',
+        'description' => 'Paga mensilmente o annualmente. Cambia o annulla quando vuoi.',
+        'storage' => ':size di spazio',
+        'ai_credits' => ':credits crediti IA al mese',
+        'unlimited' => 'Spazi di lavoro, canali, post e membri illimitati.',
+        'start_trial' => 'Prova gratis :days giorni',
+        'subscribe' => 'Abbonati',
+        'trial_terms' => 'Poi :price da :date. Annulla quando vuoi. Una prova gratuita per carta.',
+        'subscribe_terms' => 'Oggi ti verranno addebitati :price. Annulla quando vuoi.',
+        'verify_email' => [
+            'title' => 'Verifica la tua email',
+            'description' => 'Abbiamo inviato un link a :email. Aprilo, poi torna qui per iniziare.',
+            'resend' => 'Invia di nuovo',
+            'close' => 'Non ora',
+        ],
+    ],
 ];

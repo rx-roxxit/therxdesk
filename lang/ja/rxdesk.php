@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => '送信日時 :time',
     ],
+    'welcome_plan' => [
+        'title' => 'プランを選択',
+        'description' => '月払いまたは年払い。いつでも変更・解約できます。',
+        'storage' => ':size のストレージ',
+        'ai_credits' => '月 :credits AIクレジット',
+        'unlimited' => 'ワークスペース、チャンネル、投稿、メンバーは無制限。',
+        'start_trial' => ':days日間の無料トライアルを開始',
+        'subscribe' => '登録する',
+        'trial_terms' => ':date 以降は :price。いつでも解約できます。無料トライアルはカード1枚につき1回。',
+        'subscribe_terms' => '本日 :price が請求されます。いつでも解約できます。',
+        'verify_email' => [
+            'title' => 'メールアドレスを確認',
+            'description' => ':email にリンクを送りました。開いてからここに戻って開始してください。',
+            'resend' => 'メールを再送',
+            'close' => '後で',
+        ],
+    ],
 ];

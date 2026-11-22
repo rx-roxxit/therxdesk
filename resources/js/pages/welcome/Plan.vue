@@ -1,148 +1,114 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
-import PlanFeatureList from '@/components/billing/PlanFeatureList.vue';
-import WelcomeContinueButton from '@/components/welcome/WelcomeContinueButton.vue';
+import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
+import VerifyEmailDialog from '@/components/welcome/VerifyEmailDialog.vue';
 import WelcomeOfferBanner from '@/components/welcome/WelcomeOfferBanner.vue';
-import { activeLocale } from '@/language';
+import WelcomePlanCard from '@/components/welcome/WelcomePlanCard.vue';
 import WelcomeLayout from '@/layouts/WelcomeLayout.vue';
-import { formatMoney } from '@/lib/money';
 import { store } from '@/routes/app/welcome/plan';
+import type { SharedData } from '@/types';
 import type { Offer } from '@/types/offer';
-import type { PlanOption } from '@/types/plan';
+import type {
+    BillingInterval,
+    WelcomePlan,
+    WelcomePlanSelection,
+    WelcomePlanTrial,
+} from '@/types/plan';
 
 const props = defineProps<{
-    plan: PlanOption;
+    plans: WelcomePlan[];
+    selected: WelcomePlanSelection;
     offer: Offer | null;
+    trial: WelcomePlanTrial | null;
 }>();
 
-interface PriceCopy {
-    priceKey: string | null;
-    unit: string | null;
-    period: string | null;
-    checkoutButton: string;
-    terms: string;
-}
+const page = usePage<SharedData>();
+const interval = ref<BillingInterval>(props.selected.interval);
+const processingPlan = ref<string | null>(null);
+const verifyOpen = ref(false);
 
-const FULL_PRICE_COPY: PriceCopy = {
-    priceKey: null,
-    unit: 'billing.plans.per_month',
-    period: null,
-    checkoutButton: 'welcome.plan_checkout_button',
-    terms: 'welcome.plan_cancel_anytime',
+const form = useForm({
+    plan: props.selected.plan,
+    interval: props.selected.interval,
+});
+
+const isSelected = (plan: WelcomePlan): boolean =>
+    plan.slug === props.selected.plan;
+
+const isProcessing = (plan: WelcomePlan): boolean =>
+    processingPlan.value === plan.slug;
+
+const submit = (slug: string): void => {
+    processingPlan.value = slug;
+    form.plan = slug;
+    form.interval = interval.value;
+
+    form.submit(store(), {
+        onFinish: () => {
+            processingPlan.value = null;
+        },
+    });
 };
 
-const monthlyPrice = computed((): string => {
-    if (props.plan.monthly_amount === null) {
-        return '';
-    }
-
-    return formatMoney(props.plan.monthly_amount, activeLocale.value);
-});
-
-const priceCopy = computed((): PriceCopy => {
-    if (!props.offer?.has_checkout_copy) {
-        return FULL_PRICE_COPY;
-    }
-
-    const offerCopy = `offers.${props.offer.key}`;
-
-    return {
-        priceKey: `${offerCopy}.price`,
-        unit: props.offer.has_unit ? `${offerCopy}.unit` : null,
-        period: `${offerCopy}.period`,
-        checkoutButton: `${offerCopy}.checkout_button`,
-        terms: props.offer.has_terms
-            ? `${offerCopy}.terms`
-            : 'welcome.plan_terms',
-    };
-});
-
-const form = useForm({});
-
-const submit = (): void => {
+const selectPlan = (slug: string): void => {
     if (form.processing) {
         return;
     }
 
-    form.submit(store());
+    if (page.props.auth.user.email_verified_at === null) {
+        verifyOpen.value = true;
+
+        return;
+    }
+
+    submit(slug);
+};
+
+const closeVerifyDialog = (open: boolean): void => {
+    verifyOpen.value = open;
 };
 </script>
 
 <template>
-    <Head :title="$t('welcome.plan_title')" />
+    <Head :title="$t('rxdesk.welcome_plan.title')" />
 
     <WelcomeLayout
-        :title="$t('welcome.plan_title')"
-        :description="$t('welcome.plan_description')"
+        :title="$t('rxdesk.welcome_plan.title')"
+        :description="$t('rxdesk.welcome_plan.description')"
         step="plan"
+        size="6xl"
     >
-        <WelcomeOfferBanner v-if="offer?.has_banner" :offer-key="offer.key" />
+        <div class="flex w-full flex-col gap-6">
+            <WelcomeOfferBanner
+                v-if="offer?.has_banner"
+                :offer-key="offer.key"
+            />
 
-        <article
-            class="grid overflow-hidden rounded-xl text-start sm:grid-cols-[2fr_3fr]"
-            :data-testid="`plan-card-${plan.slug}`"
-        >
+            <PlanIntervalSwitch v-model="interval" />
+
             <div
-                class="flex flex-col justify-center gap-1 bg-primary-subtle p-5 sm:p-6 dark:bg-primary-selected"
+                class="grid grid-cols-1 items-stretch gap-4 min-[1081px]:grid-cols-4 sm:grid-cols-2"
             >
-                <s
-                    v-if="priceCopy.period"
-                    class="text-sm text-muted-foreground"
-                    :data-testid="`plan-price-original-${plan.slug}`"
-                    >{{ monthlyPrice }}{{ $t('billing.plans.per_month') }}</s
-                >
-                <p class="flex items-baseline gap-1 whitespace-nowrap">
-                    <span
-                        class="text-4xl leading-none font-strong tracking-tight tabular-nums [word-spacing:-0.15em] sm:text-5xl"
-                        :data-testid="`plan-price-${plan.slug}`"
-                    >
-                        <template v-if="priceCopy.priceKey">{{
-                            $t(priceCopy.priceKey)
-                        }}</template>
-                        <template v-else>{{ monthlyPrice }}</template>
-                    </span>
-                    <span
-                        v-if="priceCopy.unit"
-                        class="text-base text-foreground"
-                        :data-testid="`plan-price-unit-${plan.slug}`"
-                        >{{ $t(priceCopy.unit) }}</span
-                    >
-                </p>
-                <span
-                    v-if="priceCopy.period"
-                    class="text-base text-foreground"
-                    :data-testid="`plan-price-suffix-${plan.slug}`"
-                    >{{ $t(priceCopy.period) }}</span
-                >
+                <WelcomePlanCard
+                    v-for="plan in plans"
+                    :key="plan.id"
+                    :plan="plan"
+                    :interval="interval"
+                    :trial="trial"
+                    :offer="offer"
+                    :selected="isSelected(plan)"
+                    :processing="isProcessing(plan)"
+                    @select="selectPlan(plan.slug)"
+                />
             </div>
+        </div>
 
-            <PlanFeatureList
-                :scope="plan.slug"
-                spacious
-                class="rounded-b-xl border border-border bg-card p-5 max-sm:border-t-0 sm:rounded-e-xl sm:rounded-es-none sm:border-s-0 sm:p-6"
-            />
-        </article>
-
-        <template #actions>
-            <WelcomeContinueButton
-                :processing="form.processing"
-                :disabled="form.processing"
-                :label="$t(priceCopy.checkoutButton)"
-                testid="welcome-plan-continue"
-                @continue="submit"
-            />
-            <p
-                class="text-center text-sm text-muted-foreground"
-                data-testid="welcome-plan-terms"
-            >
-                {{
-                    $t(priceCopy.terms, {
-                        price: monthlyPrice,
-                    })
-                }}
-            </p>
-        </template>
+        <VerifyEmailDialog
+            :open="verifyOpen"
+            :email="page.props.auth.user.email"
+            @update:open="closeVerifyDialog"
+        />
     </WelcomeLayout>
 </template>

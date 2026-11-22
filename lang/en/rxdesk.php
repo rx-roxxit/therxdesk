@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Sent :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Choose your plan',
+        'description' => 'Pay monthly or yearly. Change or cancel anytime.',
+        'storage' => ':size storage',
+        'ai_credits' => ':credits AI credits a month',
+        'unlimited' => 'Unlimited workspaces, channels, posts and members.',
+        'start_trial' => 'Start :days-day free trial',
+        'subscribe' => 'Subscribe',
+        'trial_terms' => 'Then :price from :date. Cancel anytime. One free trial per card.',
+        'subscribe_terms' => "You'll be charged :price today. Cancel anytime.",
+        'verify_email' => [
+            'title' => 'Verify your email',
+            'description' => 'We sent a link to :email. Open it, then come back here to start.',
+            'resend' => 'Resend email',
+            'close' => 'Not now',
+        ],
+    ],
 ];

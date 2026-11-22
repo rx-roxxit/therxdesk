@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => '보낸 시각 :time',
     ],
+    'welcome_plan' => [
+        'title' => '플랜 선택',
+        'description' => '월간 또는 연간으로 결제하세요. 언제든 변경하거나 해지할 수 있습니다.',
+        'storage' => ':size 저장 공간',
+        'ai_credits' => '월 :credits AI 크레딧',
+        'unlimited' => '워크스페이스, 채널, 게시물, 멤버 무제한.',
+        'start_trial' => ':days일 무료 체험 시작',
+        'subscribe' => '구독하기',
+        'trial_terms' => '이후 :date부터 :price. 언제든 해지할 수 있습니다. 카드당 무료 체험 1회.',
+        'subscribe_terms' => '오늘 :price가 결제됩니다. 언제든 해지할 수 있습니다.',
+        'verify_email' => [
+            'title' => '이메일 인증',
+            'description' => ':email로 링크를 보냈습니다. 링크를 열고 여기로 돌아와 시작하세요.',
+            'resend' => '이메일 다시 보내기',
+            'close' => '나중에',
+        ],
+    ],
 ];

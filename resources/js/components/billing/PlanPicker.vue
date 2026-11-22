@@ -5,6 +5,7 @@ import { computed } from 'vue';
 
 import PlanFeatureInfo from '@/components/billing/PlanFeatureInfo.vue';
 import PlanFeatureList from '@/components/billing/PlanFeatureList.vue';
+import PlanIntervalSwitch from '@/components/billing/PlanIntervalSwitch.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { activeLocale } from '@/language';
@@ -132,35 +133,10 @@ const workspaceLabel = (plan: PlanOption): string =>
 
 <template>
     <div class="@container space-y-6">
-        <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-x-4">
-            <div
-                class="col-start-2 inline-flex gap-1 justify-self-center rounded-lg border border-border-strong bg-card p-[3px]"
-            >
-                <button
-                    v-for="option in ['monthly', 'yearly'] as const"
-                    :key="option"
-                    type="button"
-                    :aria-pressed="interval === option"
-                    :class="[
-                        'h-[30px] cursor-pointer rounded-md px-3 text-sm font-medium transition-control focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
-                        interval === option
-                            ? 'bg-primary-selected text-primary-text'
-                            : 'text-foreground hover:bg-accent',
-                    ]"
-                    :data-testid="`plan-interval-${option}`"
-                    @click="emit('update:interval', option)"
-                >
-                    {{ $t(`billing.plans.${option}`) }}
-                </button>
-            </div>
-            <Badge
-                variant="success"
-                class="col-start-3 justify-self-start"
-                data-testid="plan-save-two-months"
-            >
-                {{ $t('billing.plans.save_two_months') }}
-            </Badge>
-        </div>
+        <PlanIntervalSwitch
+            :model-value="interval"
+            @update:model-value="emit('update:interval', $event)"
+        />
 
         <div class="grid items-stretch gap-4 @2xl:grid-cols-2">
             <article

@@ -146,4 +146,21 @@ return [
         ],
         'sent_at' => 'Gesendet :time',
     ],
+    'welcome_plan' => [
+        'title' => 'Wähle deinen Tarif',
+        'description' => 'Monatlich oder jährlich zahlen. Jederzeit wechseln oder kündigen.',
+        'storage' => ':size Speicher',
+        'ai_credits' => ':credits KI-Credits pro Monat',
+        'unlimited' => 'Unbegrenzte Workspaces, Kanäle, Beiträge und Mitglieder.',
+        'start_trial' => ':days Tage kostenlos testen',
+        'subscribe' => 'Abonnieren',
+        'trial_terms' => 'Danach :price ab :date. Jederzeit kündbar. Eine kostenlose Testphase pro Karte.',
+        'subscribe_terms' => ':price wird heute abgebucht. Jederzeit kündbar.',
+        'verify_email' => [
+            'title' => 'E-Mail bestätigen',
+            'description' => 'Wir haben einen Link an :email gesendet. Öffne ihn und komme dann hierher zurück.',
+            'resend' => 'E-Mail erneut senden',
+            'close' => 'Nicht jetzt',
+        ],
+    ],
 ];
