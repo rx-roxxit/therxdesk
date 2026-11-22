@@ -117,6 +117,7 @@ function seed(): void
         'name' => 'Verify Agent',
         'email' => OWNER_EMAIL,
         'timezone' => 'UTC',
+        'country' => 'TH',
     ]);
 
     $workspace = Workspace::factory()->create([

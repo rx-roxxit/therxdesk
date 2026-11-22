@@ -13,6 +13,9 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   `@plan-save-two-months`), a card per Plan (`@plan-card-<slug>`, `@plan-price-<slug>`, `@plan-select-<slug>`).
   Choosing a Plan swaps the subscription's price at once (proration charged to the card); without a subscription
   it opens Checkout.
+- "Change plan" and "Subscribe" refuse an Account whose Owner country is blocked, or whose completed checkout was
+  billed to a blocked country (`accounts.blocked_country_at`), with the toast "Not available in the EU/UK yet": no
+  swap and no Checkout Session.
 - Payment methods (`@billing-payment-methods`, `@billing-card-<id>`), "Manage on Stripe" (`@billing-manage-stripe`,
   the Customer Portal).
 - Invoices tab (`@billing-tab-invoices`, `@billing-invoices`, `@billing-invoice-download-<id>`, empty state
@@ -47,5 +50,8 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 - The past-due state is its own journey: a paid-before subscription whose renewal failed keeps access and shows the
   sidebar banner and the `Past due` badge (`$V/drive.sh past-due`, see `trial-and-payment.md`). A lapse (Smart Retries
   exhausted, then `canceled`) is `$V/drive.sh lapsed` there too.
+- The fixture Owner's country is `TH`, so the plan actions work. To see the refusal, set `users.country` to an EU/UK
+  code (or `accounts.blocked_country_at`) on the fixture Owner and press "Change plan": the page stays and the toast
+  shows the notice.
 - Not driven yet: the Invoices tab, Subscribe on a generic trial, a downgrade, a yearly swap (which drops the
   discount).
