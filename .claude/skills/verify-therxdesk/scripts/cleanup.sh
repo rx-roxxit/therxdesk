@@ -8,6 +8,9 @@
 # Never removes evidence ($EVIDENCE_ROOT) and never kills by process name.
 source "$(dirname "$0")/env.sh"
 
+# Lifts a Suspension and removes its journey env; a missing state is a no-op.
+"$(dirname "$0")/suspension.sh" down
+
 "$(dirname "$0")/fixture.sh" down
 "$(dirname "$0")/fixture.sh" guests
 

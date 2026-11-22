@@ -8,10 +8,21 @@
 #   fixture.sh customer <cus_id>      point the fixture Account at a sandbox Customer
 #   fixture.sh customer-clear         forget that Customer
 #   fixture.sh card <fingerprint>     claim a card fingerprint for the fixture Account
+#   fixture.sh token                  print ONLY a fresh personal API token (api.sh captures it)
+#
+# The fixture is an Owner, their Workspace with one made-up LinkedIn channel,
+# and a Member on the same Account (memberEmail in `show`).
 source "$(dirname "$0")/env.sh"
 
 if [ "$#" -eq 0 ]; then
     set -- show
+fi
+
+# A token is a secret: never print it to a terminal. api.sh captures it into a
+# mode-600 curl config, so its stdout is a pipe, never a tty.
+if [ "$1" = "token" ] && [ -t 1 ]; then
+    echo "[fixture] the API token is a secret and is never printed: use api.sh, which captures it" >&2
+    exit 1
 fi
 
 compose run --rm -T -u app -e "VERIFY_GUEST_EMAIL_LIKE=$GUEST_EMAIL_LIKE" app php "$SKILL_IN_APP/scripts/fixture.php" "$@"

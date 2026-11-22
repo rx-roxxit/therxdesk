@@ -15,6 +15,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Admin Offers on the Plan step (`selling.sh up`, `offer.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-offer` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
 | Complimentary Plan: given, shown on the plan step and billing, then ended (`selling.sh up`, `complimentary.sh up`) | [complimentary.md](complimentary.md) | `complimentary`, `complimentary-ended` |
+| Suspension and the publishing gate (`selling.sh up`, `suspension.sh up`) | [suspension.md](suspension.md) | `suspension`, `gate-schedule`, `gate-retry` |
 | Operator: one current legal entity, its history, the CLI and the internal API (`selling.sh up`) | [operator.md](operator.md) | not a browser journey; internal.sh + selling.sh + mail.sh |
 | Trial and payment: repeat card, failed first charge, past due, a lapse (`selling.sh up`, a Stripe test clock) | [trial-and-payment.md](trial-and-payment.md) | `payment-retry`, `past-due`, `lapsed` |
 | Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `media.sh up`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
@@ -23,7 +24,6 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Admin alerts, heartbeat, capacity check and health (`selling.sh up`) | [admin-alerts.md](admin-alerts.md) | not a browser journey; selling.sh + internal.sh |
 | Database backups, the backup heartbeat and a restore drill (`selling.sh up`) | [database-backups.md](database-backups.md) | not a browser journey; selling.sh + internal.sh + a scratch Postgres |
 
-Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), publishing (would
-call the network), Insights, Create (ideas, templates, feeds), Repurpose, workspace members and invites, settings
-pages, the video policy and Cover, Offers (banners, coupons, trials), usage limits per Plan. Add a file when you first
-verify one.
+Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), Insights, Create (ideas,
+templates, feeds), Repurpose, workspace members and invites, settings pages, the video policy and Cover, Offers
+(banners, coupons, trials), usage limits per Plan. Add a file when you first verify one.

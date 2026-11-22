@@ -28,6 +28,9 @@ type Fixture = {
     workspaceId: string;
     channelId: string;
     channelPlatform: string;
+    /** A Member of the fixture Workspace, on the same Account. */
+    memberEmail?: string;
+    memberId?: string;
 };
 
 type Check = { name: string; passed: boolean; observed: unknown };
@@ -49,15 +52,24 @@ const tid = (selector: string): string => {
     return selector.replace(/@([\w-]+)/g, '[data-testid="$1"]');
 };
 
-/** Sign in through the login form, as a user does. */
-const signIn = async (run: Run): Promise<void> => {
+/** Sign in through the login form as any user, as a user does. */
+const signInAs = async (
+    run: Run,
+    email: string,
+    password: string,
+): Promise<void> => {
     const { page } = run;
 
     await page.goto(`${run.baseUrl}/login`);
-    await page.locator(tid('@login-email')).fill(run.fixture.email);
-    await page.locator(tid('@login-password')).fill(run.fixture.password);
+    await page.locator(tid('@login-email')).fill(email);
+    await page.locator(tid('@login-password')).fill(password);
     await page.locator(tid('@login-submit')).click();
     await page.waitForURL((url) => url.pathname !== '/login');
+};
+
+/** Sign in as the fixture Owner. */
+const signIn = async (run: Run): Promise<void> => {
+    await signInAs(run, run.fixture.email, run.fixture.password);
 };
 
 /**
@@ -186,6 +198,124 @@ const servedMode = async (page: Page): Promise<Mode | null> => {
     return null;
 };
 
+/**
+ * The Suspended screen a Suspension renders for every member of the Account:
+ * the page root, the banner, its sentence and a support action.
+ */
+const expectSuspendedScreen = async (run: Run, who: string): Promise<void> => {
+    const { page } = run;
+
+    await page.waitForURL((url) => url.pathname === '/welcome/suspended', {
+        timeout: 30_000,
+    });
+    await page.locator(tid('@welcome-suspended')).waitFor();
+    await page.locator(tid('@suspended-banner')).waitFor();
+    await page.waitForLoadState('networkidle');
+
+    const body = await page.locator(tid('@welcome-suspended')).innerText();
+    const supportLinks = page.locator('a[href^="mailto:"]');
+    const supportByRole = page.getByRole('link', { name: /support/i });
+    const supportButton = page.getByRole('button', { name: /support/i });
+    run.check(
+        `${who} sees "Account suspended, contact support"`,
+        body.includes('Account suspended, contact support'),
+        body,
+    );
+    run.check(
+        `${who} is offered a support action`,
+        (await supportLinks.count()) > 0 ||
+            (await supportByRole.count()) > 0 ||
+            (await supportButton.count()) > 0,
+        {
+            mailto: await supportLinks.count(),
+            supportLink: await supportByRole.count(),
+            supportButton: await supportButton.count(),
+        },
+    );
+    run.check(
+        `${who} is on the Suspended route`,
+        new URL(page.url()).pathname === '/welcome/suspended',
+        new URL(page.url()).pathname,
+    );
+};
+
+/** The id of the post card whose text holds `text`, once the list paints it. */
+const cardIdByText = async (
+    page: Page,
+    text: string,
+): Promise<string | null> => {
+    for (let attempt = 0; attempt < 30; attempt++) {
+        const id = await page.evaluate((needle) => {
+            const cards = Array.from(
+                document.querySelectorAll<HTMLElement>(
+                    '[data-testid^="post-card-"]',
+                ),
+            );
+            const match = cards.find((card) => {
+                return (card.textContent ?? '').includes(needle);
+            });
+            const testid = match?.getAttribute('data-testid') ?? '';
+
+            if (!testid.startsWith('post-card-')) {
+                return null;
+            }
+
+            return testid.slice('post-card-'.length);
+        }, text);
+
+        if (id !== null) {
+            return id;
+        }
+
+        await page.waitForTimeout(500);
+    }
+
+    return null;
+};
+
+/**
+ * The failure popover's reason for a post, read by opening it. `opened` is
+ * false when the card holds no failure trigger, so a poll can tell "not a
+ * failed post right now" from "the reason changed".
+ */
+const readBlockReason = async (
+    page: Page,
+    postId: string,
+): Promise<{ present: boolean; opened: boolean; reason: string | null }> => {
+    const card = page.locator(tid(`@post-card-${postId}`));
+
+    if ((await card.count()) === 0) {
+        return { present: false, opened: false, reason: null };
+    }
+
+    const trigger = page.locator(tid(`@post-status-${postId}`));
+
+    if ((await trigger.count()) === 0) {
+        return { present: true, opened: false, reason: null };
+    }
+
+    const openPopover = page.locator(tid(`@post-failure-${postId}`));
+
+    if ((await openPopover.count()) > 0) {
+        await page.keyboard.press('Escape');
+        await openPopover.waitFor({ state: 'detached' }).catch(() => undefined);
+    }
+
+    await trigger.click();
+    await openPopover.waitFor({ timeout: 5_000 }).catch(() => undefined);
+
+    const reasonLocator = page.locator(tid(`@post-failure-reason-${postId}`));
+    const reason =
+        (await reasonLocator.count()) > 0
+            ? await reasonLocator.innerText()
+            : null;
+
+    await page.keyboard.press('Escape');
+    await openPopover.waitFor({ state: 'detached' }).catch(() => undefined);
+
+    return { present: true, opened: true, reason };
+};
+
 /** The journeys that need selling mode (selling.sh up); every other one needs self-hosted. */
 const SELLING_JOURNEYS = [
     'register',
@@ -201,6 +331,9 @@ const SELLING_JOURNEYS = [
     'past-due',
     'lapsed',
     'media-on-r2',
+    'suspension',
+    'gate-schedule',
+    'gate-retry',
 ];
 
 /** The test card Stripe's sandbox always accepts, unless a path needs another. */
@@ -1509,10 +1642,10 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             block,
         );
 
-        const cards = await page
-            .locator('[data-testid^="plan-card-"]')
+        const cards = await page.locator('[data-testid^="plan-card-"]').count();
+        const interval = await page
+            .locator(tid('@plan-interval-monthly'))
             .count();
-        const interval = await page.locator(tid('@plan-interval-monthly')).count();
         run.check(
             'the plan step shows no Plan cards and no interval switch',
             cards === 0 && interval === 0,
@@ -1609,7 +1742,9 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             null,
         );
 
-        const miniButton = await page.locator(tid('@plan-select-mini')).innerText();
+        const miniButton = await page
+            .locator(tid('@plan-select-mini'))
+            .innerText();
         run.check(
             'a former Complimentary Account is offered a subscription, not a Trial',
             miniButton.includes('Subscribe'),
@@ -1990,6 +2125,273 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         }
 
         await run.step('after-uploads');
+    },
+
+    /**
+     * features/suspension.md
+     *
+     * Needs `selling.sh up` and `suspension.sh up`. The Owner and the Member
+     * on the same Account both land on the Suspended screen, from the login
+     * redirect and from a direct app page; the API refuses them (api.sh).
+     */
+    suspension: async (run) => {
+        const { page, fixture } = run;
+
+        if (!fixture.memberEmail || !fixture.memberId) {
+            throw new Error(
+                'run fixture.sh up first (the fixture has no Member: memberEmail/memberId missing)',
+            );
+        }
+
+        // Signing in still works while suspended: the POST succeeds and the
+        // redirect lands on the Suspended screen.
+        await signIn(run);
+        await quietFirstVisits(run, fixture.userId);
+        await page.reload();
+        await expectSuspendedScreen(run, 'the Owner');
+        await run.step('owner-suspended');
+
+        // Every app page redirects here, the plan step included.
+        await page.goto(`${run.baseUrl}/welcome/plan`);
+        await page.waitForURL((url) => url.pathname === '/welcome/suspended', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@welcome-suspended')).waitFor();
+        run.check(
+            '/welcome/plan redirects to the Suspended screen',
+            true,
+            new URL(page.url()).pathname,
+        );
+
+        // The Member is on the same Account: a fresh session, the same screen.
+        await page.context().clearCookies();
+        await signInAs(run, fixture.memberEmail, fixture.password);
+        await quietFirstVisits(run, fixture.memberId);
+        await page.reload();
+        await expectSuspendedScreen(run, 'the Member');
+
+        const email = await signedInEmail(page);
+        run.check(
+            'the Member session is the fixture Member',
+            email === fixture.memberEmail,
+            email,
+        );
+        await run.step('member-suspended');
+    },
+
+    /**
+     * features/suspension.md
+     *
+     * The publishing gate, step 1: schedule a post ~5 minutes ahead on the
+     * fixture channel so the dev scheduler can try it. The Account needs app
+     * access to compose, so a Complimentary Plan must be in force
+     * (`complimentary.sh up`). Suspend right after this journey, before the
+     * scheduled time, or the post goes out to the network instead.
+     */
+    'gate-schedule': async (run) => {
+        const { page, fixture } = run;
+        const leadMinutes = Number(process.env.VERIFY_GATE_LEAD_MINUTES ?? '5');
+        const scheduledAt = new Date(Date.now() + leadMinutes * 60_000);
+        const day = scheduledAt.toISOString().slice(0, 10);
+        const time = scheduledAt.toISOString().slice(11, 16).replace(':', '');
+        const caption = `Verify gate ${new Date().toISOString()}`;
+        run.note('caption', caption);
+        run.note('scheduledAt', scheduledAt.toISOString());
+        run.note('leadMinutes', leadMinutes);
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the gate journeys`,
+            );
+        }
+
+        await page.locator(tid('@schedule-view-list')).click();
+        await page.waitForURL((url) => url.pathname === '/schedule');
+        await page.locator(tid('@posts-new-post')).waitFor();
+
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page.locator(tid('@composer-base-content')).waitFor();
+
+        await page.locator(tid('@composer-add-account')).click();
+        await page
+            .locator(tid(`@composer-account-option-${fixture.channelId}`))
+            .click();
+        await page
+            .locator(tid(`@composer-caption-${fixture.channelId}`))
+            .fill(caption);
+
+        await page.locator(tid('@composer-schedule-trigger')).click();
+        await page.locator(tid('@composer-schedule-custom')).click();
+        await page.locator(tid('@composer-schedule-picker')).waitFor();
+
+        const dayLocator = page.locator(tid(`@composer-schedule-day-${day}`));
+
+        if ((await dayLocator.count()) === 0) {
+            await page.locator(tid('@composer-schedule-calendar-next')).click();
+        }
+
+        await page.locator(tid(`@composer-schedule-day-${day}`)).click();
+        await page.locator(tid('@composer-schedule-time-input')).fill(time);
+        await page.locator(tid('@composer-schedule-done')).click();
+        await run.step('composer-scheduled');
+
+        const past = await page.locator(tid('@composer-schedule-past')).count();
+        run.check('the chosen time is in the future', past === 0, {
+            day,
+            time,
+            past,
+        });
+
+        await page.locator(tid('@composer-submit')).click();
+        await page
+            .locator(tid('@post-composer-dialog'))
+            .waitFor({ state: 'detached' });
+        await page.waitForLoadState('networkidle');
+        await run.step('after-schedule');
+
+        const postId = await cardIdByText(page, caption);
+        run.check(
+            'the scheduled post shows in the list',
+            postId !== null,
+            postId,
+        );
+        run.note('blockedPostId', postId);
+
+        if (postId === null) {
+            throw new Error('the scheduled post never showed in the list');
+        }
+
+        await page.locator(tid(`@post-card-${postId}`)).waitFor();
+        await run.step('scheduled-post');
+    },
+
+    /**
+     * features/suspension.md
+     *
+     * The publishing gate, step 2: the scheduler blocked the post while the
+     * Account was suspended; the Suspension has been lifted. The failure
+     * popover showed the suspended reason and the Owner's Try again re-queues
+     * the post through the gate. Run `suspension.sh lift` first and pass the
+     * id from `gate-schedule`'s `notes.blockedPostId` in VERIFY_BLOCKED_POST.
+     */
+    'gate-retry': async (run) => {
+        const { page } = run;
+        const postId = process.env.VERIFY_BLOCKED_POST ?? '';
+
+        if (postId === '') {
+            throw new Error(
+                'VERIFY_BLOCKED_POST is empty: pass gate-schedule result.json notes.blockedPostId',
+            );
+        }
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the gate journeys`,
+            );
+        }
+
+        // A failed post is listed in Sent.
+        await page.goto(`${run.baseUrl}/schedule?tab=sent`);
+        await page
+            .locator(tid(`@post-card-${postId}`))
+            .waitFor({ timeout: 30_000 });
+        await page.waitForLoadState('networkidle');
+
+        await page.locator(tid(`@post-status-${postId}`)).click();
+        await page.locator(tid(`@post-failure-${postId}`)).waitFor();
+        await run.step('blocked-post');
+
+        const reason = await page
+            .locator(tid(`@post-failure-reason-${postId}`))
+            .innerText();
+        run.check(
+            'the failure popover says the Account is suspended',
+            /suspended/i.test(reason),
+            reason,
+        );
+
+        // The Try again control lives in the popover or on the card; the Owner
+        // may publish directly either way. Close the popover before reaching a
+        // card control so it cannot swallow the click.
+        const retryInPopover = page
+            .locator(tid(`@post-failure-${postId}`))
+            .locator(tid(`@post-retry-${postId}`));
+        let retry = retryInPopover;
+
+        if ((await retry.count()) === 0) {
+            await page.keyboard.press('Escape');
+            await page
+                .locator(tid(`@post-failure-${postId}`))
+                .waitFor({ state: 'detached' })
+                .catch(() => undefined);
+            retry = page.locator(tid(`@post-retry-${postId}`));
+        }
+
+        const retryCount = await retry.count();
+        run.check(
+            'the blocked post offers Try again to the Owner',
+            retryCount > 0,
+            retryCount,
+        );
+
+        if (retryCount > 0) {
+            const retried = page.waitForResponse(
+                (response) =>
+                    response.request().method() === 'POST' &&
+                    response.url().includes(`/posts/${postId}/retry`),
+                { timeout: 30_000 },
+            );
+            await retry.first().click();
+            await retried.catch(() => undefined);
+        }
+
+        await page.waitForLoadState('networkidle');
+        await run.step('after-retry');
+
+        // A retry re-queues the post: it leaves Sent, or comes back as an
+        // ordinary network failure. Either way its suspended block is gone.
+        let cleared = false;
+        let observed: {
+            present: boolean;
+            opened: boolean;
+            reason: string | null;
+        } = { present: true, opened: false, reason };
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            observed = await readBlockReason(page, postId);
+            const gone =
+                !observed.present ||
+                (observed.opened &&
+                    (observed.reason === null ||
+                        !/suspended/i.test(observed.reason)));
+
+            if (gone) {
+                cleared = true;
+                break;
+            }
+
+            await page.waitForTimeout(1_000);
+        }
+
+        run.check(
+            'the suspended block is gone after the retry',
+            cleared,
+            observed,
+        );
+        await run.step('retry-cleared');
     },
 
     /** features/storage-bar.md */

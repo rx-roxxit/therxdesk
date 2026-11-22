@@ -6,6 +6,7 @@
 #   drive.sh <journey> [evidence folder]
 #   drive.sh sign-in
 #   drive.sh compose-draft
+#   VERIFY_BLOCKED_POST=<id> drive.sh gate-retry
 source "$(dirname "$0")/env.sh"
 
 journey="${1:?usage: drive.sh <journey> [evidence folder]}"
@@ -44,6 +45,12 @@ if [ -s "$STATE_DIR/complimentary.env" ]; then
     [ -n "${VERIFY_COMPLIMENTARY_ACCOUNT:-}" ] && complimentary_env+=(-e "VERIFY_COMPLIMENTARY_ACCOUNT=$VERIFY_COMPLIMENTARY_ACCOUNT")
 fi
 
+# The gate journeys read the post id gate-schedule found (gate-retry) and how
+# far ahead gate-schedule schedules (default 5 minutes in drive.ts).
+gate_env=()
+[ -n "${VERIFY_BLOCKED_POST:-}" ] && gate_env+=(-e "VERIFY_BLOCKED_POST=$VERIFY_BLOCKED_POST")
+[ -n "${VERIFY_GATE_LEAD_MINUTES:-}" ] && gate_env+=(-e "VERIFY_GATE_LEAD_MINUTES=$VERIFY_GATE_LEAD_MINUTES")
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -55,6 +62,7 @@ docker run --rm --network host --ipc=host \
     "${card_env[@]}" \
     "${offer_env[@]}" \
     "${complimentary_env[@]}" \
+    "${gate_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

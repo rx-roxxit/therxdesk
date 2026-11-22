@@ -46,10 +46,11 @@ then waits until the stack is usable, not merely up: the `app` container is `hea
 migrations, Passport keys and Wayfinder), `GET /up` answers, the Vite dev server serves `/@vite/client`, and
 `/login` renders an Inertia page. Last, it creates the fixture (`fixture.sh up`) and prints it as JSON:
 `email`, `password`, `userId`, `accountId`, `stripeId`, `workspaceId`, `channelId` (a made-up LinkedIn channel),
-`channelPlatform`.
+`channelPlatform`, `memberEmail` and `memberId` (a Member of the Workspace on the same Account).
 
-The fixture is one Owner with one Workspace ("Verify Desk") and one LinkedIn channel created without model events,
-so nothing calls LinkedIn with its fake token. Run `$V/fixture.sh up` again any time to reset it to that state.
+The fixture is one Owner with one Workspace ("Verify Desk"), one LinkedIn channel created without model events,
+so nothing calls LinkedIn with its fake token, and one Member (password `password`). Run `$V/fixture.sh up` again
+any time to reset it to that state.
 
 ## Selling mode
 
@@ -119,6 +120,23 @@ $V/stripe-clock.sh delete              # remove it (cleanup.sh does this)
 `trial_cards` rows, so `4242` starts a fresh Trial on every run. The commands, the journeys and the expected rows are
 in `features/trial-and-payment.md`.
 
+## Suspension and the publishing gate
+
+```sh
+$V/suspension.sh up            # suspend the fixture Account through /internal/v1 (reason in the audit log)
+$V/suspension.sh show          # the Account's access_state (suspended, lapsed, has_app_access)
+$V/suspension.sh lift          # lift it, remove the journey env
+$V/api.sh GET /posts           # the public API as the fixture Owner, a fresh token never printed
+```
+
+`up` needs `selling.sh up` (the internal tokens), resolves the fixture Account through `fixture.sh show`, and writes
+`VERIFY_SUSPENSION_ACCOUNT` to `state/suspension.env`; `down` lifts what the env recorded. While suspended the app
+answers every page with the Suspended screen (`/welcome/suspended`) for the Owner and every Member, and every `/api`
+route answers `402` with `Account suspended, contact support.` The publishing gate then fails a scheduled post with
+`posts.publish_block_reason = suspended`; once lifted, the Owner's **Try again** re-queues it. `features/suspension.md`
+holds the full sequence (the gate journeys need `complimentary.sh up` for access, and a suspend inside the 5-minute
+scheduling lead).
+
 ## Media on R2
 
 ```sh
@@ -168,12 +186,14 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
 `selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
-`payment-retry`, `past-due`, `lapsed`, `media-on-r2`
+`payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`
 (selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
 `complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
-test clock, `media-on-r2` also needs `media.sh up`). Every journey first checks the mode php-fpm serves and stops
-with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
-journey.
+test clock, `media-on-r2` also needs `media.sh up`, `suspension` needs `suspension.sh up`, `gate-schedule` needs
+`complimentary.sh up` and a `suspension.sh up` right after, `gate-retry` needs `suspension.sh lift` and
+`VERIFY_BLOCKED_POST` from `gate-schedule`'s `notes.blockedPostId`). Every journey first checks the mode php-fpm
+serves and stops with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature,
+with or without a journey.
 
 Writing a journey (add it to `JOURNEYS`, then a row and a file in `features/`):
 
@@ -248,8 +268,9 @@ Look at the screenshots before you claim anything. A passing check on a skeleton
 $V/cleanup.sh
 ```
 
-Removes the fixture Owner and everything it owns (`fixture.sh down`: its Workspace through `PurgeWorkspace`, its
-sandbox Customer, which cancels its subscriptions, then the user and the Account), then deletes the Stripe test clock
+Removes the fixture Owner, the Member and everything they own (`fixture.sh down`: the Workspace through
+`PurgeWorkspace`, its sandbox Customer, which cancels its subscriptions, then the users and the Account), after
+lifting a Suspension (`suspension.sh down`). Then it deletes the Stripe test clock
 (`stripe-clock.sh delete`), and runs `selling.sh down` and `media.sh down`. Stops the stack only if `launch.sh` started
 it, then hands the files the root-run entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never
 deletes evidence: it stays in `~/.cache/verify-therxdesk/runs/` (override with `VERIFY_EVIDENCE_ROOT`). Run cleanup
@@ -261,7 +282,7 @@ after every failed attempt too.
 | --- | --- | --- |
 | `launch.sh` | start or reuse the stack, wait until usable, create the fixture | stack, fixture |
 | `doctor.sh` | is this instance worth driving | no |
-| `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `customer` / `customer-clear` point its Account at a sandbox Customer; `card` claims a fingerprint; `guests` removes register-journey Owners | `up`, `down`, `guests`, `customer`, `customer-clear`, `card` |
+| `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner, its Workspace and the Member (`memberEmail`, `memberId`); `customer` / `customer-clear` point its Account at a sandbox Customer; `card` claims a fingerprint; `token` issues a personal API token for `api.sh`, never printed; `guests` removes register-journey Owners | `up`, `down`, `guests`, `customer`, `customer-clear`, `card`, `token` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
 | `browser-suite.sh [pest args]` | run `tests/Browser` in the Playwright + PHP image | a scratch copy under `state/` |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
@@ -270,6 +291,8 @@ after every failed attempt too.
 | `mail.sh list\|latest\|wait\|show\|clear` | read the dev Mailpit inbox | `clear` empties it |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
 | `complimentary.sh up\|end\|show\|down` | give the fixture a Complimentary Plan through `/internal/v1`, end it, show it | `up`, `end`, `down` |
+| `suspension.sh up\|lift\|show\|down` | suspend the fixture Account through `/internal/v1`, lift it, print its `access_state` | `up`, `lift`, `down` |
+| `api.sh <METHOD> <path>` | call the public `/api` as the fixture Owner with a fresh personal token, never printed | an API token row |
 | `stripe-clock.sh create\|customer\|attach\|advance\|status\|fingerprint\|delete` | a Stripe test clock, its Customer and the fixture Account | Stripe sandbox, fixture, state |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
 | `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | no |
