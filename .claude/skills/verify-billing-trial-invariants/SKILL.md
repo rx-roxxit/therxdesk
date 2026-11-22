@@ -148,7 +148,7 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **SYNC_COMMIT_HASH**. Confirmed against these files and functions:
+Sync commit: **6d34dc21**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
