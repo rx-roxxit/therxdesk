@@ -39,6 +39,8 @@ class Account extends Model
         'plan_id',
         'ai_credits_per_month',
         'trial_ends_at',
+        'complimentary_since',
+        'complimentary_until',
         'first_invoice_id',
         'blocked_country',
         'blocked_country_at',
@@ -47,6 +49,8 @@ class Account extends Model
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'complimentary_since' => 'datetime',
+        'complimentary_until' => 'datetime',
         'onboarding_completed_at' => 'datetime',
         'onboarding_dismissed_at' => 'datetime',
         'onboarding_skipped_steps' => 'array',
@@ -222,11 +226,48 @@ class Account extends Model
     }
 
     /**
+     * A Complimentary Plan is in force: given by the System admin, and either
+     * without an end date or before one that has not passed.
+     */
+    public function isComplimentary(): bool
+    {
+        if (blank($this->complimentary_since)) {
+            return false;
+        }
+
+        if (blank($this->complimentary_until)) {
+            return true;
+        }
+
+        return $this->complimentary_until->isFuture();
+    }
+
+    /**
+     * Was ever given a Complimentary Plan. The `since` column is never
+     * cleared, so this outlives the Plan and its end date.
+     */
+    public function hadComplimentaryPlan(): bool
+    {
+        return filled($this->complimentary_since);
+    }
+
+    public function complimentaryEndsAt(): ?CarbonInterface
+    {
+        return $this->complimentary_until;
+    }
+
+    /**
      * A first checkout may start a trial: never one before, never charged,
-     * and no billable subscription without a trial.
+     * and no billable subscription without a trial. A Complimentary Plan
+     * rules a Trial out for good: the System admin ends it first, then the
+     * Account pays.
      */
     public function canStartTrial(): bool
     {
+        if ($this->hadComplimentaryPlan()) {
+            return false;
+        }
+
         if ($this->hasHadTrial()) {
             return false;
         }
@@ -261,7 +302,7 @@ class Account extends Model
             return false;
         }
 
-        if (blank($this->first_paid_at)) {
+        if ($this->isComplimentary()) {
             return false;
         }
 
@@ -269,7 +310,17 @@ class Account extends Model
             return false;
         }
 
-        return ! $this->onGenericTrial();
+        if ($this->onGenericTrial()) {
+            return false;
+        }
+
+        // A Complimentary Plan that ended is a lapse even though the Account
+        // never paid: that is the path it follows.
+        if ($this->hadComplimentaryPlan()) {
+            return true;
+        }
+
+        return filled($this->first_paid_at);
     }
 
     public function hasActiveSubscription(): bool
@@ -348,7 +399,9 @@ class Account extends Model
             return false;
         }
 
-        return $this->subscribed(self::SUBSCRIPTION_NAME) || $this->onGenericTrial();
+        return $this->subscribed(self::SUBSCRIPTION_NAME)
+            || $this->onGenericTrial()
+            || $this->isComplimentary();
     }
 
     /**
