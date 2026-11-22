@@ -236,6 +236,11 @@
     --muted: #0f0f0f;
 }
 
+@theme {
+    /* The plan step: four cards above 1080px, two from 640px, one on phones. */
+    --breakpoint-plan: 1081px;
+}
+
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);

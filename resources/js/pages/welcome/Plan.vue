@@ -34,8 +34,7 @@ const form = useForm({
     interval: props.selected.interval,
 });
 
-const isSelected = (plan: WelcomePlan): boolean =>
-    plan.slug === props.selected.plan;
+const isSelected = (plan: WelcomePlan): boolean => plan.slug === form.plan;
 
 const isProcessing = (plan: WelcomePlan): boolean =>
     processingPlan.value === plan.slug;
@@ -89,7 +88,7 @@ const closeVerifyDialog = (open: boolean): void => {
             <PlanIntervalSwitch v-model="interval" />
 
             <div
-                class="grid grid-cols-1 items-stretch gap-4 min-[1081px]:grid-cols-4 sm:grid-cols-2"
+                class="grid grid-cols-1 items-stretch gap-4 min-[640px]:max-[1080px]:grid-cols-2 plan:grid-cols-4"
             >
                 <WelcomePlanCard
                     v-for="plan in plans"
