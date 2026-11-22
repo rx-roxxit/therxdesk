@@ -103,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('welcome/software', [WelcomeController::class, 'software'])->name('app.welcome.software');
     Route::post('welcome/software', [WelcomeController::class, 'storeSoftware'])->name('app.welcome.software.store');
     Route::get('welcome/plan', [WelcomeController::class, 'plan'])->name('app.welcome.plan');
+    Route::get('welcome/plan/portal', [WelcomeController::class, 'planPortal'])->name('app.welcome.plan.portal');
     Route::post('welcome/plan', [WelcomeController::class, 'storePlan'])
         ->middleware('throttle:6,1')
         ->name('app.welcome.plan.store');

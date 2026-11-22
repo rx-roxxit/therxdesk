@@ -193,11 +193,14 @@ const SELLING_JOURNEYS = [
     'welcome-plan',
     'welcome-checkout',
     'billing',
+    'payment-retry',
+    'past-due',
+    'lapsed',
     'media-on-r2',
 ];
 
-/** The test card Stripe's sandbox always accepts. */
-const TEST_CARD = '4242424242424242';
+/** The test card Stripe's sandbox always accepts, unless a path needs another. */
+const TEST_CARD = process.env.VERIFY_TEST_CARD ?? '4242424242424242';
 
 /** A 1×1 PNG, the image the media-on-R2 proof uploads (`tests/fixtures/1x1.png`). */
 const PROOF_IMAGE = Buffer.from(
@@ -1128,6 +1131,147 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 (await portalPlan.count()) > 0,
             new URL(page.url()).hostname,
         );
+    },
+
+    /**
+     * features/trial-and-payment.md (path 2: a Trial's first charge failed)
+     *
+     * The Account never paid and its Trial's first charge was declined, so it
+     * has no access: the plan step is the retry state, not the four cards.
+     */
+    'payment-retry': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-payment-retry')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('payment-retry');
+
+        const title = await page.locator(tid('@welcome-title')).innerText();
+        run.check(
+            "the retry step says the first payment didn't go through",
+            title.includes("Your first payment didn't go through"),
+            title,
+        );
+
+        const cards = await page
+            .locator('[data-testid^="plan-card-"]')
+            .count();
+        run.check('the retry step shows no plan cards', cards === 0, cards);
+
+        await page.locator(tid('@plan-payment-retry-update-card')).click();
+        await page.waitForURL((url) => url.hostname === 'billing.stripe.com', {
+            timeout: 60_000,
+        });
+        await run.step('stripe-portal');
+
+        const host = new URL(page.url()).hostname;
+        run.check(
+            'Update card opens the Customer Portal',
+            host === 'billing.stripe.com',
+            host,
+        );
+    },
+
+    /**
+     * features/trial-and-payment.md (path 3: a renewal failed after a paid one)
+     *
+     * The Account paid at least once, so a past_due subscription keeps its
+     * access: the Schedule opens with the sidebar banner, and billing still
+     * shows the Plan with a Past due badge.
+     */
+    'past-due': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 30_000,
+        });
+        await quietFirstVisits(run);
+        await page.reload();
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@sidebar-past-due')).waitFor();
+        await run.step('past-due-schedule');
+
+        const notice = await page.locator(tid('@sidebar-past-due')).innerText();
+        run.check(
+            'the sidebar says the payment is past due',
+            notice.trim().length > 0,
+            notice,
+        );
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        await page.locator(tid('@sidebar-menu-billing')).click();
+        await page.waitForURL(
+            (url) => url.pathname === '/settings/account/billing',
+        );
+        await page.locator(tid('@billing-current-plan-badge')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('billing-past-due');
+
+        const badge = await page
+            .locator(tid('@billing-current-plan-badge'))
+            .innerText();
+        run.check(
+            'billing shows the subscription as Past due',
+            badge.includes('Past due'),
+            badge,
+        );
+
+        const planName = await page.evaluate(() => {
+            return (
+                window.history.state?.page?.props?.auth?.plan?.name ?? null
+            );
+        });
+        const shownName = await page
+            .locator(tid('@billing-current-plan-name'))
+            .innerText();
+        run.check(
+            'billing still shows the Plan',
+            typeof planName === 'string' &&
+                planName.length > 0 &&
+                shownName.includes(planName),
+            { planName, shownName },
+        );
+    },
+
+    /**
+     * features/trial-and-payment.md (path 4: Smart Retries ran out)
+     *
+     * A lapsed Account has no access: the plan step is back, without the retry
+     * state, and a card's button says Subscribe because the Trial is not
+     * offered again.
+     */
+    'lapsed': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('lapsed-plan');
+
+        const retry = await page.locator(tid('@plan-payment-retry')).count();
+        run.check('a lapsed Account has no retry step', retry === 0, retry);
+
+        const button = await page
+            .locator(tid('@plan-select-mini'))
+            .innerText();
+        run.check(
+            'the lapsed Account is offered a subscription, not a Trial',
+            button.includes('Subscribe'),
+            button,
+        );
+
+        const offer = await page.locator(tid('@welcome-plan-offer')).count();
+        run.check('the plan step shows no Offer banner', offer === 0, offer);
     },
 
     /**

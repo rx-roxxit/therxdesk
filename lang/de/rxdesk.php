@@ -156,6 +156,11 @@ return [
         'subscribe' => 'Abonnieren',
         'trial_terms' => 'Danach :price ab :date. Jederzeit kündbar. Eine kostenlose Testphase pro Karte.',
         'subscribe_terms' => ':price wird heute abgebucht. Jederzeit kündbar.',
+        'payment_retry' => [
+            'title' => 'Deine erste Zahlung ist fehlgeschlagen',
+            'description' => 'Dein Konto bleibt pausiert, bis die Zahlung eingeht. Aktualisiere deine Karte, um deinen Tarif zu starten.',
+            'update_card' => 'Karte aktualisieren',
+        ],
         'verify_email' => [
             'title' => 'E-Mail bestätigen',
             'description' => 'Wir haben einen Link an :email gesendet. Öffne ihn und komme dann hierher zurück.',

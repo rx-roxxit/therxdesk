@@ -156,6 +156,11 @@ return [
         'subscribe' => '구독하기',
         'trial_terms' => '이후 :date부터 :price. 언제든 해지할 수 있습니다. 카드당 무료 체험 1회.',
         'subscribe_terms' => '오늘 :price가 결제됩니다. 언제든 해지할 수 있습니다.',
+        'payment_retry' => [
+            'title' => '첫 결제가 완료되지 않았습니다',
+            'description' => '결제가 완료될 때까지 계정이 일시 중지됩니다. 카드를 업데이트하여 플랜을 시작하세요.',
+            'update_card' => '카드 업데이트',
+        ],
         'verify_email' => [
             'title' => '이메일 인증',
             'description' => ':email로 링크를 보냈습니다. 링크를 열고 여기로 돌아와 시작하세요.',

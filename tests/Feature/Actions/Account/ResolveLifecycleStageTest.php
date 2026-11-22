@@ -62,6 +62,7 @@ test('a paying account keeps its stage while past due or cancelled on its grace 
     $this->freezeTime();
 
     $account = Account::factory()->create(['trial_ends_at' => null]);
+    $account->forceFill(['first_paid_at' => now()->subMonth()])->save();
     $account->subscriptions()->create([
         'type' => Account::SUBSCRIPTION_NAME,
         'stripe_id' => 'sub_'.fake()->uuid(),

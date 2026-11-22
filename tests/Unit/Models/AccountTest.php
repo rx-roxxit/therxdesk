@@ -264,7 +264,43 @@ test('hasAppAccess is true for a trialing subscription', function () {
     expect($account->fresh()->hasAppAccess())->toBeTrue();
 });
 
-test('hasAppAccess is true for a past_due subscription', function () {
+test('hasAppAccess is true for a past_due subscription that paid before', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => now()->subMonth(),
+    ]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_123',
+    ]);
+
+    expect($account->fresh()->hasAppAccess())->toBeTrue();
+});
+
+test('hasAppAccess is false for a past_due subscription that never paid', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => null,
+    ]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_123',
+    ]);
+
+    expect($account->fresh()->hasAppAccess())->toBeFalse();
+});
+
+test('hasPendingFirstCharge is true for a past_due subscription that never paid', function () {
     config(['trypost.self_hosted' => false]);
 
     $account = Account::factory()->create([
@@ -278,7 +314,113 @@ test('hasAppAccess is true for a past_due subscription', function () {
         'stripe_price' => 'price_123',
     ]);
 
-    expect($account->fresh()->hasAppAccess())->toBeTrue();
+    expect($account->fresh()->hasPendingFirstCharge())->toBeTrue();
+});
+
+test('hasPendingFirstCharge is false when the account paid before', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => now()->subMonth(),
+    ]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_123',
+    ]);
+
+    expect($account->fresh()->hasPendingFirstCharge())->toBeFalse();
+});
+
+test('hasPendingFirstCharge is false when self-hosted', function () {
+    config(['trypost.self_hosted' => true]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+    ]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_123',
+    ]);
+
+    expect($account->fresh()->hasPendingFirstCharge())->toBeFalse();
+});
+
+test('hasHadTrial is true for a subscription that started a trial even after Cashier cleared trial_ends_at', function () {
+    $account = Account::factory()->create(['trial_ends_at' => null]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'canceled',
+        'stripe_price' => 'price_123',
+        'trial_ends_at' => null,
+        'trial_started_at' => now()->subDays(3),
+    ]);
+
+    expect($account->fresh()->hasHadTrial())->toBeTrue();
+});
+
+test('isLapsed is true for a paid subscription that ended', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+    ]);
+    $account->forceFill(['first_paid_at' => now()->subMonth()])->save();
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'canceled',
+        'stripe_price' => 'price_123',
+        'ends_at' => now()->subDay(),
+    ]);
+
+    expect($account->fresh()->isLapsed())->toBeTrue();
+});
+
+test('isLapsed is false for a never-paid trial that ended', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+        'first_paid_at' => null,
+    ]);
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'canceled',
+        'stripe_price' => 'price_123',
+        'ends_at' => now()->subDay(),
+        'trial_started_at' => now()->subMonth(),
+    ]);
+
+    expect($account->fresh()->isLapsed())->toBeFalse();
+});
+
+test('isLapsed is false for an active subscription', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $account = Account::factory()->create([
+        'trial_ends_at' => null,
+        'stripe_id' => 'cus_test_'.fake()->uuid(),
+    ]);
+    $account->forceFill(['first_paid_at' => now()->subMonth()])->save();
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_test_'.fake()->uuid(),
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_123',
+    ]);
+
+    expect($account->fresh()->isLapsed())->toBeFalse();
 });
 
 test('hasAppAccess lasts as long as a generic trial', function () {

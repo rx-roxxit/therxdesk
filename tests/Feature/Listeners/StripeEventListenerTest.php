@@ -12,12 +12,14 @@ use App\Jobs\PostHog\TrackPlanChanged;
 use App\Jobs\PostHog\TrackTrialConverted;
 use App\Jobs\PostHog\TrackTrialStarted;
 use App\Listeners\StripeEventListener;
+use App\Listeners\StripeInvoiceListener;
 use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
 use Laravel\Cashier\Events\WebhookHandled;
+use Laravel\Cashier\Events\WebhookReceived;
 
 beforeEach(function () {
     enablePostHog();
@@ -1082,8 +1084,8 @@ test('a trial records no payment until it converts, and a later activation keeps
 
     expect($this->account->fresh()->first_paid_at)->toBeNull();
 
-    $convertedAt = now();
-
+    // Stripe sends an `active` update when the Trial ends, before it attempts
+    // the charge; only a paid invoice proves the conversion.
     $this->listener->handle(new WebhookHandled([
         'id' => 'evt_first_paid_converted',
         'type' => 'customer.subscription.updated',
@@ -1096,6 +1098,23 @@ test('a trial records no payment until it converts, and a later activation keeps
             ],
             'previous_attributes' => ['status' => 'trialing'],
         ],
+    ]));
+
+    expect($this->account->fresh()->first_paid_at)->toBeNull();
+
+    $convertedAt = now();
+
+    (new StripeInvoiceListener)->handle(new WebhookReceived([
+        'id' => 'evt_first_paid_invoice',
+        'type' => 'invoice.payment_succeeded',
+        'data' => ['object' => [
+            'id' => 'in_first',
+            'customer' => 'cus_test123',
+            'subscription' => 'sub_123',
+            'status' => 'paid',
+            'amount_paid' => 1900,
+            'status_transitions' => ['paid_at' => $convertedAt->timestamp],
+        ]],
     ]));
 
     $this->travel(1)->month();

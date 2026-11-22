@@ -156,6 +156,11 @@ return [
         'subscribe' => "S'abonner",
         'trial_terms' => 'Puis :price à partir du :date. Annulez à tout moment. Un essai gratuit par carte.',
         'subscribe_terms' => ':price vous sera facturé aujourd’hui. Annulez à tout moment.',
+        'payment_retry' => [
+            'title' => "Votre premier paiement n'a pas abouti",
+            'description' => "Votre compte reste en pause jusqu'au paiement. Mettez à jour votre carte pour démarrer votre forfait.",
+            'update_card' => 'Mettre à jour la carte',
+        ],
         'verify_email' => [
             'title' => 'Vérifiez votre e-mail',
             'description' => 'Nous avons envoyé un lien à :email. Ouvrez-le, puis revenez ici pour commencer.',

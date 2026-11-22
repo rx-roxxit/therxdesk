@@ -31,6 +31,11 @@ export interface WelcomePlanSelection {
     interval: BillingInterval;
 }
 
+export interface WelcomePlanRetry {
+    plan: string | null;
+    update_card_url: string;
+}
+
 export const deniedPlanIdsFor = (
     plans: PlanOption[],
     workspaceCount: number,

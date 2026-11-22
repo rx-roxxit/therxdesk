@@ -40,6 +40,7 @@ class Account extends Model
         'plan_id',
         'ai_credits_per_month',
         'trial_ends_at',
+        'first_invoice_id',
     ];
 
     protected $casts = [
@@ -202,7 +203,9 @@ class Account extends Model
             return true;
         }
 
-        if ($this->subscriptions()->whereNotNull('trial_ends_at')->exists()) {
+        if ($this->subscriptions()
+            ->where(fn (Builder $query): Builder => $query->whereNotNull('trial_ends_at')->orWhereNotNull('trial_started_at'))
+            ->exists()) {
             return true;
         }
 
@@ -236,6 +239,28 @@ class Account extends Model
     public function hasPaidSubscription(): bool
     {
         return filled($this->first_paid_at);
+    }
+
+    /**
+     * A paying Account whose subscription ended: Stripe cancelled it after
+     * Smart Retries ran out. It was charged at least once, has no access now
+     * and is not on a generic trial.
+     */
+    public function isLapsed(): bool
+    {
+        if (config('trypost.self_hosted')) {
+            return false;
+        }
+
+        if (blank($this->first_paid_at)) {
+            return false;
+        }
+
+        if ($this->subscribed(self::SUBSCRIPTION_NAME)) {
+            return false;
+        }
+
+        return ! $this->onGenericTrial();
     }
 
     public function hasActiveSubscription(): bool
@@ -282,10 +307,32 @@ class Account extends Model
         return $subscription?->valid() ? $subscription : null;
     }
 
+    /**
+     * The first charge after a Trial failed and was never paid: the account is
+     * held at the retry step until the card works. A subscription that was
+     * charged before keeps its access while Stripe retries.
+     */
+    public function hasPendingFirstCharge(): bool
+    {
+        if (config('trypost.self_hosted')) {
+            return false;
+        }
+
+        if (filled($this->first_paid_at)) {
+            return false;
+        }
+
+        return (bool) $this->subscription(self::SUBSCRIPTION_NAME)?->pastDue();
+    }
+
     public function hasAppAccess(): bool
     {
         if (config('trypost.self_hosted')) {
             return true;
+        }
+
+        if ($this->hasPendingFirstCharge()) {
+            return false;
         }
 
         return $this->subscribed(self::SUBSCRIPTION_NAME) || $this->onGenericTrial();

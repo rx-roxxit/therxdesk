@@ -13,6 +13,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout`, `welcome-plan` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
+| Trial and payment: repeat card, failed first charge, past due, a lapse (`selling.sh up`, a Stripe test clock) | [trial-and-payment.md](trial-and-payment.md) | `payment-retry`, `past-due`, `lapsed` |
 | Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `media.sh up`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 | The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |
@@ -21,5 +22,5 @@ that drives one convenient entry point is incomplete when the feature's file lis
 
 Not mapped yet: connecting a real channel (needs network OAuth, not possible with the fixture), publishing (would
 call the network), Insights, Create (ideas, templates, feeds), Repurpose, workspace members and invites, settings
-pages, the video policy and Cover, Offers (banners, coupons, trials), usage limits per Plan, past-due and cancelled
-subscriptions. Add a file when you first verify one.
+pages, the video policy and Cover, Offers (banners, coupons, trials), usage limits per Plan. Add a file when you first
+verify one.

@@ -18,6 +18,10 @@ until the webhook gives the Account access, and lands on the Schedule.
 - An Owner who never had a Trial sees "Start 7-day free trial" and "Then $11.90/month from <date>. Cancel anytime.
   One free trial per card."; one who had one sees "Subscribe". A no-card trial Offer uses its own `checkout_button`
   and `terms`.
+- A card that already started a Trial is charged at once: the webhook ends the Trial, sets `trial_skipped_at` and
+  `trial_ended_at`, and the charge that follows sets `paid_without_trial_at`. `fixture.sh up`, `down` and `guests`
+  delete the Account's `trial_cards` rows, so `4242` starts a fresh Trial on the next run; `trial-and-payment.md`
+  proves the repeat-card path.
 - `/register?plan=<slug>&interval=monthly|yearly` is kept for the guest and preselects that card and interval; a
   junk value is dropped silently. The preselected card carries `data-selected="true"`.
 - Pressing a card button before the email is verified opens `@verify-email-dialog` with `@verify-email-close`
@@ -44,9 +48,11 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   Welcome, checks the four cards and the switch, the verify dialog and Mailpit, then pays) and
   `$V/drive.sh welcome-checkout` (the fixture Owner, Mini monthly). `welcome-plan` makes its own guest. `welcome-checkout`
   needs `fixture.sh up` and a fixture Owner who has not answered Welcome: a second run lands on the Schedule and times
-  out waiting for the persona step.
+  out waiting for the persona step. `payment-retry`, `past-due` and `lapsed` are the Trial and payment paths in
+  `trial-and-payment.md`; they need a Stripe test clock.
 - Stripe's page: `payOnStripeCheckout()` in `drive.ts` ticks the Terms consent checkbox when the session shows one,
-  then fills card `4242 4242 4242 4242` with an expiry two years ahead, CVC `123` and a name in the Elements frame.
+  then fills card `4242 4242 4242 4242` (or `VERIFY_TEST_CARD`, which `drive.sh` passes through) with an expiry two
+  years ahead, CVC `123` and a name in the Elements frame.
   When the session collects a billing address, it fills the billing name, address line 1, city and postal code in the
   Checkout frame, then presses `[data-testid="payment-form-submit-button"]`. The billing country follows the IP
   (Thailand here); a US card form adds `#payment-postalCodeInput`, which the helper fills when shown.
@@ -54,7 +60,8 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   `http://localhost:8025`), clicks Resend, waits for a different message, and opens its `/verify-email/...` link.
 - End state: the path is `/schedule...` and `auth.hasActiveSubscription` is `true`; `auth.plan.name` is `Mini` for
   `welcome-checkout` (`08-after-checkout.png`) and `Plus` for `welcome-plan` (`10-after-checkout.png`). The
-  subscription is `trialing` for the Catalog's trial days, not `active`.
+  subscription is `trialing` for the Catalog's trial days, not `active`, unless a repeat card skipped the Trial: then
+  it is `active` and `first_paid_at` / `first_invoice_id` are set.
 - Side effects, from the host:
   `$V/db.sh "select p.slug, s.stripe_status, s.stripe_price from accounts a left join plans p on p.id = a.plan_id left join subscriptions s on s.account_id = a.id where a.id = '<accountId>'"`
   shows `mini | trialing | <the Mini monthly Price id in plan_prices>` after `welcome-checkout`, and
@@ -70,3 +77,6 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   journey cannot pass it: report it.
 - Each run leaves a sandbox Customer; `fixture.sh up` and `cleanup.sh` delete the fixture's, and
   `fixture.sh guests` deletes the guests' (which cancels their subscriptions).
+- A repeat `welcome-checkout` without `fixture.sh up` uses the same `4242` card, now a repeat: the Trial ends at once
+  and the Account is charged. The fixture's purge of `trial_cards` is what makes a fresh Trial repeatable, so reset the
+  fixture between runs.

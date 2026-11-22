@@ -11,11 +11,15 @@ declare(strict_types=1);
  *   php fixture.php show   print the current fixture as JSON (read-only), or exit 1
  *   php fixture.php down   remove the fixture and everything it owns
  *   php fixture.php guests remove the Owners the register journey signed up
+ *   php fixture.php customer <cus_id>      point the fixture Account at a sandbox Customer
+ *   php fixture.php customer-clear         forget that Customer
+ *   php fixture.php card <fingerprint>     claim a card fingerprint for the fixture Account
  */
 
 use App\Actions\Workspace\PurgeWorkspace;
 use App\Models\Account;
 use App\Models\SocialAccount;
+use App\Models\TrialCard;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Contracts\Console\Kernel;
@@ -43,6 +47,11 @@ function purge(Collection $owners): void
         ->each(fn (Workspace $workspace) => PurgeWorkspace::execute($workspace));
 
     $accountIds = $owners->pluck('account_id')->unique();
+
+    // The cards that started a Trial are this account's record of it, and the
+    // table has no foreign key on purpose. Delete them here or the 4242 card
+    // could never start a Trial again after fixture.sh up.
+    TrialCard::query()->whereIn('account_id', $accountIds)->delete();
 
     // A selling-mode run leaves a Customer (and its subscription) in the
     // Stripe sandbox; deleting the Customer cancels its subscriptions.
@@ -86,10 +95,16 @@ function describe(): ?array
         'password' => OWNER_PASSWORD,
         'userId' => $owner->id,
         'accountId' => $owner->account_id,
+        'stripeId' => $owner->account?->stripe_id,
         'workspaceId' => $workspace?->id,
         'channelId' => $channel?->id,
         'channelPlatform' => $channel?->platform->value,
     ];
+}
+
+function fixtureAccount(): ?Account
+{
+    return User::query()->where('email', OWNER_EMAIL)->first()?->account;
 }
 
 function seed(): void
@@ -147,6 +162,69 @@ if ($command === 'down') {
     exit(0);
 }
 
+// Stripe's test clock creates the Customer itself; the Account must point at
+// it or Checkout makes a second one. stripe-clock.sh attach calls this.
+if ($command === 'customer') {
+    $customerId = $argv[2] ?? '';
+
+    if (blank($customerId)) {
+        fwrite(STDERR, "usage: fixture.php customer <cus_id>\n");
+        exit(2);
+    }
+
+    $account = fixtureAccount();
+
+    if ($account === null) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    $account->forceFill(['stripe_id' => $customerId])->save();
+
+    echo json_encode(describe(), JSON_PRETTY_PRINT), PHP_EOL;
+    exit(0);
+}
+
+if ($command === 'customer-clear') {
+    $account = fixtureAccount();
+
+    if ($account === null) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    $account->forceFill(['stripe_id' => null])->save();
+
+    echo json_encode(describe(), JSON_PRETTY_PRINT), PHP_EOL;
+    exit(0);
+}
+
+// Claim a card fingerprint for the fixture Account, as if it had started a
+// Trial before: the next Checkout on that card is charged at once.
+if ($command === 'card') {
+    $fingerprint = $argv[2] ?? '';
+
+    if (blank($fingerprint)) {
+        fwrite(STDERR, "usage: fixture.php card <fingerprint>\n");
+        exit(2);
+    }
+
+    $account = fixtureAccount();
+
+    if ($account === null) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    TrialCard::query()->updateOrCreate(
+        ['fingerprint' => $fingerprint],
+        ['account_id' => $account->id, 'stripe_subscription_id' => null],
+    );
+
+    echo "card {$fingerprint} claimed for the fixture Account\n";
+    exit(0);
+}
+
 if ($command === 'guests') {
     if (blank($guestEmailLike)) {
         fwrite(STDERR, "VERIFY_GUEST_EMAIL_LIKE is empty: run fixture.sh, not php directly\n");
@@ -158,5 +236,5 @@ if ($command === 'guests') {
     exit(0);
 }
 
-fwrite(STDERR, "usage: fixture.php up|show|down|guests\n");
+fwrite(STDERR, "usage: fixture.php up|show|down|guests|customer <cus_id>|customer-clear|card <fingerprint>\n");
 exit(2);

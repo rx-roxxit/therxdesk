@@ -156,6 +156,11 @@ return [
         'subscribe' => '登録する',
         'trial_terms' => ':date 以降は :price。いつでも解約できます。無料トライアルはカード1枚につき1回。',
         'subscribe_terms' => '本日 :price が請求されます。いつでも解約できます。',
+        'payment_retry' => [
+            'title' => '初回のお支払いが完了しませんでした',
+            'description' => 'お支払いが完了するまでアカウントは停止します。カードを更新してプランを開始してください。',
+            'update_card' => 'カードを更新',
+        ],
         'verify_email' => [
             'title' => 'メールアドレスを確認',
             'description' => ':email にリンクを送りました。開いてからここに戻って開始してください。',

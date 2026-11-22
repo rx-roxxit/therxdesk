@@ -11,6 +11,11 @@ source "$(dirname "$0")/env.sh"
 "$(dirname "$0")/fixture.sh" down
 "$(dirname "$0")/fixture.sh" guests
 
+# The trial/payment paths leave a Stripe test clock (and its Customer, which
+# fixture.sh down deletes); a missing state is a no-op. Never stop the rest of
+# the cleanup when Stripe refuses.
+"$(dirname "$0")/stripe-clock.sh" delete || echo "[cleanup] the test clock could not be deleted"
+
 # Back to .env's mode: stop the Stripe listener, recreate app without the overlay.
 "$(dirname "$0")/selling.sh" down
 
