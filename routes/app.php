@@ -40,6 +40,7 @@ use App\Http\Controllers\App\PostNoteController;
 use App\Http\Controllers\App\PostNoteMentionableController;
 use App\Http\Controllers\App\PostNoteReactionController;
 use App\Http\Controllers\App\PostRecurrenceController;
+use App\Http\Controllers\App\PostRetryController;
 use App\Http\Controllers\App\PostScheduleController;
 use App\Http\Controllers\App\PostTemplateController;
 use App\Http\Controllers\App\PostTemplatePickerController;
@@ -117,6 +118,7 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('throttle:60,1')
         ->name('app.changelog.reaction.update');
     Route::get('welcome/subscription-required', [WelcomeController::class, 'subscriptionRequired'])->name('app.welcome.subscription-required');
+    Route::get('welcome/suspended', [WelcomeController::class, 'suspended'])->name('app.welcome.suspended');
     Route::get('billing/processing', [BillingController::class, 'processing'])->name('app.billing.processing');
 
     Route::get('workspaces/create', [WorkspaceController::class, 'create'])->name('app.workspaces.create');
@@ -267,6 +269,7 @@ Route::middleware(['auth', EnsureAccountReady::class, EnsureHasWorkspace::class]
     Route::patch('posts/{post}/recurrence', [PostRecurrenceController::class, 'update'])->name('app.posts.recurrence.update');
     Route::delete('posts/{post}/recurrence', [PostRecurrenceController::class, 'destroy'])->name('app.posts.recurrence.destroy');
     Route::post('posts/{post}/video-backup/retry', [VideoBackupRetryController::class, 'store'])->name('app.posts.video-backup.retry');
+    Route::post('posts/{post}/retry', [PostRetryController::class, 'store'])->name('app.posts.retry');
     Route::get('posts/{post}/group', [PostGroupController::class, 'show'])->name('app.posts.group.show');
     Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('app.posts.destroy');
     Route::post('posts/{post}/duplicate', [PostController::class, 'duplicate'])->name('app.posts.duplicate');

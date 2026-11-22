@@ -191,6 +191,20 @@ return [
             'close' => '稍后',
         ],
     ],
+    'suspension' => [
+        'title' => '账户已暂停',
+        'description' => '账户已暂停，请联系支持。暂停期间无法发布任何内容，已连接的工具也无法访问应用。',
+        'auto' => '此页面会自动更新 — 无需刷新。',
+        'support_action' => '发送邮件给支持团队',
+    ],
+    'publishing_block' => [
+        'title' => '未发布的原因',
+        'lapsed' => '您的订阅已结束，因此这条帖子未发布。请重新订阅后再试一次。',
+        'suspended' => '您的账户已暂停，因此这条帖子未发布。请联系支持后再试一次。',
+        'retry' => '重试',
+        'retry_started' => '正在重试发布这条帖子。',
+        'retry_failed' => '无法重试发布这条帖子。请再试一次。',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk 由 :name（:address）运营。',

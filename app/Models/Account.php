@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Account\AccessDenial;
 use App\Enums\Account\DriveConnection;
 use App\Enums\Account\LifecycleStage;
 use App\Enums\Account\VideoPolicy;
@@ -47,8 +48,18 @@ class Account extends Model
         'blocked_country_payment_status',
     ];
 
+    /**
+     * The internal Suspension reason never leaves the System admin's surfaces.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'suspension_reason',
+    ];
+
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'suspended_at' => 'datetime',
         'complimentary_since' => 'datetime',
         'complimentary_until' => 'datetime',
         'onboarding_completed_at' => 'datetime',
@@ -385,8 +396,37 @@ class Account extends Model
         return (bool) $this->subscription(self::SUBSCRIPTION_NAME)?->pastDue();
     }
 
+    /**
+     * The System admin turned the Account off. It outranks every other state,
+     * self-hosted included.
+     */
+    public function isSuspended(): bool
+    {
+        return filled($this->suspended_at);
+    }
+
+    /**
+     * Why the Account may not use the app right now, or null when it may.
+     */
+    public function accessDenial(): ?AccessDenial
+    {
+        if ($this->isSuspended()) {
+            return AccessDenial::Suspended;
+        }
+
+        if ($this->hasAppAccess()) {
+            return null;
+        }
+
+        return AccessDenial::Lapsed;
+    }
+
     public function hasAppAccess(): bool
     {
+        if ($this->isSuspended()) {
+            return false;
+        }
+
         if (config('trypost.self_hosted')) {
             return true;
         }

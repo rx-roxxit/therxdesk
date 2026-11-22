@@ -29,7 +29,13 @@ class CustomerDetailResource extends JsonResource
                 'email' => $account->owner->email,
                 'email_verified_at' => $account->owner->email_verified_at,
             ] : null,
-            'access_state' => null,
+            'access_state' => [
+                'has_app_access' => $account->hasAppAccess(),
+                'lapsed' => $account->isLapsed(),
+                'suspended' => $account->isSuspended(),
+                'suspended_at' => $account->suspended_at?->toIso8601String(),
+                'suspension_reason' => $account->suspension_reason,
+            ],
             'plan' => $account->plan ? [
                 'id' => $account->plan->id,
                 'slug' => $account->plan->slug,

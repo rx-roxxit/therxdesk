@@ -27,6 +27,7 @@ class CustomerResource extends JsonResource
                 'name' => $account->plan->name,
             ] : null,
             'subscription_status' => $account->subscriptionStatus(),
+            'suspended' => $account->isSuspended(),
             'members_count' => $account->users_count ?? $account->users()->count(),
             'created_at' => $account->created_at,
         ];

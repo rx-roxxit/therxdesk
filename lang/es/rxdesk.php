@@ -191,6 +191,20 @@ return [
             'close' => 'Ahora no',
         ],
     ],
+    'suspension' => [
+        'title' => 'Cuenta suspendida',
+        'description' => 'Cuenta suspendida, contacta con soporte. Mientras esté suspendida no se puede publicar nada y las herramientas conectadas no pueden acceder a la app.',
+        'auto' => 'Esta página se actualiza automáticamente: no hace falta recargar.',
+        'support_action' => 'Escribir a soporte',
+    ],
+    'publishing_block' => [
+        'title' => 'Por qué no se publicó',
+        'lapsed' => 'Tu suscripción terminó, así que esta publicación no se publicó. Vuelve a suscribirte y luego inténtalo de nuevo.',
+        'suspended' => 'Tu cuenta está suspendida, así que esta publicación no se publicó. Contacta con soporte y luego inténtalo de nuevo.',
+        'retry' => 'Reintentar',
+        'retry_started' => 'Reintentando la publicación.',
+        'retry_failed' => 'No se pudo reintentar la publicación. Inténtalo de nuevo.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk está operado por :name, :address.',

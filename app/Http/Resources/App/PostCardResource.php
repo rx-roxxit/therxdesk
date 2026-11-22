@@ -40,6 +40,7 @@ class PostCardResource extends JsonResource
 
         return [
             ...$post->attributesToArray(),
+            'publish_block_reason' => $post->publish_block_reason?->value,
             ...$this->otherRelations($post),
             'social_account' => $this->whenLoaded('socialAccount', fn (SocialAccount $account): array => $this->accountArray($account)),
             'user' => $this->whenLoaded('user', fn (User $user): array => [

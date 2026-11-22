@@ -191,6 +191,20 @@ return [
             'close' => 'Niet nu',
         ],
     ],
+    'suspension' => [
+        'title' => 'Account opgeschort',
+        'description' => 'Account opgeschort, neem contact op met support. Zolang het opgeschort is, kan er niets worden gepubliceerd en bereiken verbonden tools de app niet.',
+        'auto' => 'Deze pagina vernieuwt automatisch — verversen is niet nodig.',
+        'support_action' => 'Support mailen',
+    ],
+    'publishing_block' => [
+        'title' => 'Waarom het niet is gepubliceerd',
+        'lapsed' => 'Je abonnement is afgelopen, daarom is dit bericht niet gepubliceerd. Sluit opnieuw een abonnement af en probeer het daarna nog eens.',
+        'suspended' => 'Je account is opgeschort, daarom is dit bericht niet gepubliceerd. Neem contact op met support en probeer het daarna nog eens.',
+        'retry' => 'Opnieuw proberen',
+        'retry_started' => 'Het bericht wordt opnieuw gepubliceerd.',
+        'retry_failed' => 'Het bericht kon niet opnieuw worden gepubliceerd. Probeer het nog eens.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk wordt beheerd door :name, :address.',

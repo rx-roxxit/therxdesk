@@ -46,6 +46,7 @@ class PostResource extends JsonResource
             ] : null,
             'origin' => $this->origin->value,
             'publish_status' => $this->publish_status->value,
+            'publish_block_reason' => $this->publish_block_reason?->value,
             'platform' => $this->platform?->value,
             'content_type' => $this->content_type?->value,
             'meta' => $this->meta,

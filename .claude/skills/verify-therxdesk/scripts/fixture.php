@@ -14,9 +14,12 @@ declare(strict_types=1);
  *   php fixture.php customer <cus_id>      point the fixture Account at a sandbox Customer
  *   php fixture.php customer-clear         forget that Customer
  *   php fixture.php card <fingerprint>     claim a card fingerprint for the fixture Account
+ *   php fixture.php token                  issue a personal API token and print ONLY it (api.sh captures it)
  */
 
+use App\Actions\ApiKey\IssueApiKey;
 use App\Actions\Workspace\PurgeWorkspace;
+use App\Models\AccessToken;
 use App\Models\Account;
 use App\Models\SocialAccount;
 use App\Models\TrialAccount;
@@ -25,6 +28,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Cashier\Cashier;
 
 $root = '/var/www/html';
@@ -35,6 +39,14 @@ $app->make(Kernel::class)->bootstrap();
 const OWNER_EMAIL = 'verify-agent@example.com';
 const OWNER_PASSWORD = 'password';
 
+// A Member of the fixture Workspace, on the same Account: the Suspended screen
+// and every access rule must treat them like the Owner.
+const MEMBER_EMAIL = 'verify-member@example.com';
+const MEMBER_PASSWORD = 'password';
+
+// The name api.sh's token is issued under, so stale ones are revoked first.
+const API_TOKEN_NAME = 'verify-agent-api';
+
 $guestEmailLike = (string) getenv('VERIFY_GUEST_EMAIL_LIKE');
 
 /**
@@ -42,12 +54,19 @@ $guestEmailLike = (string) getenv('VERIFY_GUEST_EMAIL_LIKE');
  */
 function purge(Collection $owners): void
 {
+    $accountIds = $owners->pluck('account_id')->filter()->unique();
+
+    // The fixture Workspace also has Members on the same Account; they own
+    // nothing of their own, so they go with the fixture.
+    $users = User::query()
+        ->whereIn('id', $owners->pluck('id'))
+        ->orWhereIn('account_id', $accountIds)
+        ->get();
+
     Workspace::query()
-        ->whereIn('account_id', $owners->pluck('account_id'))
+        ->whereIn('account_id', $accountIds)
         ->get()
         ->each(fn (Workspace $workspace) => PurgeWorkspace::execute($workspace));
-
-    $accountIds = $owners->pluck('account_id')->unique();
 
     // The cards and accounts that started a Trial are its record, and both
     // tables have no foreign key on purpose. Delete them here or the 4242 card
@@ -67,7 +86,7 @@ function purge(Collection $owners): void
             report: false,
         ));
 
-    User::query()->whereIn('id', $owners->pluck('id'))->delete();
+    User::query()->whereIn('id', $users->pluck('id'))->delete();
     Account::query()->whereIn('id', $accountIds)->delete();
 }
 
@@ -91,6 +110,10 @@ function describe(): ?array
 
     $workspace = Workspace::query()->find($owner->current_workspace_id);
     $channel = $workspace?->socialAccounts()->first();
+    $member = User::query()
+        ->where('email', MEMBER_EMAIL)
+        ->where('account_id', $owner->account_id)
+        ->first();
 
     return [
         'email' => OWNER_EMAIL,
@@ -101,6 +124,8 @@ function describe(): ?array
         'workspaceId' => $workspace?->id,
         'channelId' => $channel?->id,
         'channelPlatform' => $channel?->platform->value,
+        'memberEmail' => MEMBER_EMAIL,
+        'memberId' => $member?->id,
     ];
 }
 
@@ -137,6 +162,19 @@ function seed(): void
         'username' => 'verifydesk',
         'timezone' => 'UTC',
     ]));
+
+    // A Member on the same Account: a Suspension, a Lapse and the app's
+    // access rules must treat them exactly like the Owner.
+    $member = User::factory()->create([
+        'name' => 'Verify Member',
+        'email' => MEMBER_EMAIL,
+        'password' => Hash::make(MEMBER_PASSWORD),
+        'timezone' => 'UTC',
+        'country' => 'TH',
+        'account_id' => $owner->account_id,
+    ]);
+    $workspace->members()->attach($member->id, ['is_admin' => false, 'requires_approval' => false]);
+    $member->update(['current_workspace_id' => $workspace->id]);
 }
 
 $command = $argv[1] ?? '';
@@ -239,5 +277,32 @@ if ($command === 'guests') {
     exit(0);
 }
 
-fwrite(STDERR, "usage: fixture.php up|show|down|guests|customer <cus_id>|customer-clear|card <fingerprint>\n");
+// The public API as the fixture Owner. api.sh captures this line into a
+// mode-600 curl config; it must stay the only output.
+if ($command === 'token') {
+    $owner = User::query()->where('email', OWNER_EMAIL)->first();
+    $workspace = $owner === null
+        ? null
+        : Workspace::query()->find($owner->current_workspace_id);
+
+    if ($owner === null || $workspace === null) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    // A personal token's plain value is only known at issue time, so revoke an
+    // earlier one rather than leave live keys behind in the dev database.
+    AccessToken::query()
+        ->where('user_id', $owner->id)
+        ->where('workspace_id', $workspace->id)
+        ->where('name', API_TOKEN_NAME)
+        ->update(['revoked' => true]);
+
+    $issued = IssueApiKey::execute($owner, $workspace, ['name' => API_TOKEN_NAME]);
+
+    echo $issued['plain_token'], PHP_EOL;
+    exit(0);
+}
+
+fwrite(STDERR, "usage: fixture.php up|show|down|guests|customer <cus_id>|customer-clear|card <fingerprint>|token\n");
 exit(2);

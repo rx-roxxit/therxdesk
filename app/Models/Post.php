@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Actions\Media\SyncOwnedMedia;
 use App\Dto\MediaItem;
+use App\Enums\Account\AccessDenial;
 use App\Enums\Media\Type;
 use App\Enums\Post\CreatedVia;
 use App\Enums\Post\Origin;
@@ -122,6 +123,7 @@ class Post extends Model
             'approved_at' => 'datetime',
             'approval_queue_position' => QueuePosition::class,
             'publish_status' => PublishStatus::class,
+            'publish_block_reason' => AccessDenial::class,
             'platform' => Platform::class,
             'content_type' => ContentType::class,
             'meta' => 'array',
@@ -588,6 +590,7 @@ class Post extends Model
     {
         $this->writePublication([
             'publish_status' => PublishStatus::Retrying,
+            'publish_block_reason' => null,
             'retry_at' => $retryAt,
             'error_message' => $errorMessage,
             'error_context' => $errorContext,
@@ -614,6 +617,7 @@ class Post extends Model
 
         $this->writePublication([
             'publish_status' => PublishStatus::Published,
+            'publish_block_reason' => null,
             'platform_post_id' => $platformPostId,
             'platform_url' => $platformUrl,
             'published_at' => $now,
@@ -633,6 +637,7 @@ class Post extends Model
     {
         $this->writePublication([
             'publish_status' => PublishStatus::PendingReview,
+            'publish_block_reason' => null,
             'platform_post_id' => $platformPostId,
             'platform_url' => $platformUrl,
             'submitted_at' => $this->submitted_at ?? now(),
@@ -652,6 +657,7 @@ class Post extends Model
     {
         $this->writePublication([
             'publish_status' => PublishStatus::Rejected,
+            'publish_block_reason' => null,
             'platform_post_id' => $platformPostId,
             'platform_url' => $platformUrl,
             'retry_at' => null,
@@ -692,9 +698,27 @@ class Post extends Model
     {
         $this->writePublication([
             'publish_status' => PublishStatus::Failed,
+            'publish_block_reason' => null,
             'retry_at' => null,
             'error_message' => $errorMessage,
             'error_context' => $errorContext,
+            'platform_post_id' => null,
+            'platform_url' => null,
+        ]);
+    }
+
+    /**
+     * The Account's access stopped the post before any network call. The reason
+     * is a code, translated only when shown.
+     */
+    public function markPublicationBlocked(AccessDenial $reason): void
+    {
+        $this->writePublication([
+            'publish_status' => PublishStatus::Failed,
+            'publish_block_reason' => $reason->value,
+            'retry_at' => null,
+            'error_message' => null,
+            'error_context' => null,
             'platform_post_id' => null,
             'platform_url' => null,
         ]);

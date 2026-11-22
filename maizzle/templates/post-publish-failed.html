@@ -9,7 +9,11 @@
     </p>
 
     <x-post-preview />
-    @if($publication['error'])
+    @if(! empty($publication['block_reason']))
+      <x-alert title-key="rxdesk.publishing_block.title">
+        @{{ __('rxdesk.publishing_block.'.$publication['block_reason']) }}
+      </x-alert>
+    @elseif($publication['error'])
       <x-alert title-key="mail.post_preview.error">
         @{{ $publication['error'] }}
       </x-alert>

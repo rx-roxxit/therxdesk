@@ -191,6 +191,20 @@ return [
             'close' => 'Şimdi değil',
         ],
     ],
+    'suspension' => [
+        'title' => 'Hesap askıya alındı',
+        'description' => 'Hesap askıya alındı, destek ekibine ulaşın. Askıda olduğu sürece hiçbir şey yayımlanamaz ve bağlı araçlar uygulamaya erişemez.',
+        'auto' => 'Bu sayfa otomatik olarak güncellenir — yenilemenize gerek yok.',
+        'support_action' => 'Destek ekibine e-posta',
+    ],
+    'publishing_block' => [
+        'title' => 'Neden yayımlanmadı',
+        'lapsed' => 'Aboneliğiniz sona erdiği için bu gönderi yayımlanmadı. Yeniden abone olun ve ardından tekrar deneyin.',
+        'suspended' => 'Hesabınız askıya alındığı için bu gönderi yayımlanmadı. Destek ekibine ulaşın ve ardından tekrar deneyin.',
+        'retry' => 'Tekrar dene',
+        'retry_started' => 'Gönderi yeniden yayımlanıyor.',
+        'retry_failed' => 'Gönderi yeniden yayımlanamadı. Tekrar deneyin.',
+    ],
     'mail' => [
         'footer' => [
             'operator' => 'The RX Desk, :name, :address tarafından işletilmektedir.',

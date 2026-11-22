@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Actions\Post\FinalizePostPublication;
+use App\Actions\Post\PublishingGate;
 use App\Models\Post;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -21,6 +22,16 @@ class PublishPost implements ShouldQueue
 
     public function handle(): void
     {
+        $this->post->refresh();
+
+        $denial = PublishingGate::denial($this->post);
+
+        if ($denial !== null) {
+            PublishingGate::block($this->post, $denial);
+
+            return;
+        }
+
         $this->post->markAsPublishing();
 
         if (! $this->post->hasChannel()) {

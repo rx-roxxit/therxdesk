@@ -97,7 +97,17 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                     </td>
                   </tr>
                 </table>
-                @if($publication['error'])<table role="presentation" style="margin-top: 16px; width: 100%" cellpadding="0" cellspacing="0">
+                @if(! empty($publication['block_reason']))<table role="presentation" style="margin-top: 16px; width: 100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td class="sm-p-4" style="border-radius: 12px; border: 1px solid #eae8e5; background-color: #f7f6f3; padding: 20px">
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; line-height: 20px; color: #7f0f00">{{ __('rxdesk.publishing_block.title') }}</p>
+                      <p style="margin: 6px 0 0; font-size: 14px; line-height: 22px; color: #292928">
+                        {{ __('rxdesk.publishing_block.'.$publication['block_reason']) }}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+                @elseif($publication['error'])<table role="presentation" style="margin-top: 16px; width: 100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td class="sm-p-4" style="border-radius: 12px; border: 1px solid #eae8e5; background-color: #f7f6f3; padding: 20px">
                       <p style="margin: 0; font-size: 14px; font-weight: 600; line-height: 20px; color: #7f0f00">{{ __('mail.post_preview.error') }}</p>
