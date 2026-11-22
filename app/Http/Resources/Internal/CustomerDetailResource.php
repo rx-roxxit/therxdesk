@@ -45,6 +45,11 @@ class CustomerDetailResource extends JsonResource
                 'ends_at' => $subscription->ends_at,
                 'created_at' => $subscription->created_at,
             ] : null,
+            'complimentary' => $account->hadComplimentaryPlan() ? [
+                'in_force' => $account->isComplimentary(),
+                'since' => $account->complimentary_since?->toIso8601String(),
+                'until' => $account->complimentary_until?->toIso8601String(),
+            ] : null,
             'storage' => [
                 'used_bytes' => $usage->used,
                 'quota_bytes' => $usage->limit,

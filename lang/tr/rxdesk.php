@@ -16,6 +16,12 @@ return [
         'select' => 'Ülkeni seç',
         'blocked' => "AB ve Birleşik Krallık'ta henüz kullanılamıyor",
     ],
+    'complimentary' => [
+        'plan_given' => 'The RX Desk tarafından verilen plan',
+        'until' => ':date tarihine kadar',
+        'no_end' => 'Bitiş tarihi yok',
+        'checkout_blocked' => 'Planınızı The RX Desk verdi; abone olmak için The RX Desk ile iletişime geçin.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

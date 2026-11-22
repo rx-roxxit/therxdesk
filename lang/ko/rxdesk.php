@@ -16,6 +16,12 @@ return [
         'select' => '국가를 선택하세요',
         'blocked' => 'EU/영국에서는 아직 이용할 수 없습니다',
     ],
+    'complimentary' => [
+        'plan_given' => 'The RX Desk에서 제공한 요금제',
+        'until' => ':date까지',
+        'no_end' => '종료일 없음',
+        'checkout_blocked' => '이 요금제는 The RX Desk에서 제공하므로 구독하려면 The RX Desk에 문의하세요.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

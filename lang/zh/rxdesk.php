@@ -16,6 +16,12 @@ return [
         'select' => '选择国家或地区',
         'blocked' => '暂不在欧盟和英国提供',
     ],
+    'complimentary' => [
+        'plan_given' => 'The RX Desk 赠送的套餐',
+        'until' => '至 :date',
+        'no_end' => '无结束日期',
+        'checkout_blocked' => '你的套餐由 The RX Desk 赠送，如需订阅请联系 The RX Desk。',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

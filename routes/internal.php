@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\CatalogSettingController;
+use App\Http\Controllers\Internal\ComplimentaryPlanController;
 use App\Http\Controllers\Internal\HealthController;
 use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\PlanController;
@@ -22,6 +23,14 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::get('accounts/{account}', [AccountController::class, 'show'])
         ->whereUuid('account')
         ->name('internal.accounts.show');
+
+    Route::post('accounts/{account}/complimentary', [ComplimentaryPlanController::class, 'store'])
+        ->whereUuid('account')
+        ->name('internal.accounts.complimentary.store');
+
+    Route::post('accounts/{account}/complimentary/end', [ComplimentaryPlanController::class, 'end'])
+        ->whereUuid('account')
+        ->name('internal.accounts.complimentary.end');
 
     Route::get('audit-log', [AuditLogController::class, 'index'])
         ->name('internal.audit-log.index');

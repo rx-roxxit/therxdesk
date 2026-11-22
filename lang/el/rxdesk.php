@@ -16,6 +16,12 @@ return [
         'select' => 'Επίλεξε τη χώρα σου',
         'blocked' => 'Δεν είναι ακόμη διαθέσιμο στην ΕΕ ή το Ηνωμένο Βασίλειο',
     ],
+    'complimentary' => [
+        'plan_given' => 'Πλάνο από The RX Desk',
+        'until' => 'Έως :date',
+        'no_end' => 'Χωρίς ημερομηνία λήξης',
+        'checkout_blocked' => 'Το πλάνο σου το παρέχει το The RX Desk, οπότε επικοινώνησε με το The RX Desk για να εγγραφείς.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
