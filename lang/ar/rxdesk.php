@@ -191,4 +191,10 @@ return [
             'close' => 'ليس الآن',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'تُدار The RX Desk بواسطة :name، :address.',
+        ],
+    ],
+
 ];

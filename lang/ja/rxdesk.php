@@ -191,4 +191,10 @@ return [
             'close' => '後で',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'The RX Desk は :name（:address）が運営しています。',
+        ],
+    ],
+
 ];

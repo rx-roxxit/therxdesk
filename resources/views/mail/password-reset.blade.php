@@ -94,7 +94,7 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 <p style="margin: 0 0 8px">
                   {!! str_replace(':brand', '<a href="'.e(config('app.url')).'" target="_blank" style="color: inherit; font-weight: 600; text-decoration: none;">The RX Desk</a>', e(__('mail.layout.tagline'))) !!}
                 </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-left: auto; margin-right: auto; margin-top: 12px">
+                @include('mail.partials.operator-footer') <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-left: auto; margin-right: auto; margin-top: 12px">
                   <tr>
                     <td style="padding-left: 4px; padding-right: 4px">
                       <a href="https://github.com/rx-roxxit/therxdesk" target="_blank">

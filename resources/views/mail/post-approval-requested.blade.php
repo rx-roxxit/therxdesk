@@ -122,7 +122,7 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 <p style="margin: 0 0 8px">
                   {!! str_replace(':brand', '<a href="'.e(config('app.url')).'" target="_blank" style="color: inherit; font-weight: 600; text-decoration: none;">The RX Desk</a>', e(__('mail.layout.tagline'))) !!}
                 </p>
-                <p style="margin: 8px 0 0">
+                @include('mail.partials.operator-footer') <p style="margin: 8px 0 0">
                   <a href="{{ route('app.notifications.preferences') }}" target="_blank" style="color: #5a5a59; text-decoration: underline">
                     {{ __('mail.layout.manage_notifications') }}
                   </a>

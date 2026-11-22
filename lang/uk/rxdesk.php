@@ -191,4 +191,10 @@ return [
             'close' => 'Не зараз',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'Оператор The RX Desk — :name, :address.',
+        ],
+    ],
+
 ];

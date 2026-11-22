@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "maizzle serve",
-    "build": "maizzle build production"
+    "build": "maizzle build production && node copy-partials.mjs"
   },
   "dependencies": {
     "@maizzle/framework": "latest",

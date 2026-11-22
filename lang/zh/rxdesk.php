@@ -191,4 +191,10 @@ return [
             'close' => '稍后',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'The RX Desk 由 :name（:address）运营。',
+        ],
+    ],
+
 ];

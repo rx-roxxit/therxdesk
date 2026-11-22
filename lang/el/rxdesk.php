@@ -191,4 +191,10 @@ return [
             'close' => 'Όχι τώρα',
         ],
     ],
+    'mail' => [
+        'footer' => [
+            'operator' => 'The RX Desk λειτουργεί από :name, :address.',
+        ],
+    ],
+
 ];
