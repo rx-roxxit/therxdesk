@@ -1,0 +1,8 @@
+# Checks that fail at the sync commit. The model and the code disagree here;
+# each line is a reported finding, not an allowance.
+# Remove a line only after the code fix is confirmed and the model updated.
+card-repeat-one-trial|The trial-end call can fail; the skip facts are reverted and the second Trial keeps running.
+account-one-trial|Two Checkout Sessions created before either webhook both carry a Trial for one Account.
+redelivered-created-self-skips|A created event replayed after the event-id cache expires ends its own legitimate Trial.
+admin-cancellation-race|A webhook that loaded the row before the admin write overwrites the Admin type.
+zero-coupon-first-payment|A subscription born active with a $0 first invoice records first_paid_at without a payment.
