@@ -23,9 +23,13 @@ explores every order; everything runs in Docker.
 5. **A $0 first invoice is not proof that the Account paid.** Harm: an Account
    that never paid keeps app access while its next charge is retried.
 6. **An Account that never paid has no access while its first charge is
-   retried**; **an Account that paid before keeps access while past due.**
+   retried**; **an Account that paid before keeps access while past due,** unless
+   a blocked checkout ended it (rule 8).
 7. **A repeat card's Trial is ended at once** even when the trial-end call
    fails. Harm: the card that should have been refused keeps its Trial.
+8. **A checkout billed to a blocked country leaves the Account without access,**
+   even when the local cancel did not land. Harm: the service is used where it
+   is not sold.
 
 ## Run it
 
@@ -110,6 +114,14 @@ born `active` (a 100% coupon, for one) is not proof of money.
 `SubscriptionBornActiveZeroCoupon` leaves `firstPaid` false; `InvoicePaid(0)`
 leaves it false and `InvoicePaid(1900)` sets it.
 
+### 6. A blocked checkout has no access (`blocked-checkout-no-access`)
+
+`StripeCheckoutSessionListener` writes `accounts.blocked_country_at` before it
+calls Stripe to cancel the subscription, and `Account::hasAppAccess()` answers
+false as soon as that fact is set. `BlockedCheckoutCancel` cancels the status;
+`BlockedCheckoutCancelFails` keeps the status and leaves only the fact, and the
+invariant still refuses access.
+
 ### Not modelled: two subscriptions can coexist
 
 Nothing stops a second Stripe subscription from being created while the first
@@ -161,10 +173,13 @@ Sync commit: **3123bb9c**. Confirmed against these files and functions:
 | `endRepeatCardTrial()` — `TrialEndFailed` on a failed call, non-2xx and a redelivery | `EndTrialOk` / `EndTrialFails`; `EndTrialRetries` in the fixed model |
 | `handleSubscriptionCreated()` on a subscription born `active` — no first payment | `HandleCreatedActive`; `SubscriptionBornActiveZeroCoupon` |
 | `StripeInvoiceListener::handle()` — `status = paid` and `amount_paid > 0` | `InvoicePaid(amount)` |
+| `StripeCheckoutSessionListener::handle()` — records `accounts.blocked_country*`, then cancels the subscription | `BlockedCheckoutCancel` / `BlockedCheckoutCancelFails` |
 | `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
-| `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()`, `hasAppAccess()` | `CanStartTrial`, `HasAppAccess` |
+| `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()` | `CanStartTrial`, `HasAppAccess` |
+| `Account::hasAppAccess()` — a blocked checkout ends access, a paid past-due keeps it | `HasAppAccess`, `BlockedNoAccess` |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
 | `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
+| `2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php` — `users.country`, `accounts.blocked_country*` | the facts `BlockedCheckoutCancel` writes |
 
 Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Listeners/StripeInvoiceListener.php`,
@@ -174,10 +189,13 @@ Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Support/Billing/OpenCheckoutSessions.php`,
 `app/Support/Billing/TrialAccounts.php`,
 `app/Support/Billing/TrialCards.php`,
-`app/Support/Billing/CardFingerprint.php`, `app/Models/Account.php`,
+`app/Support/Billing/CardFingerprint.php`,
+`app/Support/Billing/BlockedCountries.php`,
+`app/Listeners/StripeCheckoutSessionListener.php`, `app/Models/Account.php`,
 `app/Models/Subscription.php`, `app/Models/TrialAccount.php`,
 `database/migrations/2026_11_22_120000_add_billing_facts.php`,
-`database/migrations/2026_11_22_130000_add_trial_accounts.php`.
+`database/migrations/2026_11_22_130000_add_trial_accounts.php`,
+`database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php`.
 
 ## Bounds and assumptions
 

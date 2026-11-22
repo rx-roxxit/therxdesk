@@ -681,11 +681,10 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             exact: false,
         });
 
-        try {
-            await notice.first().waitFor({ timeout: 15_000 });
-        } catch {
-            // The check below records the failure with what the page showed.
-        }
+        await notice
+            .first()
+            .waitFor({ timeout: 15_000 })
+            .catch(() => null);
 
         await page.waitForLoadState('networkidle');
         await run.step('blocked-country-refused');
