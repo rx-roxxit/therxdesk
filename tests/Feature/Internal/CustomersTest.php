@@ -167,3 +167,31 @@ test('an unknown customer is 404', function () {
         ->getJson(route('internal.accounts.show', Str::uuid()))
         ->assertNotFound();
 });
+
+test('customer detail carries no Complimentary block before one is given', function () {
+    $owner = User::factory()->create();
+
+    $this->withHeaders($this->adminHeaders)
+        ->getJson(route('internal.accounts.show', $owner->account_id))
+        ->assertOk()
+        ->assertJsonPath('complimentary', null);
+});
+
+test('customer detail carries the Complimentary block while one is in force', function () {
+    $owner = User::factory()->create();
+    $account = $owner->account;
+    $this->travelTo(now()->startOfSecond());
+
+    $account->forceFill([
+        'plan_id' => Plan::where('slug', 'standard')->firstOrFail()->id,
+        'complimentary_since' => now(),
+        'complimentary_until' => now()->addDays(30),
+    ])->save();
+
+    $this->withHeaders($this->adminHeaders)
+        ->getJson(route('internal.accounts.show', $account->id))
+        ->assertOk()
+        ->assertJsonPath('complimentary.in_force', true)
+        ->assertJsonPath('complimentary.since', now()->toIso8601String())
+        ->assertJsonPath('complimentary.until', now()->addDays(30)->toIso8601String());
+});
