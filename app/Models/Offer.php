@@ -164,12 +164,12 @@ class Offer extends Model
     }
 
     /**
-     * Offers without a trial: a coupon only, for a checkout that charges at
-     * once.
+     * Offers that carry a coupon. A billing checkout takes this discount but
+     * never a trial, so a trial-only Offer is not a candidate there.
      */
-    public function scopeWithoutTrial(Builder $query): Builder
+    public function scopeWithCoupon(Builder $query): Builder
     {
-        return $query->where(fn (Builder $query): Builder => $query->whereNull('offers.trial_days')->orWhere('offers.trial_days', 0));
+        return $query->whereNotNull('offers.stripe_coupon_id');
     }
 
     /**

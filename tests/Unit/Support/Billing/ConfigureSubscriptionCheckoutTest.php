@@ -129,6 +129,17 @@ test('a coupon offer applies its coupon once and keeps promotion codes off', fun
         ->and(trialExpiresAt($subscription))->not->toBeNull();
 });
 
+test('an account that had a trial gets the coupon without another trial', function () {
+    $this->account->update(['trial_ends_at' => now()->subDay()]);
+    $offer = Offer::factory()->percent(20)->create(['trial_days' => 14]);
+    claimOfferFor($this->account, $offer);
+
+    $subscription = configureCheckout($this->account->fresh());
+
+    expect($subscription->couponId)->toBe($offer->stripe_coupon_id)
+        ->and(trialExpiresAt($subscription))->toBeNull();
+});
+
 test('an offer never turns the promotion code field on', function () {
     claimOfferFor($this->account, Offer::factory()->trial(8)->create());
 

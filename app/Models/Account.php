@@ -140,7 +140,7 @@ class Account extends Model
         return $this->offers()
             ->availableTo($this)
             ->link()
-            ->unless($withTrial, fn (Builder $query): Builder => $query->withoutTrial())
+            ->unless($withTrial, fn (Builder $query): Builder => $query->withCoupon())
             ->orderByPivot('claimed_at', 'desc')
             ->first();
     }
@@ -150,7 +150,7 @@ class Account extends Model
         return Offer::query()
             ->availableTo($this)
             ->general()
-            ->unless($withTrial, fn (Builder $query): Builder => $query->withoutTrial())
+            ->unless($withTrial, fn (Builder $query): Builder => $query->withCoupon())
             ->latestStarted()
             ->first();
     }

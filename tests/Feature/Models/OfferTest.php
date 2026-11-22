@@ -105,6 +105,19 @@ test('a general offer the account redeemed is skipped for that account', functio
     expect($account->currentOffer()?->id)->toBe($second->id);
 });
 
+test('a billing checkout takes a coupon offer but never a trial-only one', function () {
+    $account = Account::factory()->create();
+    $trialOnly = Offer::factory()->link()->trial(14)->create();
+    $account->offers()->attach($trialOnly, ['claimed_at' => now()]);
+
+    expect($account->currentOffer(withTrial: false))->toBeNull();
+
+    $coupon = Offer::factory()->link()->percent(20)->create(['trial_days' => 14]);
+    $account->offers()->attach($coupon, ['claimed_at' => now()->addMinute()]);
+
+    expect($account->currentOffer(withTrial: false)?->id)->toBe($coupon->id);
+});
+
 test('a general offer is reachable without a claim but not by its link', function () {
     $offer = Offer::factory()->general()->create(['slug' => 'general-offer']);
 
