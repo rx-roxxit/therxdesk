@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\AuditLog;
 use App\Models\Operator;
+use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
     config([
@@ -198,6 +199,18 @@ test('a missing or invalid admin email answers 422', function () {
         'Authorization' => 'Bearer test-admin-token',
         'X-Internal-Admin-Email' => 'not-an-email',
     ])->postJson(route('internal.operator.store'), operatorPayload())->assertUnprocessable();
+});
+
+test('the cached current row holds plain attributes, never a model', function () {
+    Operator::factory()->create(['legal_name_latin' => 'Cached Operator Co., Ltd.']);
+
+    expect(Operator::current()?->legal_name_latin)->toBe('Cached Operator Co., Ltd.');
+
+    $cached = Cache::get(Operator::CURRENT_CACHE_KEY);
+
+    expect($cached)->toBeArray()
+        ->and($cached['current'])->toBeArray()
+        ->and($cached['current']['legal_name_latin'])->toBe('Cached Operator Co., Ltd.');
 });
 
 test('a write through the API clears the cached current row', function () {

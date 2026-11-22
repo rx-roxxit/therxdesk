@@ -57,14 +57,25 @@ class Operator extends Model
     /**
      * The one current row, cached under a wrapper array so a null result is
      * cached too (`Cache::rememberForever` treats a cached null as a miss).
+     *
+     * The cache holds the row's attributes, never the model: cache stores
+     * serialize their values and `cache.serializable_classes` is false, so a
+     * stored model would come back as `__PHP_Incomplete_Class`. `hydrate()`
+     * rebuilds the same read-only model from the attributes.
      */
     public static function current(): ?self
     {
         $cached = Cache::rememberForever(self::CURRENT_CACHE_KEY, fn (): array => [
-            'current' => self::query()->current()->latest('effective_from')->first(),
+            'current' => self::query()->current()->latest('effective_from')->first()?->toArray(),
         ]);
 
-        return data_get($cached, 'current');
+        $attributes = data_get($cached, 'current');
+
+        if (blank($attributes)) {
+            return null;
+        }
+
+        return self::hydrate([$attributes])->first();
     }
 
     public static function forgetCurrent(): void

@@ -121,13 +121,13 @@ class OperatorCommand extends Command
         try {
             if ($current === null) {
                 $operator = $operators->create($attributes, 'cli');
-                $this->info("Created the Operator {$operator->legal_name_latin}.");
+                $this->info("Operator created: {$operator->legal_name_latin}");
 
                 return self::SUCCESS;
             }
 
             $operator = $operators->updateCurrent($attributes, 'cli');
-            $this->info("Updated the Operator {$operator->legal_name_latin}.");
+            $this->info("Operator updated: {$operator->legal_name_latin}");
         } catch (ValidationException $exception) {
             foreach (Arr::flatten($exception->errors()) as $error) {
                 $this->error((string) $error);
