@@ -9,6 +9,7 @@ use App\Enums\Invite\Result;
 use App\Models\Account;
 use App\Models\Invite;
 use App\Models\User;
+use App\Support\Billing\BlockedCountries;
 use Illuminate\Support\Facades\DB;
 
 class AcceptInvite
@@ -17,6 +18,10 @@ class AcceptInvite
     {
         if (! $invite->isFor($user->email)) {
             return Result::WrongEmail;
+        }
+
+        if (! config('trypost.self_hosted') && BlockedCountries::isBlocked($user->country)) {
+            return Result::BlockedCountry;
         }
 
         $previousAccountId = null;

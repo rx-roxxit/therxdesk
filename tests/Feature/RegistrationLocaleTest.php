@@ -20,6 +20,7 @@ function registerWithLocale(array $overrides = []): TestResponse
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ], $overrides));
 }

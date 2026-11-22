@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\Concerns\PreservesAttributionParameters;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Auth\RegisterRequest;
 use App\Support\Auth\PasswordRequirements;
+use App\Support\Countries;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,7 @@ class RegisteredUserController extends Controller
             'email' => $request->query('email'),
             'invite' => $request->query('invite'),
             'passwordRequirements' => PasswordRequirements::checklist(),
+            'countries' => config('trypost.self_hosted') ? null : Countries::ISO,
         ]);
     }
 
@@ -42,6 +44,7 @@ class RegisteredUserController extends Controller
             'password' => $request->validated('password'),
             'is_invite' => $invite !== null,
             'registration_ip' => $request->ip(),
+            'country' => $request->validated('country'),
             'locale' => $request->validated('locale'),
             'timezone' => $request->validated('timezone'),
             'week_starts_on' => $request->validated('week_starts_on'),

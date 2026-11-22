@@ -3,6 +3,7 @@ import { Form, Head, usePage } from '@inertiajs/vue3';
 import { IconEye, IconEyeOff } from '@tabler/icons-vue';
 import { computed, ref } from 'vue';
 
+import CountrySelect from '@/components/auth/CountrySelect.vue';
 import LegalLinks from '@/components/auth/LegalLinks.vue';
 import PasswordRequirements from '@/components/auth/PasswordRequirements.vue';
 import type { PasswordRequirement } from '@/components/auth/PasswordRequirements.vue';
@@ -22,14 +23,26 @@ import {
 import { useGuestLocale } from '@/composables/useGuestLocale';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { detectPreferences } from '@/lib/detectPreferences';
+import { filled } from '@/lib/helpers';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
-defineProps<{
+const props = defineProps<{
     email?: string | null;
     invite?: string | null;
     passwordRequirements: PasswordRequirement[];
+    countries?: string[] | null;
 }>();
+
+const countryOptions = (): string[] => {
+    if (! filled(props.countries)) {
+        return [];
+    }
+
+    return props.countries;
+};
+
+const hasCountries = (): boolean => countryOptions().length > 0;
 
 const { signupLocale } = useGuestLocale();
 const detected = detectPreferences();
@@ -97,13 +110,21 @@ const hasSocial = computed(
                             <InputError :message="errors.name" />
                         </div>
 
+                        <CountrySelect
+                            v-if="hasCountries()"
+                            :countries="countryOptions()"
+                            :error="errors.country"
+                            :tabindex="2"
+                            data-testid="register-country"
+                        />
+
                         <div class="grid gap-2">
                             <Label for="email">{{ $t('auth.register.email') }}</Label>
                             <Input
                                 id="email"
                                 data-testid="register-email"
                                 type="email"
-                                :tabindex="2"
+                                :tabindex="3"
                                 autocomplete="email"
                                 name="email"
                                 placeholder="email@example.com"
@@ -121,7 +142,7 @@ const hasSocial = computed(
                                 <Input
                                     id="password"
                                     :type="showPassword ? 'text' : 'password'"
-                                    :tabindex="3"
+                                    :tabindex="4"
                                     autocomplete="new-password"
                                     name="password"
                                     v-model="password"
@@ -160,7 +181,7 @@ const hasSocial = computed(
                         <Button
                             type="submit"
                             class="w-full"
-                            :tabindex="4"
+                            :tabindex="5"
                             :disabled="processing"
                             data-testid="register-user-button"
                         >
@@ -174,7 +195,7 @@ const hasSocial = computed(
                 {{ $t('auth.register.has_account') }}
                 <TextLink
                     :href="login()"
-                    :tabindex="5"
+                    :tabindex="6"
                     data-testid="register-log-in-link"
                     >{{ $t('auth.register.log_in') }}</TextLink
                 >

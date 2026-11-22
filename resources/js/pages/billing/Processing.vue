@@ -6,18 +6,21 @@ import { computed, onMounted, ref, watch } from 'vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import { index as billingIndex } from '@/routes/app/billing';
 import { index as postsIndex } from '@/routes/app/posts';
+import { plan as welcomePlan } from '@/routes/app/welcome';
 import type { SharedData } from '@/types';
 
 const props = defineProps<{
     ready: boolean;
     returnsToBilling: boolean;
+    countryBlocked: boolean;
 }>();
 
 const page = usePage<SharedData>();
 
-// Poll `auth` so `auth.plan` is set after the webhook writes plan_id.
+// Poll `auth` so `auth.plan` is set after the webhook writes plan_id, and
+// `countryBlocked` so a cancelled checkout leaves Processing at once.
 const { stop } = usePoll(2000, {
-    only: ['ready', 'auth'],
+    only: ['ready', 'auth', 'countryBlocked'],
 });
 
 const finishing = ref(false);
@@ -25,6 +28,17 @@ const finishing = ref(false);
 const purchaseReady = computed(
     (): boolean => props.ready && page.props.auth.plan !== null,
 );
+
+// The checkout's billing country is blocked: the webhook cancelled it, so the
+// plan step shows the notice instead of a spinner that never finishes.
+const goToPlan = (): void => {
+    if (!props.countryBlocked) {
+        return;
+    }
+
+    stop();
+    router.visit(welcomePlan.url(), { replace: true });
+};
 
 const goNext = (): void => {
     if (props.returnsToBilling) {
@@ -52,7 +66,22 @@ watch(purchaseReady, (ready) => {
     }
 });
 
+watch(
+    () => props.countryBlocked,
+    (blocked) => {
+        if (blocked) {
+            goToPlan();
+        }
+    },
+);
+
 onMounted(() => {
+    if (props.countryBlocked) {
+        goToPlan();
+
+        return;
+    }
+
     if (purchaseReady.value) {
         completePurchase();
     }

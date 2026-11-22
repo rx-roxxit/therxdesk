@@ -41,6 +41,9 @@ class Account extends Model
         'ai_credits_per_month',
         'trial_ends_at',
         'first_invoice_id',
+        'blocked_country',
+        'blocked_country_at',
+        'blocked_country_payment_status',
     ];
 
     protected $casts = [
@@ -52,6 +55,7 @@ class Account extends Model
         'lifecycle_stage_changed_at' => 'datetime',
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
+        'blocked_country_at' => 'datetime',
         'video_policy' => VideoPolicy::class,
         'ai_credits_per_month' => 'integer',
     ];

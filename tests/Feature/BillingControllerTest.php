@@ -848,3 +848,34 @@ test('billing index skips a default that is not a card and marks the subscriptio
             ->where('paymentMethods.1.is_default', false)
         );
 });
+
+test('processing sends countryBlocked when a blocked checkout left the account without access', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $this->account->update([
+        'blocked_country' => 'GB',
+        'blocked_country_at' => now(),
+        'blocked_country_payment_status' => 'unpaid',
+    ]);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.processing'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('billing/Processing', false)
+            ->where('countryBlocked', true)
+            ->where('ready', false)
+        );
+});
+
+test('processing does not send countryBlocked while the account still has access', function () {
+    config(['trypost.self_hosted' => false]);
+
+    subscribeAccount($this->account);
+    $this->account->update(['blocked_country_at' => now()]);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.processing'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('countryBlocked', false));
+});

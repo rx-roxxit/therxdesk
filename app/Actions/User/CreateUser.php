@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 class CreateUser
 {
     /**
-     * @param  array{name: string, email: string, password?: string, google_id?: string, github_id?: string, email_verified_at?: \DateTimeInterface|null, is_invite?: bool, registration_ip?: string|null, locale?: string|null, timezone?: string|null, week_starts_on?: string|null, time_format?: string|null}  $data
+     * @param  array{name: string, email: string, password?: string, google_id?: string, github_id?: string, email_verified_at?: \DateTimeInterface|null, is_invite?: bool, registration_ip?: string|null, country?: string|null, locale?: string|null, timezone?: string|null, week_starts_on?: string|null, time_format?: string|null}  $data
      * @param  array<string, string>  $attributionParameters  UTM parameters and ad click IDs (gclid, fbclid, etc.) captured before signup
      */
     public static function execute(array $data, array $attributionParameters = []): User
@@ -50,6 +50,7 @@ class CreateUser
                 'email_verified_at' => data_get($data, 'email_verified_at', $isInviteRegistration ? now() : null),
                 'account_id' => $account->id,
                 'registration_ip' => data_get($data, 'registration_ip'),
+                'country' => data_get($data, 'country'),
                 'locale' => $locale,
                 'time_format' => TimeFormat::tryFrom((string) data_get($data, 'time_format')) ?? TimeFormat::forLocale($locale),
                 'week_starts_on' => WeekStart::tryFrom((string) data_get($data, 'week_starts_on')) ?? WeekStart::DEFAULT,

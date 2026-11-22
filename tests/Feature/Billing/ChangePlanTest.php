@@ -558,3 +558,41 @@ class FailingSwapSubscription extends Subscription
         throw IncompletePayment::requiresAction(IncompleteSwapSubscription::payment());
     }
 }
+
+test('change-plan refuses an Owner whose country is blocked', function () use ($withWorkspace) {
+    $user = User::factory()->create(['country' => 'DE']);
+    $withWorkspace($user);
+    subscribeAccount($user->account);
+
+    $this->actingAs($user->fresh())
+        ->from(route('app.billing.index'))
+        ->post(route('app.billing.change-plan'), [
+            'plan_id' => $this->socials->id,
+            'interval' => 'monthly',
+        ])
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+
+    expect($user->fresh()->account->plan_id)->toBeNull();
+});
+
+test('change-plan refuses an account whose checkout was billed to a blocked country', function () use ($withWorkspace) {
+    $user = User::factory()->create();
+    $withWorkspace($user);
+    subscribeAccount($user->account);
+
+    $user->account->update([
+        'blocked_country' => 'GB',
+        'blocked_country_at' => now(),
+        'blocked_country_payment_status' => 'unpaid',
+    ]);
+
+    $this->actingAs($user->fresh())
+        ->from(route('app.billing.index'))
+        ->post(route('app.billing.change-plan'), [
+            'plan_id' => $this->socials->id,
+            'interval' => 'monthly',
+        ])
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('rxdesk.country.blocked'));
+});

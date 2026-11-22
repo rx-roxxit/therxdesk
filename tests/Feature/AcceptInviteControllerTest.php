@@ -417,3 +417,79 @@ test('decline invite fails for wrong email', function () {
     // Invite should NOT be deleted
     expect(Invite::find($invite->id))->not->toBeNull();
 });
+
+test('accept invite refuses a blocked country and leaves everything unchanged', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = User::factory()->create([
+        'email' => 'invitee@example.com',
+        'country' => 'DE',
+    ]);
+    $personalAccountId = $user->account_id;
+
+    $invite = Invite::factory()->create([
+        'account_id' => $this->account->id,
+        'invited_by' => $this->owner->id,
+        'email' => 'invitee@example.com',
+        'workspaces' => [$this->workspace->id],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('app.invites.accept', $invite))
+        ->assertRedirect(route('app.workspaces.create'))
+        ->assertSessionHas('flash.banner', __('rxdesk.country.blocked'))
+        ->assertSessionHas('flash.bannerStyle', 'danger');
+
+    $user->refresh();
+
+    expect($user->account_id)->toBe($personalAccountId)
+        ->and($invite->refresh()->accepted_at)->toBeNull()
+        ->and($this->workspace->members()->where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('accept invite still accepts an allowed country', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = User::factory()->create([
+        'email' => 'invitee@example.com',
+        'country' => 'TH',
+    ]);
+
+    $invite = Invite::factory()->create([
+        'account_id' => $this->account->id,
+        'invited_by' => $this->owner->id,
+        'email' => 'invitee@example.com',
+        'workspaces' => [$this->workspace->id],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('app.invites.accept', $invite))
+        ->assertRedirect(route('app.calendar'))
+        ->assertSessionHas('flash.bannerStyle', 'success');
+
+    expect($user->fresh()->account_id)->toBe($this->account->id)
+        ->and($invite->refresh()->accepted_at)->not->toBeNull();
+});
+
+test('a self-hosted install never blocks an invite by country', function () {
+    config(['trypost.self_hosted' => true]);
+
+    $user = User::factory()->create([
+        'email' => 'invitee@example.com',
+        'country' => 'DE',
+    ]);
+
+    $invite = Invite::factory()->create([
+        'account_id' => $this->account->id,
+        'invited_by' => $this->owner->id,
+        'email' => 'invitee@example.com',
+        'workspaces' => [$this->workspace->id],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('app.invites.accept', $invite))
+        ->assertSessionHas('flash.bannerStyle', 'success');
+
+    expect($user->fresh()->account_id)->toBe($this->account->id)
+        ->and($invite->refresh()->accepted_at)->not->toBeNull();
+});

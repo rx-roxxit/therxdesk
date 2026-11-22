@@ -63,6 +63,7 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         'rdt_cid',
         'epik',
         'registration_ip',
+        'country',
         'persona',
         'goals',
         'previous_software',

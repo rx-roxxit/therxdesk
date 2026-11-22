@@ -25,6 +25,7 @@ test('email registration stores the zone, week start and clock the browser repor
         'name' => 'Bia',
         'email' => 'bia@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'pt-BR',
         'timezone' => 'America/Sao_Paulo',
         'week_starts_on' => 'sunday',
@@ -43,6 +44,7 @@ test('email registration without detection falls back to UTC, Monday and the lan
         'name' => 'Dirk',
         'email' => 'dirk@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'de',
         'week_starts_on' => '',
         'time_format' => '',
@@ -60,6 +62,7 @@ test('email registration rejects a week start or clock outside the allowed value
         'name' => 'Eve',
         'email' => 'eve@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
         $field => $value,
     ])->assertSessionHasErrors($field);
@@ -140,6 +143,7 @@ test('email registration stores the language the register form sent and pushes i
         'name' => 'Bia',
         'email' => 'bia-locale@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'pt-BR',
     ])->assertSessionHasNoErrors();
 
@@ -218,6 +222,7 @@ test('an invited email registration stores the language the register form sent',
         'name' => 'Invitee',
         'email' => 'invited-locale@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'invite' => $invite->id,
         'locale' => 'pt-BR',
     ])->assertRedirect(route('app.invites.show', $invite, absolute: false));

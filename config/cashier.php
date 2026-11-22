@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Listeners\StripeBillingSignalListener;
 use Laravel\Cashier\Console\WebhookCommand;
 use Laravel\Cashier\Invoices\DompdfInvoiceRenderer;
+use Stripe\Event as StripeEvent;
 
 return [
 
@@ -53,6 +54,7 @@ return [
         'events' => [
             ...WebhookCommand::DEFAULT_EVENTS,
             ...array_keys(StripeBillingSignalListener::JOBS),
+            StripeEvent::TYPE_CHECKOUT_SESSION_COMPLETED,
         ],
     ],
 

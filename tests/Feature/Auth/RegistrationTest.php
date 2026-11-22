@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Invite;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\Countries;
 
 beforeEach(fn () => config()->set('trypost.self_hosted', false));
 
@@ -38,6 +39,7 @@ test('new users can register', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -51,6 +53,7 @@ test('new users get a default workspace on registration', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -68,6 +71,7 @@ test('new users do not have verified email by default', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -96,6 +100,7 @@ test('new users registering via invite have verified email automatically', funct
         'email' => 'test@example.com',
         'password' => strongPassword(),
         'invite' => $invite->id,
+        'country' => 'TH',
         'locale' => 'en',
     ]);
 
@@ -187,6 +192,7 @@ test('register works normally when not self_hosted even with pending invite in s
             'name' => 'Invitee',
             'email' => 'invitee@example.com',
             'password' => strongPassword(),
+            'country' => 'TH',
             'locale' => 'en',
         ]);
 
@@ -194,4 +200,71 @@ test('register works normally when not self_hosted even with pending invite in s
     expect(User::where('email', 'invitee@example.com')->exists())->toBeTrue();
     // Cleared regardless of mode, since signup consumes the marker.
     expect(session('pending_invite_id'))->toBeNull();
+});
+
+test('the register page sends the ISO country list in selling mode', function () {
+    $this->get(route('register'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('countries', Countries::ISO)
+        );
+});
+
+test('the register page sends no country list when self-hosted', function () {
+    config()->set('trypost.self_hosted', true);
+    $invite = createTestInvite('invitee@example.com');
+
+    $this->withSession(['pending_invite_id' => $invite->id])
+        ->get(route('register'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('countries', null));
+});
+
+test('registration refuses a blocked country with the notice and creates no user', function (string $country) {
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => strongPassword(),
+        'country' => $country,
+        'locale' => 'en',
+    ])->assertSessionHasErrors(['country' => __('rxdesk.country.blocked')]);
+
+    $this->assertGuest();
+
+    expect(User::where('email', 'test@example.com')->exists())->toBeFalse();
+})->with(['DE', 'FR', 'GB', 'NO', 'JE', 'IM', 'de']);
+
+test('registration stores an allowed country on the user, uppercased', function () {
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => strongPassword(),
+        'country' => 'th',
+        'locale' => 'en',
+    ])->assertSessionHasNoErrors();
+
+    expect(User::where('email', 'test@example.com')->first()->country)->toBe('TH');
+});
+
+test('registration requires a country in selling mode', function () {
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => strongPassword(),
+        'locale' => 'en',
+    ])->assertSessionHasErrors('country');
+
+    expect(User::where('email', 'test@example.com')->exists())->toBeFalse();
+});
+
+test('registration refuses a country code that is not ISO 3166-1', function () {
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => strongPassword(),
+        'country' => 'XX',
+        'locale' => 'en',
+    ])->assertSessionHasErrors('country');
+
+    expect(User::where('email', 'test@example.com')->exists())->toBeFalse();
 });

@@ -103,6 +103,7 @@ test('a new account reads the clock of its language', function (string $locale, 
         'name' => 'Ana',
         'email' => $email,
         'password' => strongPassword(),
+        'country' => 'TH',
         'locale' => $locale,
     ])->assertSessionHasNoErrors();
 
