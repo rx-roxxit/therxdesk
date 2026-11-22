@@ -59,23 +59,25 @@ $V/selling.sh logs      # the Stripe listener's log, signing secret redacted
 $V/selling.sh down      # back to .env's mode (self-hosted)
 ```
 
-Run `launch.sh` first; `up` needs the stack running. It does four things, each safe to repeat:
+Run `launch.sh` first; `up` needs the stack running. It does five things, each safe to repeat:
 
 1. **Plan catalog.** Runs `php artisan migrate --force` and then `Database\Seeders\PlanSeeder` in a one-off
    container (both idempotent, no env): the seeder writes the four RX Desk Plans and their `plan_prices` rows into
    the app's own database (Mini $11.90 / $119, Standard $17.90 / $179, Plus $29.90 / $299, Max $49.90 / $499;
-   yearly is 10× monthly) and archives any other Plan. The rows carry no Stripe ids.
-2. **Sandbox prices.** `scripts/plans.php catalog` prints the active Plans' active price rows as JSON. Through
-   `stripe.sh` (the Stripe CLI image `stripe/stripe-cli:v1.55.14`, nothing installed on the host), it finds or
-   creates one Product per Plan and one Price per interval, keyed by lookup keys
-   `rxdesk-verify-<slug>-monthly|yearly`, with the amount from the catalog (never written in bash). A second run
-   creates nothing; a sandbox Price whose amount no longer matches the catalog stops `up`, because a Stripe Price
-   is immutable. `scripts/plans.php attach` then writes each id into that Plan and interval's active `plan_prices`
-   row: the same id is a no-op, and a different id adds an active row and archives the old one (no price row is
-   ever deleted). `stripe.sh` refuses a key that is not a test key.
-3. **Webhook secret.** `stripe listen --print-secret` (stable for the sandbox key) goes into
+   yearly is 10× monthly) and archives any other Plan. The rows carry no Stripe ids; step 2 gives them theirs.
+2. **Catalog sync.** Runs `php artisan rxdesk:catalog-sync` in the app image. The app creates every Stripe object
+   itself: one Product per active Plan, a monthly Price and a yearly Price at ten times monthly, with the amounts
+   read from `plan_prices` (never written in bash). It writes each Price id into its Plan and interval's active
+   `plan_prices` row: the same id and amount is a no-op, and a different one adds an active row and archives the
+   old one (no price row is ever deleted). A Stripe key change makes the stored ids unreachable, so the same
+   command creates new Products and Prices and writes new rows, leaving the old rows to keep resolving.
+   `stripe.sh` refuses a key that is not a test key.
+3. **Legacy sandbox objects.** Sandbox Products and Prices that earlier runs created with a `rxdesk-verify-*`
+   lookup key or `metadata.rxdesk_verify=true` are archived (`active=false`), never deleted. The step is
+   idempotent, so finding none is normal.
+4. **Webhook secret.** `stripe listen --print-secret` (stable for the sandbox key) goes into
    `~/.cache/verify-therxdesk/state/stripe-webhook.env`, mode 600, never shown.
-4. **Recreate.** It writes the marker `~/.cache/verify-therxdesk/state/selling` and recreates `app` with
+5. **Recreate.** It writes the marker `~/.cache/verify-therxdesk/state/selling` and recreates `app` with
    `scripts/compose.selling.yaml` on top of the project's compose files: `SELF_HOSTED=false` and
    `STRIPE_WEBHOOK_SECRET` as container env (Laravel keeps container env over `.env`, and php-fpm passes it
    through, `clear_env = no`), plus a `stripe` service running `stripe listen --all-snapshot --forward-to
@@ -90,10 +92,12 @@ While the marker exists, every script (`compose` in `env.sh`) includes the overl
 Switching recreates the owner's running `app` container (about a minute; the entrypoint runs again), so the
 owner's open dev browser follows the mode too. `cleanup.sh` runs `selling.sh down`.
 
-The catalog is **temporary**: `PlanSeeder` writes the four Plans and their prices in code. Ticket #54 has the app
-create every Stripe Product and Price itself from its Catalog; when it lands, `selling.sh` uses that sync instead
-of creating sandbox prices, and the `rxdesk-verify-*` lookup keys go. Do that through
-`/pstack:maintain-verification-skill`.
+The catalog is the **app's own data**. `plan_prices` is the source of truth and the app creates every Stripe
+object from it; `selling.sh up` seeds the four Plans only because a fresh dev database has none. In the running
+app, the same Catalog is edited through `/internal/v1` (`POST /plans`, `PATCH /plans/{id}`,
+`POST /plans/{id}/archive`, `PATCH /catalog-settings`), and each write is audited. `PlanSeeder` stays the dev
+seed, not a second catalog: do not hand-create sandbox Products or Prices beside it. The `GET /plans` response
+shows the Stripe ids the app stored.
 
 ## Internal API
 
@@ -217,7 +221,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
 | `browser-suite.sh [pest args]` | run `tests/Browser` in the Playwright + PHP image | a scratch copy under `state/` |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
-| `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, sandbox catalog, `plan_prices` |
+| `selling.sh up\|down\|status\|logs` | switch the stack to selling mode and back, show it | stack, Stripe sandbox objects, `plan_prices` |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
 | `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | no |
@@ -225,4 +229,5 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 `env.sh` holds the shared settings (`VERIFY_BASE_URL`, `VERIFY_VITE_URL`, `VERIFY_EVIDENCE_ROOT` override them),
 `compose` (with the selling overlay while the marker exists), `wait_until_usable` and `served_mode`.
 `compose.selling.yaml` is the selling overlay.
-`fixture.php` and `plans.php` run inside the app image as `app` (UID 1001) through `docker compose run`, never as root.
+`fixture.php` runs inside the app image as `app` (UID 1001) through `docker compose run`, never as root; the
+Catalog sync runs the same way through `app_run php artisan rxdesk:catalog-sync`.
