@@ -189,7 +189,7 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **33ab087d**. Confirmed against these files and functions:
+Sync commit: **906b3e98**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
