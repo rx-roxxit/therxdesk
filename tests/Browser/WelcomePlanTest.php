@@ -171,3 +171,25 @@ test('the offer banner stays above the four cards', function () {
         ->assertSeeIn('@plan-price-mini', '$11.90')
         ->assertNoJavaScriptErrors();
 });
+
+test('the plan cards use four, two and one column at each width', function (int $width, int $columns) {
+    config(['trypost.self_hosted' => false]);
+
+    $this->actingAs(welcomeOwnerOnPlanStep());
+
+    $page = visit(route('app.welcome.plan'))->resize($width, 900);
+    waitFor($page, '@plan-card-mini');
+    waitForWebFonts($page);
+
+    $lefts = $page->script(
+        "[...document.querySelectorAll('[data-testid^=\"plan-card-\"]')].map((card) => Math.round(card.getBoundingClientRect().left))",
+    );
+
+    expect(count(array_unique($lefts)))->toBe($columns);
+
+    $page->assertNoJavaScriptErrors();
+})->with([
+    'desktop' => [1440, 4],
+    'tablet' => [1024, 2],
+    'phone' => [390, 1],
+]);

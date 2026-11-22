@@ -61,7 +61,6 @@ return [
     'billing.plans.features.networks_all' => 39,
     'billing.plans.features.repurpose' => 40,
     'billing.plans.features.team' => 32,
-    'welcome.plan_checkout_button' => 24,
     'billing.current_plan.subscribe' => 17,
     'offers.bf26.checkout_button' => 24,
     'offers.bf26.name' => 14,
