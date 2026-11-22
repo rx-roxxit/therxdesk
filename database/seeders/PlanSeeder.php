@@ -24,9 +24,9 @@ class PlanSeeder extends Seeder
      */
     private const PLANS = [
         ['slug' => 'mini', 'name' => 'Mini', 'quota_bytes' => 2147483648, 'ai_credits_per_month' => 2500, 'sort' => 1, 'monthly' => 1190],
-        ['slug' => 'standard', 'name' => 'Standard', 'quota_bytes' => 5368709120, 'ai_credits_per_month' => 6250, 'sort' => 2, 'monthly' => 1790],
+        ['slug' => 'standard', 'name' => 'Standard', 'quota_bytes' => 5368709120, 'ai_credits_per_month' => 10000, 'sort' => 2, 'monthly' => 1790],
         ['slug' => 'plus', 'name' => 'Plus', 'quota_bytes' => 21474836480, 'ai_credits_per_month' => 25000, 'sort' => 3, 'monthly' => 2990],
-        ['slug' => 'max', 'name' => 'Max', 'quota_bytes' => 53687091200, 'ai_credits_per_month' => 62500, 'sort' => 4, 'monthly' => 4990],
+        ['slug' => 'max', 'name' => 'Max', 'quota_bytes' => 53687091200, 'ai_credits_per_month' => 40000, 'sort' => 4, 'monthly' => 4990],
     ];
 
     public function run(): void
