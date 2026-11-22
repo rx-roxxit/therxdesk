@@ -78,6 +78,7 @@ class BillingController extends Controller
             'trialEndsAt' => $account->activeTrialEndsAt(),
             'subscription' => $subscription?->only(['stripe_status', 'ends_at']),
             'plan' => transform($account->plan, fn (Plan $plan): array => PlanResource::make($plan)->resolve()),
+            'complimentary' => $this->complimentary($account),
             'workspaceCount' => $account->workspaces()->count(),
             'invoices' => Inertia::scroll(fn () => InvoiceResource::collection(
                 $account->cursorPaginateInvoices((int) config('app.pagination.default'), ['status' => 'paid']),
@@ -86,6 +87,24 @@ class BillingController extends Controller
             'discount' => $discount,
             'changePlanOffer' => fn (): ?array => $this->changePlanOffer($account, $discount()),
         ]);
+    }
+
+    /**
+     * The Complimentary Plan in force, for the current-plan card: its name and
+     * the end date the System admin set. Null when there is none.
+     *
+     * @return array{plan_name: string|null, ends_at: string|null}|null
+     */
+    private function complimentary(Account $account): ?array
+    {
+        if (! $account->isComplimentary()) {
+            return null;
+        }
+
+        return [
+            'plan_name' => $account->plan?->name,
+            'ends_at' => $account->complimentaryEndsAt()?->toIso8601String(),
+        ];
     }
 
     /**
@@ -168,6 +187,13 @@ class BillingController extends Controller
         $account = $request->user()->account;
 
         abort_unless($request->user()->isAccountOwner(), SymfonyResponse::HTTP_FORBIDDEN);
+
+        // A Complimentary Plan has no Stripe Customer to manage: the System
+        // admin ends it instead.
+        if ($account->isComplimentary()) {
+            return redirect()->route('app.billing.index')
+                ->with('flash.error', __('rxdesk.complimentary.checkout_blocked'));
+        }
 
         return BillingPortal::redirect($account, route('app.billing.index'));
     }

@@ -48,6 +48,7 @@ import {
 } from '@/routes/app/billing';
 import type { AuthPlan, SharedData } from '@/types';
 import type {
+    ComplimentaryPlan,
     Invoice,
     PaymentMethod,
     Subscription,
@@ -66,6 +67,8 @@ interface ScrollInvoices {
 }
 
 type BillingTab = 'plan' | 'invoices';
+
+type Translate = (key: string, replace?: Record<string, string>) => string;
 
 const BILLING_TABS: BillingTab[] = ['plan', 'invoices'];
 
@@ -89,7 +92,48 @@ const props = defineProps<{
     paymentMethods: PaymentMethod[];
     discount: SubscriptionDiscount | null;
     changePlanOffer: ChangePlanOffer | null;
+    complimentary: ComplimentaryPlan | null;
 }>();
+
+const hasComplimentary = computed((): boolean => props.complimentary !== null);
+
+const showsPlanSection = computed(
+    (): boolean =>
+        props.hasSubscription || props.onTrial || hasComplimentary.value,
+);
+
+const showsChangePlan = computed(
+    (): boolean => props.hasSubscription && hasComplimentary.value === false,
+);
+
+const showsSubscribe = computed(
+    (): boolean =>
+        props.hasSubscription === false && hasComplimentary.value === false,
+);
+
+const showsSubscriptionSection = computed(
+    (): boolean => props.hasSubscription && hasComplimentary.value === false,
+);
+
+const billingTabs = computed((): BillingTab[] => {
+    if (hasComplimentary.value) {
+        return ['plan'];
+    }
+
+    return BILLING_TABS;
+});
+
+const complimentaryUntilLine = ($t: Translate): string => {
+    const endsAt = props.complimentary?.ends_at ?? null;
+
+    if (endsAt === null) {
+        return $t('rxdesk.complimentary.no_end');
+    }
+
+    return $t('rxdesk.complimentary.until', {
+        date: date.formatDate(endsAt),
+    });
+};
 
 const discountKey = computed((): string => {
     if (props.discount?.duration === 'once') {
@@ -109,6 +153,10 @@ const currentInterval = computed(
 );
 
 const subscriptionStatus = computed((): SubscriptionStatus | null => {
+    if (hasComplimentary.value) {
+        return null;
+    }
+
     if (props.subscription?.stripe_status === 'past_due') {
         return 'past_due';
     }
@@ -147,6 +195,11 @@ const currentPrice = computed((): string | null => {
     return props.plan.monthly_price;
 });
 
+const showsPrice = computed(
+    (): boolean =>
+        hasComplimentary.value === false && currentPrice.value !== null,
+);
+
 const priceSuffixKey = computed((): string =>
     currentInterval.value === 'yearly'
         ? 'billing.plans.per_year'
@@ -154,7 +207,7 @@ const priceSuffixKey = computed((): string =>
 );
 
 const billingTab = (value: unknown): BillingTab =>
-    BILLING_TABS.find((tab) => tab === value) ?? 'plan';
+    billingTabs.value.find((tab) => tab === value) ?? 'plan';
 
 const tab = ref<BillingTab>(
     billingTab(
@@ -222,7 +275,7 @@ const selectPlan = (planId: string): void => {
         >
             <TabsList variant="line">
                 <TabsTrigger
-                    v-for="value in BILLING_TABS"
+                    v-for="value in billingTabs"
                     :key="value"
                     :value="value"
                     :data-testid="`billing-tab-${value}`"
@@ -233,7 +286,7 @@ const selectPlan = (planId: string): void => {
 
             <TabsContent value="plan" class="flex flex-col gap-10">
                 <SettingsSection
-                    v-if="hasSubscription || onTrial"
+                    v-if="showsPlanSection"
                     :title="$t('billing.plans.current')"
                 >
                     <div
@@ -271,7 +324,7 @@ const selectPlan = (planId: string): void => {
                                         </Badge>
                                     </div>
                                     <p
-                                        v-if="currentPrice"
+                                        v-if="showsPrice"
                                         class="flex items-baseline gap-1 tabular-nums"
                                         data-testid="billing-current-plan-price"
                                     >
@@ -305,7 +358,7 @@ const selectPlan = (planId: string): void => {
                                     </p>
                                 </div>
                                 <Button
-                                    v-if="hasSubscription"
+                                    v-if="showsChangePlan"
                                     variant="outline"
                                     class="shrink-0"
                                     data-testid="billing-change-plan"
@@ -314,7 +367,7 @@ const selectPlan = (planId: string): void => {
                                     {{ $t('billing.current_plan.change') }}
                                 </Button>
                                 <Button
-                                    v-else
+                                    v-else-if="showsSubscribe"
                                     class="shrink-0"
                                     :loading="checkoutForm.processing"
                                     data-testid="billing-subscribe"
@@ -323,6 +376,27 @@ const selectPlan = (planId: string): void => {
                                     {{ $t('billing.current_plan.subscribe') }}
                                 </Button>
                             </div>
+                        </div>
+                        <div
+                            v-if="hasComplimentary"
+                            class="flex flex-col gap-1 border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground sm:px-6"
+                            data-testid="billing-current-plan-complimentary"
+                        >
+                            <p>{{ $t('rxdesk.complimentary.plan_given') }}</p>
+                            <p
+                                v-if="complimentary?.ends_at"
+                                class="text-foreground"
+                                data-testid="billing-current-plan-complimentary-until"
+                            >
+                                {{ complimentaryUntilLine($t) }}
+                            </p>
+                            <p
+                                v-else
+                                class="text-foreground"
+                                data-testid="billing-current-plan-complimentary-no-end"
+                            >
+                                {{ $t('rxdesk.complimentary.no_end') }}
+                            </p>
                         </div>
                         <p
                             v-if="subscriptionStatus === 'trial' && trialEndsAt"
@@ -362,7 +436,10 @@ const selectPlan = (planId: string): void => {
                         </p>
                     </div>
 
-                    <Dialog v-model:open="isPlanDialogOpen">
+                    <Dialog
+                        v-if="showsChangePlan"
+                        v-model:open="isPlanDialogOpen"
+                    >
                         <DialogContent
                             class="sm:max-w-3xl"
                             data-testid="billing-plan-dialog"
@@ -390,7 +467,7 @@ const selectPlan = (planId: string): void => {
                 </SettingsSection>
 
                 <SettingsSection
-                    v-if="hasSubscription"
+                    v-if="showsSubscriptionSection"
                     :title="$t('billing.subscription.title')"
                     :description="$t('billing.subscription.description')"
                 >

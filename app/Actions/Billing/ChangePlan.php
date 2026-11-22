@@ -30,6 +30,12 @@ class ChangePlan
      */
     public function execute(Account $account, Plan $plan, Interval $interval): Response
     {
+        // A Complimentary Plan replaces Checkout: the System admin ends it
+        // before the Account can subscribe (ADR 0006).
+        if ($account->isComplimentary()) {
+            return back()->with('flash.error', __('rxdesk.complimentary.checkout_blocked'));
+        }
+
         if (BlockedCountries::isBlocked($account->owner?->country)) {
             return back()->with('flash.error', __('rxdesk.country.blocked'));
         }

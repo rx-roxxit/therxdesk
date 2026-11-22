@@ -22,6 +22,13 @@ class StartSubscriptionCheckout
 {
     public function redirect(Account $account, string $priceId, string $cancelUrl, ?Plan $plan = null, ?Offer $offer = null, CheckoutOrigin $origin = CheckoutOrigin::Welcome): Response
     {
+        // A Complimentary Plan replaces Checkout: the System admin ends it
+        // before the Account can subscribe (ADR 0006).
+        if ($account->isComplimentary()) {
+            return redirect()->route('app.billing.index')
+                ->with('flash.error', __('rxdesk.complimentary.checkout_blocked'));
+        }
+
         // A leftover Workspaces row (unpaid/canceled without `deleted`) would
         // let Processing treat auth.plan as checkout-complete and skip the wait.
         if (filled($account->plan_id) && ! $account->onGenericTrial()) {
