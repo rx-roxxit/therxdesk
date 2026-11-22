@@ -38,6 +38,7 @@ class Account extends Model
         'owner_id',
         'name',
         'plan_id',
+        'ai_credits_per_month',
         'trial_ends_at',
     ];
 
@@ -51,6 +52,7 @@ class Account extends Model
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
         'video_policy' => VideoPolicy::class,
+        'ai_credits_per_month' => 'integer',
     ];
 
     public function owner(): BelongsTo
@@ -250,6 +252,19 @@ class Account extends Model
         }
 
         return $this->subscribed(self::SUBSCRIPTION_NAME) || $this->onGenericTrial();
+    }
+
+    /**
+     * The AI credits the Account gets every month: its own override, else its
+     * Plan's. Null when neither is set.
+     */
+    public function aiCreditsPerMonth(): ?int
+    {
+        if (filled($this->ai_credits_per_month)) {
+            return (int) $this->ai_credits_per_month;
+        }
+
+        return $this->plan?->ai_credits_per_month;
     }
 
     public function workspaceLimit(): ?int

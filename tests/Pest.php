@@ -26,6 +26,7 @@ use Illuminate\Testing\TestResponse;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
 use Tests\BrowserTestCase;
+use Tests\Support\FakeCatalogStripe;
 use Tests\Support\FakeDiskSpace;
 use Tests\TestCase;
 
@@ -48,6 +49,9 @@ pest()->extend(TestCase::class)
         fakeChatGptEgressRanges();
         FakeDiskSpace::bindRoomy();
         Queue::fake([BootstrapAccountAnalytics::class]);
+    })
+    ->afterEach(function (): void {
+        ApiRequestor::setHttpClient(null);
     })
     ->in('Feature', 'Unit');
 
@@ -499,6 +503,20 @@ function fakeStripeBilling(Account $account, ?array $coupon = null, ?int $discou
             ];
         }
     });
+}
+
+/**
+ * Answers the Catalog's Product and Price calls from memory, recording every
+ * request. Reset after each test with ApiRequestor::setHttpClient(null).
+ */
+function fakeCatalogStripe(): FakeCatalogStripe
+{
+    config(['cashier.secret' => 'sk_test_fake']);
+
+    $fake = new FakeCatalogStripe;
+    ApiRequestor::setHttpClient($fake);
+
+    return $fake;
 }
 
 /**

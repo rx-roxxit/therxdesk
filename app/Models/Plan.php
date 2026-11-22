@@ -25,6 +25,7 @@ class Plan extends Model
         'workspace_limit',
         'sort',
         'is_archived',
+        'stripe_product_id',
     ];
 
     protected function casts(): array

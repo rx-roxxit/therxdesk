@@ -244,6 +244,10 @@ class AccountStorage
             return (int) $account->quota_bytes;
         }
 
+        if (filled($account->plan?->quota_bytes)) {
+            return (int) $account->plan->quota_bytes;
+        }
+
         return self::defaultQuota();
     }
 
@@ -263,7 +267,7 @@ class AccountStorage
      */
     public function ownerAccounts(): Collection
     {
-        return Account::query()->whereHas('workspaces')->with('owner')->get();
+        return Account::query()->whereHas('workspaces')->with(['owner', 'plan'])->get();
     }
 
     /**

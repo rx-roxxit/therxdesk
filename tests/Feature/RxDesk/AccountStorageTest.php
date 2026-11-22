@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Account;
 use App\Models\Media;
+use App\Models\Plan;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Workspace;
@@ -53,6 +54,28 @@ test('the default Quota comes from env', function () {
     config(['rxdesk.storage.default_quota' => '750MB']);
 
     expect(app(AccountStorage::class)->usage($this->account)->limit)->toBe(750 * $this->mb);
+});
+
+test('an Account on a Plan uses the Plan Quota when it has no override', function () {
+    $plan = Plan::factory()->create(['quota_bytes' => 2 * 1024 * $this->mb]);
+    $this->account->update(['plan_id' => $plan->id]);
+
+    expect(app(AccountStorage::class)->limit($this->account))->toBe(2 * 1024 * $this->mb);
+});
+
+test('an Account override wins over its Plan Quota', function () {
+    $plan = Plan::factory()->create(['quota_bytes' => 2 * 1024 * $this->mb]);
+    $this->account->update(['plan_id' => $plan->id]);
+    $this->account->forceFill(['quota_bytes' => 8 * 1024 * $this->mb])->save();
+
+    expect(app(AccountStorage::class)->limit($this->account))->toBe(8 * 1024 * $this->mb);
+});
+
+test('an Account whose Plan has no Quota falls back to the env default', function () {
+    $plan = Plan::factory()->create(['quota_bytes' => null]);
+    $this->account->update(['plan_id' => $plan->id]);
+
+    expect(app(AccountStorage::class)->limit($this->account))->toBe(5 * 1024 * $this->mb);
 });
 
 test('an account can store bytes up to its Quota and no further', function () {

@@ -59,12 +59,27 @@ class QuotaCommand extends Command
     private function show(AccountStorage $storage, Account $account): int
     {
         $usage = $storage->usage($account);
-        $source = blank($account->quota_bytes) ? ' (default Quota)' : '';
+        $source = $this->quotaSource($account);
 
         $this->info("{$this->email()} uses {$this->size($usage->used)} of {$this->size($usage->limit)}{$source}.");
         $this->reportCommitment($storage);
 
         return self::SUCCESS;
+    }
+
+    private function quotaSource(Account $account): string
+    {
+        if (filled($account->quota_bytes)) {
+            return '';
+        }
+
+        $plan = $account->plan;
+
+        if (filled($plan?->quota_bytes)) {
+            return " (from the {$plan->name} Plan)";
+        }
+
+        return ' (default Quota)';
     }
 
     private function set(AccountStorage $storage, Account $account): int
