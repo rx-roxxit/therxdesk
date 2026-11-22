@@ -19,10 +19,15 @@ $V/mail.sh clear
 - `latest` prints the newest matching `ID` and subject, and exits 1 when nothing matches.
 - `wait` polls every 2 seconds until a matching email arrives (60 seconds by default), then prints its
   `ID` and subject.
-- `show` prints the subject, recipients, date and plain-text body, because callers need the body.
+- `show` prints the subject, recipients, date and body, because callers need the body: the plain-text part, or the
+  HTML part with its tags stripped when the mail has none (the app's own mail is HTML-only).
 - `clear` empties the inbox. It also removes unrelated mail the dev stack sent earlier.
 
 The script reads Mailpit at `MAILPIT_URL` (`VERIFY_MAILPIT_URL`, default `http://localhost:8025`).
+
+A fresh checkout seeded from the root `.env.example` points mail at `127.0.0.1:2525`, not Mailpit: the running dev
+`.env` must say `MAIL_MAILER=smtp`, `MAIL_HOST=mailpit`, `MAIL_PORT=1025` (the Docker template
+`docker/.env.docker.example` has the right values).
 
 ## Proof checklist
 

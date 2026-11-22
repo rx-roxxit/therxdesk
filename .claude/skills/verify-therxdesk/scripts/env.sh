@@ -42,14 +42,26 @@ SELLING_MARKER="$STATE_DIR/selling"
 SELLING_SECRET_FILE="$STATE_DIR/stripe-webhook.env"
 INTERNAL_SECRET_FILE="$STATE_DIR/internal-api.env"
 
+# Media on R2 (media.sh): the app runs with FILESYSTEM_DISK=r2 while the r2
+# marker exists, through the overlay below. It stacks on the selling overlay
+# when that is on too; .env is never edited.
+R2_OVERLAY="$SKILL_DIR/scripts/compose.r2.yaml"
+R2_MARKER="$STATE_DIR/r2"
+
 compose() {
+    local extra=()
+
+    if [ -f "$R2_MARKER" ]; then
+        extra+=(-f "$R2_OVERLAY")
+    fi
+
     if [ -f "$SELLING_MARKER" ]; then
         docker compose --progress quiet --project-directory "$MAIN_CHECKOUT" \
-            -f "$MAIN_CHECKOUT/compose.yaml" -f "$MAIN_CHECKOUT/compose.override.yaml" -f "$SELLING_OVERLAY" "$@"
+            -f "$MAIN_CHECKOUT/compose.yaml" -f "$MAIN_CHECKOUT/compose.override.yaml" -f "$SELLING_OVERLAY" "${extra[@]}" "$@"
         return
     fi
 
-    docker compose --progress quiet --project-directory "$MAIN_CHECKOUT" "$@"
+    docker compose --progress quiet --project-directory "$MAIN_CHECKOUT" "${extra[@]}" "$@"
 }
 
 # wait_for <what> <seconds> <command...>: retry the command every 2 seconds

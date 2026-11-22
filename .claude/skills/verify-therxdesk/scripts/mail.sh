@@ -126,6 +126,37 @@ case "$ACTION" in
         encoded="$(python3 -I -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$ID")"
         curl -fsS --max-time 10 "$MAILPIT_URL/api/v1/message/$encoded" | python3 -I -c '
 import json, sys
+from html.parser import HTMLParser
+
+class PlainText(HTMLParser):
+    """The readable text of an HTML mail: tags dropped, blocks on their own line."""
+
+    BLOCKS = ("br", "p", "div", "tr", "li", "h1", "h2", "h3", "table")
+
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+        self.skipping = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("style", "script"):
+            self.skipping += 1
+        if tag in self.BLOCKS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag):
+        if tag in ("style", "script") and self.skipping:
+            self.skipping -= 1
+
+    def handle_data(self, data):
+        if not self.skipping:
+            self.parts.append(data)
+
+def plain_text(html):
+    parser = PlainText()
+    parser.feed(html)
+    lines = [line.strip() for line in "".join(parser.parts).splitlines()]
+    return "\n".join(line for line in lines if line)
 
 message = json.load(sys.stdin)
 addresses = ", ".join(item.get("Address", "") for item in (message.get("To") or []))
@@ -133,7 +164,8 @@ print("Subject: %s" % message.get("Subject", ""))
 print("To: %s" % addresses)
 print("Date: %s" % message.get("Date", ""))
 print()
-print(message.get("Text") or "")
+# The app sends HTML-only mail, so Text is usually empty: read the HTML then.
+print(message.get("Text") or plain_text(message.get("HTML") or ""))
 '
         ;;
     clear)

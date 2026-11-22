@@ -14,6 +14,9 @@ source "$(dirname "$0")/env.sh"
 # Back to .env's mode: stop the Stripe listener, recreate app without the overlay.
 "$(dirname "$0")/selling.sh" down
 
+# Back to .env's media disk, if media.sh up was run.
+"$(dirname "$0")/media.sh" down
+
 if [ -f "$STATE_DIR/started-stack" ]; then
     echo "[cleanup] stopping the dev stack launch.sh started"
     compose stop

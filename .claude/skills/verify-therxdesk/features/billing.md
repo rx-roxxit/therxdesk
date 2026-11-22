@@ -5,8 +5,8 @@ invoices, and manages the subscription on Stripe's Customer Portal.
 
 ## Sub-features
 
-- Entry: account menu (`@sidebar-workspace-menu`) → `@sidebar-menu-billing`, or Settings → `@settings-nav-billing`.
-  Owner only (a member gets 403); selling mode only.
+- Entry: account menu (`@sidebar-workspace-menu`) → `@sidebar-menu-billing` ("Plans and billing"), or Settings →
+  `@settings-nav-billing`. Owner only (any non-owner, a member or a non-owner admin, gets 403); selling mode only.
 - Plan tab: current plan (`@billing-current-plan-name`, `-price`, `-badge`, `-status` for a trial, cancel or past
   due, `-discount`), "Change plan" (`@billing-change-plan`), "Subscribe" (`@billing-subscribe`, a generic trial).
 - Plan dialog (`@billing-plan-dialog`, `PlanPicker`): Monthly / Yearly (`@plan-interval-<interval>`,
@@ -15,11 +15,12 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   it opens Checkout.
 - Payment methods (`@billing-payment-methods`, `@billing-card-<id>`), "Manage on Stripe" (`@billing-manage-stripe`,
   the Customer Portal).
-- Invoices tab (`@billing-tab-invoices`, `@billing-invoices`, `@billing-invoice-download-<id>`).
+- Invoices tab (`@billing-tab-invoices`, `@billing-invoices`, `@billing-invoice-download-<id>`, empty state
+  `@billing-invoices-empty`); `/settings/account/billing?tab=invoices` deep-links to it.
 
 ## How to get to it (user POV)
 
-In selling mode, with a subscribed Owner: open the account menu, choose "Billing".
+In selling mode, with a subscribed Owner: open the account menu, choose "Plans and billing".
 
 ## Driving it with Playwright
 

@@ -23,14 +23,14 @@ followers chart opens the share card.
 
 ## Driving it with Playwright
 
-1. Start the stack with the proof overlay that sets `FILESYSTEM_DISK=r2` (the selling overlay plus that one
-   variable; `.env` is untouched).
+1. `selling.sh up` (the journey needs a subscribed Owner), then `media.sh up`: it recreates `app` with
+   `FILESYSTEM_DISK=r2` through `compose.r2.yaml`, without editing `.env`.
 2. `fixture.sh up` for a fresh Owner.
 3. `drive.sh welcome-checkout` once, so the fixture Owner has a subscription and reaches the Schedule.
 4. `media.sh seed`: it creates an analytics-included Instagram channel on the fixture, uploads its avatar to the
    default disk, and writes two follower readings.
 5. `drive.sh media-on-r2`.
-6. `media.sh clear`, then `selling.sh down`.
+6. `media.sh clear`, then `media.sh down`, then `selling.sh down`.
 
 The journey checks:
 
@@ -45,6 +45,8 @@ The journey checks:
 ## Gotchas
 
 - `media.sh seed` refuses to run while the default disk is local, so a pass cannot come from the wrong disk.
+  `media.sh up` and `media.sh down` switch the disk; the marker stacks on the selling overlay, so any later
+  `selling.sh up` keeps r2 on.
 - The dev bucket's public URL is its `r2.dev` address; the production bucket is served from a public custom domain
   set in `R2_URL`.
 - The bucket must answer `GET` with CORS from the app's origin (`http://localhost:8000` in dev). Without it the

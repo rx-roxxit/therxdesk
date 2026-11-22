@@ -12,12 +12,12 @@ gives the Account access, and lands on the Schedule.
   (Standard, Plus, Max) are on billing's change-plan picker. Prices come from `plan_prices` (see
   `selling-mode.md`).
 - An Offer changes the Plan step: a banner (`@welcome-plan-offer`), a discounted price, a trial, or a no-card trial
-  that skips Checkout. The fixture has no Offer; `OfferSeeder` has local ones, but its coupons are upstream's and
-  are not in this sandbox.
+  that skips Checkout. The fixture has no Offer. `OfferSeeder` has local rows, but its coupons are Stripe
+  test-mode objects that this sandbox does not guarantee, so the journey always takes the full-price path.
 - Stripe Checkout (hosted, sandbox): promotion code field, card form in a Stripe Elements iframe, Link opt-in.
 - Processing (`/billing/processing`) polls until the Account has access, then opens the Schedule.
-- The webhooks (`checkout.session.completed`, `customer.subscription.created`, `invoice.paid`, ...) write the
-  `subscriptions` row and the Account's Plan.
+- The webhooks: Cashier's handlers write the `subscriptions` row, and `customer.subscription.created` / `updated`
+  writes the Account's Plan (`accounts.plan_id`).
 
 ## How to get to it (user POV)
 
@@ -27,7 +27,7 @@ the Plan step. On Stripe's page type the test card and press "Subscribe".
 ## Driving it with Playwright
 
 - Journey: `$V/drive.sh welcome-checkout`, after `fixture.sh up` (the journey needs an Owner who has not answered
-  Welcome; a second run on the same fixture lands on the Plan step and fails).
+  Welcome: a second run on the paid fixture lands on the Schedule and times out waiting for the persona step).
 - Stripe's page: `payOnStripeCheckout()` in `drive.ts` finds the Elements frame holding `#payment-numberInput` and
   fills card `4242 4242 4242 4242`, an expiry two years ahead, CVC `123` and a name, then presses
   `[data-testid="payment-form-submit-button"]`. The billing country follows the IP (Thailand here); a US country

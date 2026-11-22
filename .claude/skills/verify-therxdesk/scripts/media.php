@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Insights page includes in analytics, its avatar stored on the default disk,
  * and two follower readings so the share card has something to draw. Never run
  * it against production. Run it through media.sh, which runs it in the app
- * image with the selling overlay when that is up.
+ * image with the selling and r2 overlays when those are up.
  *
  *   php media.php seed    upload the avatar and write the readings (idempotent)
  *   php media.php clear   remove the channel, its readings and the avatar
@@ -78,7 +78,7 @@ function seed(): void
     $disk = (string) config('filesystems.default');
 
     if (in_array($disk, ['local', 'public'], true)) {
-        fwrite(STDERR, "the default disk is {$disk}; start the stack with FILESYSTEM_DISK=r2 (selling.sh up with the proof overlay)\n");
+        fwrite(STDERR, "the default disk is {$disk}; run media.sh up first\n");
         exit(1);
     }
 

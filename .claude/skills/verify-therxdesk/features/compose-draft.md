@@ -6,7 +6,7 @@ without a date.
 ## Sub-features
 
 - Open the composer from "New post" (`@posts-new-post`) on the Schedule's List and Board views or on a channel's
-  Grid.
+  Grid; it also opens from the sidebar's New menu and a calendar slot.
 - Pick channels (`@composer-add-account`, then `@composer-account-option-<channel id>`).
 - Write the caption per channel (`@composer-caption-<channel id>`) or the shared text (`@composer-base-content`).
 - Live network preview (LinkedIn preview for the fixture channel).
@@ -23,8 +23,8 @@ The dialog closes and the list opens on the Drafts tab, with the draft under "Un
 
 - Journey: `$V/drive.sh compose-draft`. The caption is `Verify draft <ISO time>`, recorded in
   `result.json` → `notes.caption`.
-- The view switch has no test id: the journey clicks `getByRole('link', { name: 'List', exact: true })` and waits
-  for the path `/schedule`.
+- The view switch exposes `@schedule-view-<key>` (`@schedule-view-list`, `-calendar`, `-board`, `-grid`); the
+  journey clicks `@schedule-view-list` and waits for the path `/schedule`.
 - End state: the URL is `/schedule?tab=drafts` and a card with the caption is visible (`05-draft-in-list.png`).
 - Side effect, from the host:
   `$V/db.sh "select id, status, content from posts where workspace_id = '<workspaceId>'"` shows a row with

@@ -8,12 +8,12 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Sign in with email and password | [sign-in.md](sign-in.md) | `sign-in` |
 | Register a new Owner at `/register` (`selling.sh up`) | [registration.md](registration.md) | `register` |
 | Write a post and save it as a draft | [compose-draft.md](compose-draft.md) | `compose-draft` |
-| Storage bar in the account menu | [storage-bar.md](storage-bar.md) | not written yet |
-| Switch the app language from the sidebar | [language-switch.md](language-switch.md) | not written yet |
+| Storage bar in the account menu | [storage-bar.md](storage-bar.md) | `storage-bar` |
+| Switch the app language from the sidebar | [language-switch.md](language-switch.md) | `language-switch` |
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout` |
 | Billing: current plan, change plan, cards, Customer Portal (`selling.sh up`) | [billing.md](billing.md) | `billing` |
-| Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `FILESYSTEM_DISK=r2`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
+| Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `media.sh up`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 | The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |
 | Admin alerts, heartbeat, capacity check and health (`selling.sh up`) | [admin-alerts.md](admin-alerts.md) | not a browser journey; selling.sh + internal.sh |

@@ -288,8 +288,8 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.waitForLoadState('networkidle');
         await run.step('after-sign-in');
 
-        // The Schedule opens on the view the user picked last (Calendar for a
-        // new user), so any /schedule path is the Schedule.
+        // The login form redirects to the Calendar route; the page's `view`
+        // prop defaults to week, so any /schedule path is the Schedule.
         const landedOn = new URL(page.url()).pathname;
         run.check(
             'lands on the Schedule',
@@ -419,10 +419,8 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.reload();
 
         // A new user lands on the Calendar view; the List view holds the
-        // New Post button the browser tests use. The view switch has no test
-        // id, so it is reached by role and its English name (the fixture
-        // Owner's locale is the default, English).
-        await page.getByRole('link', { name: 'List', exact: true }).click();
+        // New Post button the browser tests use.
+        await page.locator(tid('@schedule-view-list')).click();
         await page.waitForURL((url) => url.pathname === '/schedule');
         await page.locator(tid('@posts-new-post')).waitFor();
         await run.step('schedule');
@@ -911,6 +909,117 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         }
 
         await run.step('after-uploads');
+    },
+
+    /** features/storage-bar.md */
+    'storage-bar': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+        await page.locator(tid('@sidebar-workspace-menu')).waitFor();
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        const usage = page.locator(tid('@sidebar-menu-storage-usage'));
+        await usage.waitFor();
+        await run.step('account-menu-storage');
+
+        const storage = await page.evaluate(() => {
+            return window.history.state?.page?.props?.storage ?? null;
+        });
+        const shown = (await usage.textContent())?.trim() ?? null;
+        run.check(
+            'the storage row shows the usage against the quota',
+            storage !== null &&
+                shown !== null &&
+                shown.includes(storage.used_label) &&
+                shown.includes(storage.limit_label),
+            { shown, storage },
+        );
+        run.check(
+            'the storage row has a progress bar',
+            (await page.locator(tid('@sidebar-menu-storage-progress')).count()) ===
+                1,
+            await page.locator(tid('@sidebar-menu-storage-progress')).count(),
+        );
+        run.note('storage', storage);
+
+        await page.locator(tid('@sidebar-menu-storage')).click();
+        await page.waitForURL((url) => url.pathname === '/settings/preferences');
+        // SettingsSelect puts the test id on its trigger, not on the row.
+        const videoPolicy = page.locator('#video-policy');
+        await videoPolicy.waitFor();
+        await run.step('preferences-video-policy');
+
+        run.check(
+            'the storage row opens the Video policy',
+            new URL(page.url()).hash === '#video-policy' &&
+                (await videoPolicy.isVisible()) &&
+                (await page
+                    .locator(tid('@preferences-video-policy-trigger'))
+                    .isVisible()),
+            {
+                hash: new URL(page.url()).hash,
+                visible: await videoPolicy.isVisible(),
+            },
+        );
+    },
+
+    /** features/language-switch.md */
+    'language-switch': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+        await page.waitForURL((url) => url.pathname.startsWith('/schedule'));
+        await page.locator(tid('@sidebar-workspace-menu')).waitFor();
+
+        // A full page load would clear this flag.
+        await page.evaluate(() => {
+            (window as unknown as { __notReloaded?: boolean }).__notReloaded =
+                true;
+        });
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        const trigger = page.locator(tid('@sidebar-language-trigger'));
+        await trigger.waitFor();
+
+        // A Radix sub-trigger opens on a pointer move, not on a click alone.
+        await trigger.dispatchEvent('pointermove');
+        await trigger.click();
+        await page.locator(tid('@sidebar-language-ja')).click();
+
+        // The sidebar's Publish link is "公開" once the locale is Japanese.
+        const published = page.getByRole('link', {
+            name: '公開',
+            exact: true,
+        });
+        await published.waitFor();
+        await run.step('sidebar-in-japanese');
+
+        const notReloaded = await page.evaluate(() => {
+            return (
+                (window as unknown as { __notReloaded?: boolean })
+                    .__notReloaded === true
+            );
+        });
+        run.check(
+            'the page translates without a full reload',
+            notReloaded,
+            notReloaded,
+        );
+        run.check(
+            'the sidebar reads in Japanese',
+            (await published.count()) === 1,
+            await published.count(),
+        );
+
+        const locale = await page.evaluate(() => {
+            return window.history.state?.page?.props?.locale ?? null;
+        });
+        run.check('the shared locale is ja', locale === 'ja', locale);
     },
 };
 

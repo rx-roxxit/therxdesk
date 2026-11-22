@@ -3,9 +3,10 @@
 The System admin gets one email alert system: `[URGENT]` at once, `[RESOLVED]` when it clears,
 `[TODAY]` at most once every 6 hours per condition, and `[DIGEST]` at 08:00 Asia/Bangkok only when
 there is something to report. The scheduler dispatches a heartbeat job every 5 minutes, and a
-capacity command every 5 minutes reads host RAM and load, the Horizon queue wait and free disk.
-Nightwatch's webhook feeds the TODAY burst alert and the digest. `GET /internal/v1/health` gives the
-admin app the figures. There is no UI.
+capacity command every 5 minutes reads host RAM and load, the Horizon queue wait, free disk and the
+Nightwatch burst. Nightwatch's webhook feeds the TODAY burst alert and the digest. `GET
+/internal/v1/health` gives the admin app the figures. There is no UI. All three scheduled jobs run
+only in selling mode (`routes/console.php`); call the command directly to exercise them otherwise.
 
 ## Alerts
 
@@ -13,11 +14,14 @@ admin app the figures. There is no UI.
 | --- | --- | --- |
 | `[URGENT]` | free disk near the Disk guard threshold | once per open cycle |
 | `[RESOLVED]` | an URGENT condition clears | once per open cycle |
-| `[TODAY]` | RAM > 75%, 5-minute load > 5, queue wait > 2 min, free disk < 30 GB, a Nightwatch burst | one per condition per 6 hours |
-| `[DIGEST]` | 08:00 Asia/Bangkok, only when non-empty | cleared TODAY alerts, new issues, yesterday's failed jobs |
+| `[TODAY]` | RAM > 75%, 5-minute load > 5, queue wait > 2 min, free disk < 30 GB, a Nightwatch burst (5 issues an hour) | one per condition per 6 hours |
+| `[DIGEST]` | 08:00 Asia/Bangkok, only when non-empty | cleared TODAY alerts, new issues, yesterday's failed jobs, a due restore drill (a fresh install sends it daily until a drill is recorded) |
+
+A free disk inside the Disk guard plus its 5 GB margin raises `[URGENT]` and suppresses the TODAY
+disk alert, so the same run raises one or the other, never both.
 
 Recipient: `RXDESK_ALERT_RECIPIENT` (default `admin@therxdesk.com`). In selling mode the dev stack
-points it at the Mailpit inbox. The endpoint is `POST /webhooks/nightwatch`, signed with
+points it at the Mailpit inbox. Subjects are `[TAG] The RX Desk: <condition title>`. The endpoint is `POST /webhooks/nightwatch`, signed with
 `NIGHTWATCH_WEBHOOK_SECRET` in the `Nightwatch-Signature` header (raw `hash_hmac('sha256', body, secret)`).
 With no secret configured it answers 404.
 
