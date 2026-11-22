@@ -122,6 +122,19 @@ false as soon as that fact is set. `BlockedCheckoutCancel` cancels the status;
 `BlockedCheckoutCancelFails` keeps the status and leaves only the fact, and the
 invariant still refuses access.
 
+### 7. A Complimentary Plan grants access and never a Trial (`complimentary-access`, `complimentary-no-trial`)
+
+`Account::isComplimentary()` reads `accounts.complimentary_since` /
+`complimentary_until` every time, so a passed end date grants no access and,
+with no Subscription, makes the Account Lapsed. `hasAppAccess()` adds that
+state unless a blocked checkout already ended it. Giving the Plan does not
+touch `trial_ends_at`; `canStartTrial()` is false for good once the Account was
+ever given one, and `StartSubscriptionCheckout::redirect()` /
+`ChangePlan::execute()` refuse a Checkout. `ComplimentaryHasAccess` /
+`ComplimentaryEndedNoAccess` / `ComplimentaryEndedIsLapsed` check the access
+side; `ComplimentaryNoTrial` checks that a given Account's Checkout Sessions
+open without a Trial.
+
 ### Not modelled: two subscriptions can coexist
 
 Nothing stops a second Stripe subscription from being created while the first
@@ -180,6 +193,12 @@ Sync commit: **33ab087d**. Confirmed against these files and functions:
 | `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()` | `CanStartTrial`, `HasAppAccess` |
 | `Account::currentOffer(withTrial: false)` — a billing checkout takes a coupon Offer (even with trial days, which `canStartTrial()` then suppresses) but never a trial-only one | not a Trial-grant rule; `CanStartTrial` still decides |
 | `Account::hasAppAccess()` — a blocked checkout ends access, a paid past-due keeps it | `HasAppAccess`, `BlockedNoAccess` |
+| `Account::isComplimentary()` / `hadComplimentaryPlan()` — the Complimentary columns are read every time, so a passed end date ends access; ever given is permanent | `ComplimentaryHasAccess`, `ComplimentaryEndedNoAccess`, `ComplimentaryEndedIsLapsed`; `comp` |
+| `Account::isLapsed()` — no Subscription and no generic trial, and the Account paid before or was ever given a Complimentary Plan | `Lapsed` |
+| `Account::canStartTrial()` — false for good once a Complimentary Plan was given | `CanStartTrial`'s `comp[a] = FALSE` |
+| `ComplimentaryPlans::give()` / `end()` — the Account's own columns plus an audit row; give refuses a Subscription or a blocked country, end defaults 30 days ahead | `GiveComplimentary` / `EndComplimentary` (the refusal is the action's precondition) |
+| `ChangePlan::execute()` — a Complimentary Account is refused before a swap or Checkout | `OpenCheckout` disabled while `comp` |
+| `2026_11_23_000000_add_complimentary_plan_to_accounts_table.php` — `accounts.complimentary_since` / `complimentary_until` | the facts `GiveComplimentary` / `EndComplimentary` write |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
 | `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
 | `2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php` — `users.country`, `accounts.blocked_country*` | the facts `BlockedCheckoutCancel` writes |
@@ -194,11 +213,14 @@ Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Support/Billing/TrialCards.php`,
 `app/Support/Billing/CardFingerprint.php`,
 `app/Support/Billing/BlockedCountries.php`,
+`app/Services/Billing/ComplimentaryPlans.php`,
+`app/Actions/Billing/ChangePlan.php`,
 `app/Listeners/StripeCheckoutSessionListener.php`, `app/Models/Account.php`,
 `app/Models/Subscription.php`, `app/Models/TrialAccount.php`,
 `database/migrations/2026_11_22_120000_add_billing_facts.php`,
 `database/migrations/2026_11_22_130000_add_trial_accounts.php`,
-`database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php`.
+`database/migrations/2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php`,
+`database/migrations/2026_11_23_000000_add_complimentary_plan_to_accounts_table.php`.
 
 ## Bounds and assumptions
 
@@ -223,6 +245,12 @@ Covered files: `app/Listeners/StripeEventListener.php`,
 - Access is read from one subscription, as `Account::subscription()` does; the
   multi-subscription "latest row" selection is not modelled. Two subscriptions
   can coexist, which is reported separately, not checked here.
+- A Complimentary Plan is given only to an Account with no Subscription and not
+  blocked (the service refuses both), and the model assumes no Checkout is in
+  flight when it is given. Once in force, no Checkout opens for that Account;
+  `canStartTrial()` is false from the permanent fact.
+- A Complimentary Plan's end date passing is a read (`isComplimentary()`), not
+  an action: `EndComplimentary` is the state that read reaches.
 
 No-card Trials are gone (November 2026): `StartGenericTrial`,
 `Offer::startsWithoutCard()`, `requires_card` and the listener's
@@ -233,7 +261,9 @@ legacy generic trial (`accounts.trial_ends_at`) still grants access, which
 
 Not covered: fingerprint retrieval failures, an Offer's `trial_days` and
 coverage beyond the gate above, plan and Offer writes, PostHog, dunning
-schedules, deletion/re-signup, tax, currency and price logic.
+schedules, deletion/re-signup, tax, currency and price logic, and the
+Complimentary date arithmetic (the 30-day default and the 2037 ceiling) with
+its screens.
 
 ## Add a check
 

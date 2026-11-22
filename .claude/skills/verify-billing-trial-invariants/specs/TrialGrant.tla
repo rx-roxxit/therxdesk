@@ -15,6 +15,10 @@
 \* A redelivery of the same created event finds both claims written by its own
 \* subscription and is a no-op (TrialClaim::Owned).
 \*
+\* Complimentary Plans (#59): ComplimentaryPlans::give() refuses a Subscription,
+\* and Account::canStartTrial() is false forever once the Account was given one,
+\* so a Checkout never opens with a Trial while the Plan is in force.
+\*
 \* Accounts {a1,a2}, cards {c1,c2}, subscriptions:
 \*   s1 = a1/c1, s2 = a1/c2 (the same Account, two cards),
 \*   s3 = a2/c1 (the same card, two Accounts).
@@ -29,10 +33,11 @@ CardOf == [s1 |-> "c1", s2 |-> "c2", s3 |-> "c1"]
 CONSTANT AllowRedelivery
 
 VARIABLES open, expired, sessionTrial, exists, stripeTrialing,
-          started, skipped, ending, handled, replayed, ever, claim, acctClaim, firstPaid
+          started, skipped, ending, handled, replayed, ever, claim, acctClaim, firstPaid,
+          comp
 
 vars == <<open, expired, sessionTrial, exists, stripeTrialing, started, skipped,
-          ending, handled, replayed, ever, claim, acctClaim, firstPaid>>
+          ending, handled, replayed, ever, claim, acctClaim, firstPaid, comp>>
 
 Init ==
   /\ open = [s \in SUBS |-> FALSE]
@@ -49,21 +54,36 @@ Init ==
   /\ claim = [f \in Cards |-> "none"]
   /\ acctClaim = [a \in Accounts |-> "none"]
   /\ firstPaid = [a \in Accounts |-> FALSE]
+  /\ comp = [a \in Accounts |-> FALSE]
 
 \* Account::canStartTrial() at the moment the Checkout Session is created.
+\* A Complimentary Plan was ever given: false for good (`hadComplimentaryPlan()`).
 CanStartTrial(a) ==
   /\ firstPaid[a] = FALSE
   /\ acctClaim[a] = "none"
+  /\ comp[a] = FALSE
   /\ \A s \in SUBS : (AcctOf[s] = a) => (started[s] = FALSE)
+
+\* ComplimentaryPlans::give(): the System admin gives the Account a Plan for
+\* free. The service refuses a Subscription; the Account here has no Checkout
+\* in flight and no Trial behind it, so the two rules stay comparable.
+GiveComplimentary(a) ==
+  /\ comp[a] = FALSE
+  /\ \A s \in SUBS : (AcctOf[s] = a) => (open[s] = FALSE /\ sessionTrial[s] = FALSE /\ started[s] = FALSE)
+  /\ comp' = [comp EXCEPT ![a] = TRUE]
+  /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, started,
+                 skipped, ending, handled, replayed, ever, claim, acctClaim, firstPaid>>
 
 \* ConfigureSubscriptionCheckout::apply(): the session is created with or
 \* without a trial. That decision is frozen in the Stripe session.
 \* OpenCheckoutSessions::expire() closes the Account's other open sessions in
 \* the same request; `expireOthers` is FALSE for the race where both requests
-\* listed before either created its session.
+\* listed before either created its session. A Complimentary Account cannot
+\* open a Checkout (StartSubscriptionCheckout::redirect() refuses it).
 OpenCheckout(s, expireOthers) ==
   /\ open[s] = FALSE
   /\ exists[s] = FALSE
+  /\ comp[AcctOf[s]] = FALSE
   /\ expireOthers \in BOOLEAN
   /\ open' = [open EXCEPT ![s] = TRUE]
   /\ sessionTrial' = [sessionTrial EXCEPT ![s] = CanStartTrial(AcctOf[s])]
@@ -71,7 +91,7 @@ OpenCheckout(s, expireOthers) ==
                 THEN [x \in SUBS |-> expired[x] \/ (open[x] /\ AcctOf[x] = AcctOf[s])]
                 ELSE expired
   /\ UNCHANGED <<exists, stripeTrialing, started, skipped, ending, handled,
-                 replayed, ever, claim, acctClaim, firstPaid>>
+                 replayed, ever, claim, acctClaim, firstPaid, comp>>
 
 \* Checkout completes: Stripe creates the subscription (trialing or active).
 \* No local subscription row exists yet; the webhook has not run. An expired
@@ -88,7 +108,7 @@ CompleteCheckout(s) ==
                     THEN firstPaid
                     ELSE [firstPaid EXCEPT ![AcctOf[s]] = TRUE]
   /\ UNCHANGED <<open, expired, sessionTrial, started, skipped, ending, handled,
-                 replayed, ever, claim, acctClaim>>
+                 replayed, ever, claim, acctClaim, comp>>
 
 \* customer.subscription.created, trialing: both claims are free, so this
 \* subscription takes the Account's one Trial and the card's.
@@ -104,7 +124,7 @@ HandleCreatedTrialNewCard(s) ==
   /\ acctClaim' = [acctClaim EXCEPT ![AcctOf[s]] = s]
   /\ ever' = [ever EXCEPT ![s] = TRUE]
   /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, skipped,
-                 ending, replayed, firstPaid>>
+                 ending, replayed, firstPaid, comp>>
 
 \* customer.subscription.created, trialing, the Account's Trial is already
 \* another subscription's: the skip facts are written before the Stripe call.
@@ -119,7 +139,7 @@ HandleCreatedTrialAccountTaken(s) ==
   /\ skipped' = [skipped EXCEPT ![s] = TRUE]
   /\ ending' = [ending EXCEPT ![s] = TRUE]
   /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, replayed,
-                 ever, claim, acctClaim, firstPaid>>
+                 ever, claim, acctClaim, firstPaid, comp>>
 
 \* customer.subscription.created, trialing, the card already had a Trial: the
 \* Account's claim is taken while it is free, the card is not claimed.
@@ -136,7 +156,7 @@ HandleCreatedTrialRepeatCard(s) ==
   /\ ending' = [ending EXCEPT ![s] = TRUE]
   /\ acctClaim' = [acctClaim EXCEPT ![AcctOf[s]] = s]
   /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, replayed,
-                 ever, claim, firstPaid>>
+                 ever, claim, firstPaid, comp>>
 
 \* customer.subscription.created, active: a subscription born without a trial
 \* records no payment by itself (only a paid invoice above zero proves one).
@@ -146,7 +166,7 @@ HandleCreatedActive(s) ==
   /\ sessionTrial[s] = FALSE
   /\ handled' = [handled EXCEPT ![s] = TRUE]
   /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, started,
-                 skipped, ending, replayed, ever, claim, acctClaim, firstPaid>>
+                 skipped, ending, replayed, ever, claim, acctClaim, firstPaid, comp>>
 
 \* subscriptions.update(trial_end: now) succeeded.
 EndTrialOk(s) ==
@@ -154,7 +174,7 @@ EndTrialOk(s) ==
   /\ ending' = [ending EXCEPT ![s] = FALSE]
   /\ stripeTrialing' = [stripeTrialing EXCEPT ![s] = FALSE]
   /\ UNCHANGED <<open, expired, sessionTrial, exists, started, skipped, handled,
-                 replayed, ever, claim, acctClaim, firstPaid>>
+                 replayed, ever, claim, acctClaim, firstPaid, comp>>
 
 \* subscriptions.update(trial_end: now) failed: the skip facts stay and the
 \* handler answers non-2xx, so Stripe redelivers the event and the call runs
@@ -185,18 +205,20 @@ RedeliverCreated(s) ==
                           THEN [acctClaim EXCEPT ![AcctOf[s]] = s]
                           ELSE acctClaim
   /\ UNCHANGED <<open, expired, sessionTrial, exists, stripeTrialing, started,
-                 handled, ever, claim, firstPaid>>
+                 handled, ever, claim, firstPaid, comp>>
 
 \* An expired session never completes; a user who still wants that Plan
-\* starts a new one. Everything else has been handled and its Stripe call is
-\* not still pending.
+\* starts a new one. A Complimentary Account's subscriptions have no Checkout
+\* to complete. Everything else has been handled and its Stripe call is not
+\* still pending.
 AllDone ==
-  \A s \in SUBS : (handled[s] \/ expired[s]) /\ ending[s] = FALSE
+  \A s \in SUBS : (handled[s] \/ expired[s] \/ comp[AcctOf[s]]) /\ ending[s] = FALSE
 
 Done == AllDone /\ UNCHANGED vars
 
 Next ==
   \/ \E s \in SUBS, expireOthers \in BOOLEAN : OpenCheckout(s, expireOthers)
+  \/ \E a \in Accounts : GiveComplimentary(a)
   \/ \E s \in SUBS : CompleteCheckout(s)
   \/ \E s \in SUBS : HandleCreatedTrialNewCard(s)
   \/ \E s \in SUBS : HandleCreatedTrialAccountTaken(s)
@@ -220,6 +242,11 @@ AccountTrialsKept(a) == {s \in SUBS : ever[s] = TRUE /\ AcctOf[s] = a}
 CardOneTrial == \A f \in Cards : Cardinality(CardTrialsKept(f)) <= 1
 AccountOneTrial == \A a \in Accounts : Cardinality(AccountTrialsKept(a)) <= 1
 WinnerNotSkipped == \A s \in SUBS : (claim[CardOf[s]] = s) => skipped[s] = FALSE
+
+\* An Account given a Complimentary Plan never starts a Trial: its Checkouts
+\* open without one, and it cannot open a new Checkout at all while in force.
+ComplimentaryNoTrial ==
+  \A s \in SUBS : (comp[AcctOf[s]] = TRUE) => (sessionTrial[s] = FALSE /\ started[s] = FALSE)
 
 Spec == Init /\ [][Next]_vars
 

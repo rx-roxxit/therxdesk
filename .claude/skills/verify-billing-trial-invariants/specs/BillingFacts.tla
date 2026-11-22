@@ -8,6 +8,10 @@
 \*     under a lock and leave a CancellationType::Admin row alone
 \*     (Subscription.php:51-113), so a webhook that loaded the row earlier
 \*     cannot replace an admin write.
+\*   ComplimentaryPlans::give() / end() (#59) write the Account's own columns;
+\*     Account::isComplimentary() reads them every time, so a passed end date
+\*     ends the state without a writer. When it ends with no Subscription an
+\*     Account that never paid is Lapsed (Account::isLapsed()).
 EXTENDS Naturals, TLC
 
 Statuses == {"none", "trialing", "active", "past_due", "canceled"}
@@ -17,10 +21,12 @@ Amounts == {0, 1900}
 Outcomes == {"cancel", "resume"}
 
 VARIABLES status, firstPaid, positiveInvoice, zeroCoupon,
-          subType, readDone, readVal, wrote, wasAdmin, blocked
+          subType, readDone, readVal, wrote, wasAdmin, blocked,
+          complimentary, everComplimentary
 
 vars == <<status, firstPaid, positiveInvoice, zeroCoupon,
-          subType, readDone, readVal, wrote, wasAdmin, blocked>>
+          subType, readDone, readVal, wrote, wasAdmin, blocked,
+          complimentary, everComplimentary>>
 
 Init ==
   /\ status = "none"
@@ -33,47 +39,70 @@ Init ==
   /\ wrote = [w \in Writers |-> FALSE]
   /\ wasAdmin = FALSE
   /\ blocked = FALSE
+  /\ complimentary = FALSE
+  /\ everComplimentary = FALSE
 
-\* Checkout created a trialing subscription.
+\* Checkout created a trialing subscription. A Complimentary Account cannot
+\* open a Checkout (StartSubscriptionCheckout::redirect() refuses it).
 StartTrial ==
   /\ status = "none"
+  /\ complimentary = FALSE
   /\ status' = "trialing"
-  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* A checkout with a 100% coupon and no trial: Stripe creates the
 \* subscription active and its first invoice is $0. The created webhook
 \* records no payment; the $0 invoice proves none either.
 SubscriptionBornActiveZeroCoupon ==
   /\ status = "none"
+  /\ complimentary = FALSE
   /\ status' = "active"
   /\ zeroCoupon' = TRUE
-  /\ UNCHANGED <<firstPaid, positiveInvoice, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
+
+\* The System admin gives a Complimentary Plan (/internal/v1). The service
+\* refuses an Account with a Subscription (so status is "none" here) or a
+\* blocked country.
+GiveComplimentary ==
+  /\ status = "none"
+  /\ blocked = FALSE
+  /\ complimentary = FALSE
+  /\ complimentary' = TRUE
+  /\ everComplimentary' = TRUE
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+
+\* The end action, or the end date passing: Account::isComplimentary() answers
+\* false from the columns; nothing else is written.
+EndComplimentary ==
+  /\ complimentary = TRUE
+  /\ complimentary' = FALSE
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, everComplimentary>>
 
 \* The trial's end: Stripe sends `active` before it attempts the charge.
 TrialEndsActive ==
   /\ status = "trialing"
   /\ status' = "active"
-  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* The first charge fails: the subscription turns past_due.
 ChargeFails ==
   /\ status = "active"
   /\ status' = "past_due"
-  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* invoice.payment_succeeded: only a paid invoice above zero proves payment.
 InvoicePaid(amount) ==
   /\ amount \in Amounts
   /\ firstPaid' = IF amount > 0 THEN TRUE ELSE firstPaid
   /\ positiveInvoice' = IF amount > 0 THEN TRUE ELSE positiveInvoice
-  /\ UNCHANGED <<status, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<status, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* A webhook handler loads the subscription row (subscriptionFor()).
 WebhookRead(w) ==
   /\ readDone[w] = FALSE
   /\ readDone' = [readDone EXCEPT ![w] = TRUE]
   /\ readVal' = [readVal EXCEPT ![w] = subType]
-  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* ... and later writes its outcome. The write re-reads the row under a lock
 \* and decides from the stored value, not from the value it loaded earlier.
@@ -85,20 +114,20 @@ WebhookWrite(w, outcome) ==
   /\ subType' = IF subType = "admin"
                 THEN subType
                 ELSE IF outcome = "cancel" THEN "voluntary" ELSE "none"
-  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wasAdmin, blocked>>
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* The System admin ends the subscription (admin app).
 AdminCancel ==
   /\ subType # "admin"
   /\ subType' = "admin"
   /\ wasAdmin' = TRUE
-  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wrote, blocked>>
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wrote, blocked, complimentary, everComplimentary>>
 
 \* Stripe deletes the subscription after the retries run out.
 StripeDeletes ==
   /\ status \in {"active", "past_due"}
   /\ status' = "canceled"
-  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, blocked, complimentary, everComplimentary>>
 
 \* checkout.session.completed billed to a blocked country: the Account keeps
 \* the fact, then Stripe cancels the subscription.
@@ -107,7 +136,7 @@ BlockedCheckoutCancel ==
   /\ blocked = FALSE
   /\ blocked' = TRUE
   /\ status' = "canceled"
-  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin>>
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, complimentary, everComplimentary>>
 
 \* The same when Stripe's cancel call fails: the fact stays, the status still
 \* looks valid, and access must still be gone.
@@ -115,7 +144,7 @@ BlockedCheckoutCancelFails ==
   /\ status \in {"trialing", "active"}
   /\ blocked = FALSE
   /\ blocked' = TRUE
-  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin>>
+  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, subType, readDone, readVal, wrote, wasAdmin, complimentary, everComplimentary>>
 
 Done ==
   /\ status \in {"canceled", "past_due"}
@@ -125,6 +154,8 @@ Done ==
 Next ==
   \/ StartTrial
   \/ SubscriptionBornActiveZeroCoupon
+  \/ GiveComplimentary
+  \/ EndComplimentary
   \/ TrialEndsActive
   \/ ChargeFails
   \/ \E amount \in Amounts : InvoicePaid(amount)
@@ -137,11 +168,21 @@ Next ==
   \/ Done
 
 \* Account::hasPendingFirstCharge() blocks the access that
-\* Cashier::keepPastDueSubscriptionsActive() would otherwise give.
+\* Cashier::keepPastDueSubscriptionsActive() would otherwise give. A
+\* Complimentary Plan in force is access on its own (#59), unless a blocked
+\* checkout ended it.
 HasAppAccess ==
   /\ blocked = FALSE
-  /\ status \in {"active", "trialing", "past_due"}
-  /\ ~(status = "past_due" /\ firstPaid = FALSE)
+  /\ \/ (/\ status \in {"active", "trialing", "past_due"}
+         /\ ~(status = "past_due" /\ firstPaid = FALSE))
+     \/ (complimentary = TRUE)
+
+\* Account::isLapsed(): no Subscription and no generic trial, and the Account
+\* paid before or was ever given a Complimentary Plan.
+Lapsed ==
+  /\ complimentary = FALSE
+  /\ status \in {"none", "canceled"}
+  /\ (firstPaid = TRUE \/ everComplimentary = TRUE)
 
 \* Rules, in the reader's words.
 NeverPaidNoAccess == (status = "past_due" /\ firstPaid = FALSE) => HasAppAccess = FALSE
@@ -150,6 +191,11 @@ BlockedNoAccess == (blocked = TRUE) => HasAppAccess = FALSE
 ZeroInvoiceIsNoProof == (positiveInvoice = FALSE) => (firstPaid = FALSE)
 ZeroCouponIsNoProof == (zeroCoupon = TRUE /\ positiveInvoice = FALSE) => (firstPaid = FALSE)
 AdminSticky == wasAdmin = TRUE => subType = "admin"
+ComplimentaryHasAccess == (complimentary = TRUE) => HasAppAccess = TRUE
+ComplimentaryEndedNoAccess ==
+  (everComplimentary = TRUE /\ complimentary = FALSE /\ status \in {"none", "canceled"}) => HasAppAccess = FALSE
+ComplimentaryEndedIsLapsed ==
+  (everComplimentary = TRUE /\ complimentary = FALSE /\ status \in {"none", "canceled"}) => Lapsed = TRUE
 
 Spec == Init /\ [][Next]_vars
 
