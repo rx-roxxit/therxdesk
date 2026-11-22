@@ -64,7 +64,10 @@ class StartSubscriptionCheckout
                 ConfigureSubscriptionCheckout::INTERVAL_METADATA_KEY => $interval->value,
                 ConfigureSubscriptionCheckout::OFFER_SLUG_METADATA_KEY => $offer?->slug,
             ], filled(...)),
-            ...ConfigureSubscriptionCheckout::sessionOptions($account->owner?->locale ?? Locale::DEFAULT),
+            ...ConfigureSubscriptionCheckout::sessionOptions(
+                $account->owner?->locale ?? Locale::DEFAULT,
+                $offer?->hasCoupon() ?? false,
+            ),
         ]);
 
         rescue(function () use ($account, $plan, $interval, $offer): void {

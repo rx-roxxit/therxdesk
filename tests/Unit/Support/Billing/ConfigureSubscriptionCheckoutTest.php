@@ -148,3 +148,10 @@ test('session options carry the locale, the billing address, Terms consent and n
 test('session options never ask Stripe to pick the language', function () {
     expect(ConfigureSubscriptionCheckout::sessionOptions(Locale::Arabic)['locale'])->toBe('en');
 });
+
+test('a coupon session leaves the promotion code parameter out entirely', function () {
+    $withCoupon = ConfigureSubscriptionCheckout::sessionOptions(Locale::English, true);
+
+    expect($withCoupon)->not->toHaveKey('allow_promotion_codes')
+        ->and(ConfigureSubscriptionCheckout::sessionOptions(Locale::English, false)['allow_promotion_codes'])->toBeFalse();
+});

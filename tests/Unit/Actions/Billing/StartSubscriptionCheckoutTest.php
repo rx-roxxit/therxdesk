@@ -396,7 +396,10 @@ test('redirect uses the offer it is given and never looks one up', function () {
         ->once()
         ->with(['trypost_offer_id' => $offer->id, 'trypost_offer_slug' => $offer->slug])
         ->andReturnSelf();
-    $builder->shouldReceive('checkout')->once()->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
+    $builder->shouldReceive('checkout')
+        ->once()
+        ->withArgs(fn (array $options): bool => ! array_key_exists('allow_promotion_codes', $options))
+        ->andReturn((object) ['url' => 'https://checkout.stripe.test/session']);
 
     /** @var Account&MockInterface $accountMock */
     $accountMock = Mockery::mock($account)->makePartial();

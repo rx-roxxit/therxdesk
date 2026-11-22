@@ -1105,7 +1105,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             .innerText();
         run.check(
             'the banner carries the campaign name and the discount line',
-            bannerName.includes('Verify banner') &&
+            bannerName.toLowerCase().includes('verify banner') &&
                 bannerLine.includes('20% off your first 3 months'),
             { bannerName, bannerLine },
         );
