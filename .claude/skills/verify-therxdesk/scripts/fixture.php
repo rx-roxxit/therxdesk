@@ -19,6 +19,7 @@ declare(strict_types=1);
 use App\Actions\Workspace\PurgeWorkspace;
 use App\Models\Account;
 use App\Models\SocialAccount;
+use App\Models\TrialAccount;
 use App\Models\TrialCard;
 use App\Models\User;
 use App\Models\Workspace;
@@ -48,10 +49,11 @@ function purge(Collection $owners): void
 
     $accountIds = $owners->pluck('account_id')->unique();
 
-    // The cards that started a Trial are this account's record of it, and the
-    // table has no foreign key on purpose. Delete them here or the 4242 card
+    // The cards and accounts that started a Trial are its record, and both
+    // tables have no foreign key on purpose. Delete them here or the 4242 card
     // could never start a Trial again after fixture.sh up.
     TrialCard::query()->whereIn('account_id', $accountIds)->delete();
+    TrialAccount::query()->whereIn('account_id', $accountIds)->delete();
 
     // A selling-mode run leaves a Customer (and its subscription) in the
     // Stripe sandbox; deleting the Customer cancels its subscriptions.

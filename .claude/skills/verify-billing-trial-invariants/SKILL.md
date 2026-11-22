@@ -58,98 +58,65 @@ output; do not read a long state dump by eye when `/statechart` can draw it.
 
 The exit code is non-zero for `NEW`, `ERROR`, `FIXED` and drift.
 
-## What it finds at the sync commit (514a6e04)
+## What it covers at the sync commit
 
-Five checks fail. Each is a real execution of the current code, not a modelling
-artefact; the `selftest-*` checks show the same rules pass on the fixed model.
+All checks pass. The five findings of 514a6e04 are fixed; each fix is the
+mechanism the model now describes.
 
-### 1. Two Checkout Sessions give one Account two Trials (`account-one-trial`)
+### 1. One Trial per Account (`account-one-trial`)
 
-Account `a1` opens Checkout A with card `c1`. `ConfigureSubscriptionCheckout::trialDays()`
-(`app/Support/Billing/ConfigureSubscriptionCheckout.php:57`) reads
-`Account::canStartTrial()` (`app/Models/Account.php:219`) and it is true, so A
-carries a Trial. Before A's webhook runs, `a1` opens Checkout B with card `c2`;
-`canStartTrial()` is still true, because nothing local records a Trial until a
-webhook writes `trial_started_at` / `trial_ends_at`. Both sessions complete. The
-two `customer.subscription.created` handlers each claim a different card in
-`trial_cards`, and each keeps its Trial. The Account now has two.
+`StartSubscriptionCheckout::redirect()` expires the Account's other open
+Checkout Sessions (`OpenCheckoutSessions::expire()`) before creating a new one,
+so a second tab cannot normally complete. Two requests that list before either
+creates a session can still both complete, so the webhook also claims the
+Account's Trial: `TrialAccounts::claim()` (`trial_accounts.account_id`,
+`insertOrIgnore`) makes the second subscription's claim `Taken`, and
+`endRepeatCardTrial()` ends its Trial at once. The model's `OpenCheckout` may or
+may not expire the other session (`expireOthers`), so TLC still explores the
+race and the Account claim is what proves the rule.
 
-The model's trace: `OpenCheckout(s1) > OpenCheckout(s2) > CompleteCheckout(s1) >
-CompleteCheckout(s2) > HandleCreatedTrialNewCard(s1) > HandleCreatedTrialNewCard(s2)`.
+### 2. A repeat card's Trial ends even when the call fails (`card-repeat-one-trial`)
 
-No two workers are needed: only two sessions created before the first webhook.
-There is no account-level reservation to make `canStartTrial()` false while a
-checkout is open.
+`endRepeatCardTrial()` writes the skip facts, then calls
+`subscriptions.update(trial_end: now)`. A failure no longer reverts them: it
+raises `TrialEndFailed`, `handle()` gives the event id back to the cache and
+rethrows, and the non-2xx answer makes Stripe redeliver the event. The redelivery
+claims nothing new (`TrialClaim::Owned` / `Taken`) and calls the update again, so
+the Trial ends on the retry. The model's `EndTrialFails` is a stutter: the skip
+facts stay and `EndTrialOk` remains enabled.
 
-### 2. A failed trial-end call leaves two Trials on one card (`card-repeat-one-trial`)
+### 3. A redelivery never ends its own Trial (`redelivered-created-self-skips`)
 
-Accounts `a1` and `a2` check out with the same card `c1`. Worker 1 handles
-`a1`'s `created`: `TrialCards::claim()` (`app/Support/Billing/TrialCards.php:16`)
-inserts the fingerprint, so `a1` keeps its Trial. Worker 2 handles `a2`'s
-`created`: the claim returns false, so `recordTrialStart()`
-(`app/Listeners/StripeEventListener.php:197`) writes `trial_skipped_at` and
-`trial_ended_at`, then `endRepeatCardTrial()` (`StripeEventListener.php:229`)
-calls `subscriptions.update(trial_end: now)`. That call fails. The catch in
-`endRepeatCardTrial` reverts the two timestamps and rethrows; `handle()` catches
-and logs it (`StripeEventListener.php:63`), so Cashier answers 2xx and Stripe
-never retries. `a2`'s Stripe trial keeps running: card `c1` has two Trials.
+Both claims are idempotent per subscription. `TrialCards::claim()` and
+`TrialAccounts::claim()` return `Owned` when the stored
+`stripe_subscription_id` is the subscription asking, and `recordTrialStart()`
+treats `Owned` as a winner. Only `Taken` calls `endRepeatCardTrial()`. The
+event-id cache is still best-effort; a delivery after it expires is now safe.
 
-The model's trace: `OpenCheckout(s1) > OpenCheckout(s3) > CompleteCheckout(s1) >
-CompleteCheckout(s3) > HandleCreatedTrialNewCard(s1) >
-HandleCreatedTrialRepeatCard(s3) > EndTrialFails(s3)`.
+### 4. An admin cancellation is sticky (`admin-cancellation-race`)
 
-### 3. A replayed created event ends its own Trial (`redelivered-created-self-skips`)
+`Subscription::recordCancellation()` and `clearCancellation()` re-read the row
+with `lockForUpdate()` inside a transaction and leave a
+`CancellationType::Admin` row alone, whatever the handler loaded earlier. The
+model's `WebhookWrite` decides from the stored `subType`, not the value read
+before `AdminCancel`, and models both a cancellation and a resume.
 
-`a1`/`c1`'s `created` is handled; the claim row is `c1 -> s1` and
-`trial_started_at` is set. The event-id key `stripe_webhook_event:<id>` lives in
-the cache for one day (`StripeEventListener.php:337`), while Stripe retries a
-failed delivery for up to three days. When the key is gone and the same event
-arrives again, `alreadyProcessed()` returns false, `recordTrialStart()` runs
-again, `TrialCards::claim()` correctly returns false — the row is its own — and
-the code calls `endRepeatCardTrial()` on the subscription that owns the row,
-setting `trial_end: now`. The legitimate Trial is cut short.
+### 5. A $0 invoice proves no payment (`zero-coupon-first-payment`)
 
-The model's trace: `OpenCheckout(s1) > CompleteCheckout(s1) >
-HandleCreatedTrialNewCard(s1) > RedeliverCreated(s1)`.
+`handleSubscriptionCreated()` no longer records `first_paid_at`: a subscription
+born `active` (a 100% coupon, for one) is not proof of money.
+`StripeInvoiceListener` writes it only for an invoice `status = paid` with
+`amount_paid > 0`, and it is the only writer. The model's
+`SubscriptionBornActiveZeroCoupon` leaves `firstPaid` false; `InvoicePaid(0)`
+leaves it false and `InvoicePaid(1900)` sets it.
 
-The dedupe is a best-effort cache, not a durable idempotency key. This does not
-create a second Trial; it kills the first one.
+### Not modelled: two subscriptions can coexist
 
-### 4. A concurrent admin cancellation is overwritten (`admin-cancellation-race`)
-
-A webhook handler loads the subscription in `subscriptionFor()`
-(`StripeEventListener.php:150`) with `cancellation_type = null`. Before
-`recordCancellationFacts()` saves, the System admin records
-`CancellationType::Admin`. The webhook then calls `recordCancellation()`
-(`app/Models/Subscription.php:51`); it checks the in-memory `null`, not the
-stored `Admin`, and writes `voluntary`. The admin type is lost.
-
-The model's trace: `WebhookRead(w1) [readVal = none] > AdminCancel [subType = admin]
-> WebhookWrite(w1) [subType = voluntary]`.
-
-Sequential delivery is correct and the existing test covers it. Only the gap
-between the row load and the save loses the admin type. This repo has no admin
-writer (ADR 0004 puts it in the admin app); the model abstracts it as
-`AdminCancel`. If that writer changes the row through a conditional update
-instead of a load-and-save, re-model it.
-
-### 5. A $0 first invoice counts as payment (`zero-coupon-first-payment`)
-
-A Checkout with a 100% coupon and no Trial creates the subscription `active`,
-and its first invoice is $0. Cashier sends `customer.subscription.created` with
-status `active`; `handleSubscriptionCreated()` calls `recordFirstPayment()`
-(`StripeEventListener.php:388`), which checks only `isNowActive()` and
-`first_paid_at`, so it writes `first_paid_at = now()` with no money paid. The
-invoice listener's `amount_paid > 0` guard (`StripeInvoiceListener.php:46`) never
-runs on this path, and would not overwrite the value anyway.
-
-The model's trace is one step: `SubscriptionBornActiveZeroCoupon`.
-
-Consequence: `hasPaidSubscription()` is true, and `hasPendingFirstCharge()` is
-false, so a later failed charge leaves the Account with access while past due —
-the opposite of "only a paid invoice above zero proves the first payment". The
-Trial path is correct: a Trial's end no longer records `first_paid_at`, and a $0
-invoice leaves it null.
+Nothing stops a second Stripe subscription from being created while the first
+is still `active` (two completions in the race above, or a server-side gate that
+does not exist yet). The model bounds one subscription row per slot and reads
+access from one subscription, as `Account::subscription()` does; the double
+billing that follows is reported separately (#67) and not covered here.
 
 ## A bug, or a modelling error?
 
@@ -181,48 +148,60 @@ invoice leaves it null.
 
 ## Coverage record
 
-Sync commit: **514a6e04**. Confirmed against these files and functions:
+Sync commit: **SYNC_COMMIT_HASH**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
 | `ConfigureSubscriptionCheckout::trialDays()` / `apply()` — the Trial decision is frozen in the Stripe session | `OpenCheckout` |
+| `OpenCheckoutSessions::expire()` — the Account's other sessions are expired, or the race misses them | `OpenCheckout`'s `expireOthers` |
 | Stripe creating the subscription after the session completes | `CompleteCheckout` |
-| `StripeEventListener::handleSubscriptionCreated()` with `trialing` | `HandleCreatedTrialNewCard` / `HandleCreatedTrialRepeatCard` |
-| `TrialCards::claim()` — `insertOrIgnore` on the fingerprint primary key | the `claim` function, assigned in one action |
-| `endRepeatCardTrial()` — success / failure and revert | `EndTrialOk` / `EndTrialFails`; `EndTrialRetries` in the fixed model |
-| `recordFirstPayment()` on a subscription born `active` | `HandleCreatedActive`; `SubscriptionBornActiveZeroCoupon` |
+| `StripeEventListener::handleSubscriptionCreated()` with `trialing` | `HandleCreatedTrialNewCard` / `HandleCreatedTrialRepeatCard` / `HandleCreatedTrialAccountTaken` |
+| `TrialAccounts::claim()` — `insertOrIgnore` on the `trial_accounts` Account id | the `acctClaim` function |
+| `TrialCards::claim()` — `insertOrIgnore` on the fingerprint; `Owned` for this subscription's own row | the `claim` function; `RedeliverCreated` |
+| `endRepeatCardTrial()` — `TrialEndFailed` on a failed call, non-2xx and a redelivery | `EndTrialOk` / `EndTrialFails`; `EndTrialRetries` in the fixed model |
+| `handleSubscriptionCreated()` on a subscription born `active` — no first payment | `HandleCreatedActive`; `SubscriptionBornActiveZeroCoupon` |
 | `StripeInvoiceListener::handle()` — `status = paid` and `amount_paid > 0` | `InvoicePaid(amount)` |
-| `Subscription::recordCancellation()` — the `Admin` guard | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
+| `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
 | `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()`, `hasAppAccess()` | `CanStartTrial`, `HasAppAccess` |
-| `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic `claim` |
+| `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
+| `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
 
 Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Listeners/StripeInvoiceListener.php`,
+`app/Actions/Billing/StartSubscriptionCheckout.php`,
+`app/Exceptions/Billing/TrialEndFailed.php`,
 `app/Support/Billing/ConfigureSubscriptionCheckout.php`,
+`app/Support/Billing/OpenCheckoutSessions.php`,
+`app/Support/Billing/TrialAccounts.php`,
 `app/Support/Billing/TrialCards.php`,
 `app/Support/Billing/CardFingerprint.php`, `app/Models/Account.php`,
-`app/Models/Subscription.php`,
-`database/migrations/2026_11_22_120000_add_billing_facts.php`.
+`app/Models/Subscription.php`, `app/Models/TrialAccount.php`,
+`database/migrations/2026_11_22_120000_add_billing_facts.php`,
+`database/migrations/2026_11_22_130000_add_trial_accounts.php`.
 
 ## Bounds and assumptions
 
 - At most **2 accounts, 2 cards, 3 subscription slots**, one Trial length, one
-  fingerprint per slot. TLC explores every order of the actions under that bound,
-  not every payload variation.
+  fingerprint per slot, one Account claim per account. TLC explores every order
+  of the actions under that bound, not every payload variation.
 - `insertOrIgnore` on a primary key is atomic (PostgreSQL and MySQL both). This
-  is why the card claim itself has no interleaving.
+  is why neither claim has an interleaving.
 - `Cache::add` is atomic; its keys can expire, which is the redelivery action.
-- `CardFingerprint::forSubscription()` returns the card. A blank fingerprint
-  returns before the claim (`StripeEventListener.php:210-214`), so that Trial is
-  never claimed; this is not modelled.
-- The trial-end API call has two outcomes: it succeeds, or it fails and the
-  handler swallows the exception.
+  A handler that answers non-2xx gives the key back, which the model treats as
+  the `EndTrialFails` retry.
+- `CardFingerprint::forSubscription()` returns the card. A blank fingerprint was
+  never claimed before this change either; the Account claim still runs first,
+  and the model assumes a fingerprint is present.
+- The trial-end API call has two outcomes: it succeeds, or it fails, keeps the
+  skip facts and is retried by Stripe's redelivery.
 - The admin writer exists and writes the cancellation type directly, as an
-  external app through the internal API.
+  external app through the internal API (assumed to block on the row lock, as a
+  plain `UPDATE` does).
 - A 100% coupon with no Trial yields a subscription created `active` with a $0
   first invoice.
 - Access is read from one subscription, as `Account::subscription()` does; the
-  multi-subscription "latest row" selection is not modelled.
+  multi-subscription "latest row" selection is not modelled. Two subscriptions
+  can coexist, which is reported separately, not checked here.
 
 Not covered: fingerprint retrieval failures, Offers' `trial_days`, generic
 Trials, plan and Offer writes, PostHog, dunning schedules, deletion/re-signup,

@@ -20,12 +20,18 @@ SUMMARY="$OUT_DIR/summary.txt"
 COVERED=(
   app/Listeners/StripeEventListener.php
   app/Listeners/StripeInvoiceListener.php
+  app/Actions/Billing/StartSubscriptionCheckout.php
+  app/Exceptions/Billing/TrialEndFailed.php
   app/Support/Billing/ConfigureSubscriptionCheckout.php
+  app/Support/Billing/OpenCheckoutSessions.php
+  app/Support/Billing/TrialAccounts.php
   app/Support/Billing/TrialCards.php
   app/Support/Billing/CardFingerprint.php
   app/Models/Account.php
   app/Models/Subscription.php
+  app/Models/TrialAccount.php
   database/migrations/2026_11_22_120000_add_billing_facts.php
+  database/migrations/2026_11_22_130000_add_trial_accounts.php
 )
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
