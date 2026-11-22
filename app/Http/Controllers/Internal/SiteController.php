@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Internal;
 
 use App\Http\Resources\Internal\SitePlanResource;
 use App\Models\Offer;
+use App\Models\Operator;
 use App\Models\Plan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,11 +29,36 @@ class SiteController
             ->first();
 
         return response()->json([
+            'operator' => $this->operator(Operator::current()),
             'offer' => $this->offer($offer),
             'plans' => $plans
                 ->map(fn (Plan $plan): array => SitePlanResource::make($plan, $offer)->resolve($request))
                 ->all(),
         ]);
+    }
+
+    /**
+     * The customer-facing fields of the Operator the website must name. Phone
+     * and the ids stay internal.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function operator(?Operator $operator): ?array
+    {
+        if ($operator === null) {
+            return null;
+        }
+
+        return [
+            'legal_name_latin' => $operator->legal_name_latin,
+            'address_latin' => $operator->address_latin,
+            'legal_name_th' => $operator->legal_name_th,
+            'address_th' => $operator->address_th,
+            'tax_id' => $operator->tax_id,
+            'vat_id' => $operator->vat_id,
+            'contact_email' => $operator->contact_email,
+            'effective_from' => $operator->effective_from,
+        ];
     }
 
     /**
