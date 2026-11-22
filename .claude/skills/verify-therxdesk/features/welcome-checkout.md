@@ -90,8 +90,9 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   `active`, unless a repeat card skipped the Trial: then it is `active` and `first_paid_at` / `first_invoice_id` are
   set. On the Offer path, `db.sh "select o.slug, ao.redeemed_at from account_offer ao join offers o on o.id =
   ao.offer_id where ao.account_id = '<accountId>'"` shows the no-banner Offer redeemed, and
-  `stripe.sh get /v1/subscriptions/<sub id>` shows its `discount.coupon.id` (the app-created
-  `rxdesk-offer-...`).
+  `stripe.sh get /v1/subscriptions/<sub id> -d 'expand[]=discounts'` shows
+  `discounts[0].source.coupon` (the app-created `rxdesk-offer-...`). The subscription's `trial_end` is 14 days
+  out, the Offer's longer trial.
 - Side effects, from the host:
   `$V/db.sh "select p.slug, s.stripe_status, s.stripe_price from accounts a left join plans p on p.id = a.plan_id left join subscriptions s on s.account_id = a.id where a.id = '<accountId>'"`
   shows `mini | trialing | <the Mini monthly Price id in plan_prices>` after `welcome-checkout`, and
