@@ -27,16 +27,25 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 - Journey: `$V/drive.sh billing`, right after `welcome-checkout` on the same fixture (it needs the Mini monthly
   subscription that journey makes; do not run `fixture.sh up` in between).
 - Checks: Mini, `$11.90`, Free trial (after `welcome-checkout` the first checkout is on the Catalog trial; the
-  journey also accepts Active for a subscription past its trial); the `4242` card listed; the dialog's Yearly shows
-  `$9.92` a month; choosing Standard (`@plan-select-standard`) makes it the current plan at `$17.90`; "Manage on
-  Stripe" opens `billing.stripe.com` on the Standard subscription at `$17.90 per month`.
+  journey also accepts Active for a subscription past its trial, and for a repeat card that skipped the Trial); the
+  `4242` card listed; the dialog's Yearly shows `$9.92` a month; choosing Standard (`@plan-select-standard`) makes it
+  the current plan at `$17.90`; "Manage on Stripe" opens `billing.stripe.com` on the Standard subscription at
+  `$17.90 per month`.
 - Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | trialing | <the Standard monthly
-  Price id in plan_prices>` right after the run (the swap keeps the trial).
+  Price id in plan_prices>` right after the run (the swap keeps the trial); a repeat card shows `active` instead.
 
 ## Gotchas
 
 - The dialog fades in: the journey waits for `document.getAnimations()` to finish before its screenshot.
-- The upgrade changes the fixture's subscription for good; run `welcome-checkout` from a fresh fixture to repeat.
-- The Customer Portal works with the sandbox's default portal settings; cancelling there is not driven.
+- The upgrade changes the fixture's subscription for good; run `welcome-checkout` from a fresh fixture to repeat
+  (`fixture.sh up` clears the Account's `trial_cards`, so the `4242` card gets a Trial again).
+- The Customer Portal is the app's own configuration, created and updated through the Stripe API by
+  `BillingPortalConfiguration::ensure()` (its id lives on `catalog_settings`), not the Dashboard default: plan
+  switching off; card update, invoices, cancel at period end and the cancellation-reason question on. A test-to-live
+  key change leaves the stored id unreachable, so `ensure()` recreates the configuration on the next open; cancelling
+  there is not driven.
+- The past-due state is its own journey: a paid-before subscription whose renewal failed keeps access and shows the
+  sidebar banner and the `Past due` badge (`$V/drive.sh past-due`, see `trial-and-payment.md`). A lapse (Smart Retries
+  exhausted, then `canceled`) is `$V/drive.sh lapsed` there too.
 - Not driven yet: the Invoices tab, Subscribe on a generic trial, a downgrade, a yearly swap (which drops the
-  discount), a past-due or cancelled subscription.
+  discount).

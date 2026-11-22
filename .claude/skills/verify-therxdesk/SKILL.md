@@ -45,7 +45,8 @@ up -d`. The first boot from empty volumes runs `composer install`, `npm ci` and 
 then waits until the stack is usable, not merely up: the `app` container is `healthy` (the entrypoint finished
 migrations, Passport keys and Wayfinder), `GET /up` answers, the Vite dev server serves `/@vite/client`, and
 `/login` renders an Inertia page. Last, it creates the fixture (`fixture.sh up`) and prints it as JSON:
-`email`, `password`, `userId`, `accountId`, `workspaceId`, `channelId` (a made-up LinkedIn channel), `channelPlatform`.
+`email`, `password`, `userId`, `accountId`, `stripeId`, `workspaceId`, `channelId` (a made-up LinkedIn channel),
+`channelPlatform`.
 
 The fixture is one Owner with one Workspace ("Verify Desk") and one LinkedIn channel created without model events,
 so nothing calls LinkedIn with its fake token. Run `$V/fixture.sh up` again any time to reset it to that state.
@@ -99,6 +100,25 @@ app, the same Catalog is edited through `/internal/v1` (`POST /plans`, `PATCH /p
 seed, not a second catalog: do not hand-create sandbox Products or Prices beside it. The `GET /plans` response
 shows the Stripe ids the app stored.
 
+## Trial and payment
+
+The four paths of the Trial and access rules (a repeat card, a failed first charge, a paid-before past due, and a
+lapse) need a Stripe **test clock**, so they finish in a minute instead of days:
+
+```sh
+$V/stripe-clock.sh create              # a clock frozen at now
+$V/stripe-clock.sh customer            # a sandbox Customer on it
+$V/stripe-clock.sh attach              # fixture.sh customer <cus_...>
+$V/stripe-clock.sh advance <epoch>     # move it, wait until Stripe is ready
+$V/stripe-clock.sh status              # clock, status, frozen time, Customer
+$V/stripe-clock.sh delete              # remove it (cleanup.sh does this)
+```
+
+`fixture.sh card <fingerprint>` claims a card for the fixture Account (a repeat card), and
+`stripe-clock.sh fingerprint [pm_id]` prints a payment method's fingerprint. `fixture.sh up` deletes the Account's
+`trial_cards` rows, so `4242` starts a fresh Trial on every run. The commands, the journeys and the expected rows are
+in `features/trial-and-payment.md`.
+
 ## Media on R2
 
 ```sh
@@ -143,10 +163,12 @@ $V/drive.sh <journey> <folder>     # evidence in <folder>
 A journey is a key of `JOURNEYS` in `scripts/drive.ts`. `drive.sh` runs it with `node` in
 `mcr.microsoft.com/playwright:v1.65.1-noble` on the host network, against `http://localhost:8000`, with the repo
 mounted read-only, the dev `node_modules` volume for `playwright`, and the fixture in `VERIFY_FIXTURE`. It prints
-`ok`/`FAIL` per check and exits non-zero when the journey fails.
+`ok`/`FAIL` per check and exits non-zero when the journey fails. `VERIFY_TEST_CARD` overrides the `4242` card
+`payOnStripeCheckout()` fills (the failed-first-charge path uses it).
 
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
-`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `media-on-r2` (selling mode, listed in `SELLING_JOURNEYS`;
+`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `payment-retry`, `past-due`, `lapsed`, `media-on-r2`
+(selling mode, listed in `SELLING_JOURNEYS`; `payment-retry`, `past-due` and `lapsed` need a Stripe test clock,
 `media-on-r2` also needs `media.sh up`). Every journey first checks the mode php-fpm serves and stops
 with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature, with or without a
 journey.
@@ -225,10 +247,11 @@ $V/cleanup.sh
 ```
 
 Removes the fixture Owner and everything it owns (`fixture.sh down`: its Workspace through `PurgeWorkspace`, its
-sandbox Customer, which cancels its subscriptions, then the user and the Account), then runs `selling.sh down` and
-`media.sh down`. Stops the stack only if `launch.sh` started it, then hands the files the root-run
-entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never deletes evidence: it stays in
-`~/.cache/verify-therxdesk/runs/` (override with `VERIFY_EVIDENCE_ROOT`). Run cleanup after every failed attempt too.
+sandbox Customer, which cancels its subscriptions, then the user and the Account), then deletes the Stripe test clock
+(`stripe-clock.sh delete`), and runs `selling.sh down` and `media.sh down`. Stops the stack only if `launch.sh` started
+it, then hands the files the root-run entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never
+deletes evidence: it stays in `~/.cache/verify-therxdesk/runs/` (override with `VERIFY_EVIDENCE_ROOT`). Run cleanup
+after every failed attempt too.
 
 ## Helpers
 
@@ -236,7 +259,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | --- | --- | --- |
 | `launch.sh` | start or reuse the stack, wait until usable, create the fixture | stack, fixture |
 | `doctor.sh` | is this instance worth driving | no |
-| `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `guests` removes register-journey Owners | `up`, `down`, `guests` |
+| `fixture.sh up\|show\|down\|guests` | create, print (JSON), remove the fixture Owner; `customer` / `customer-clear` point its Account at a sandbox Customer; `card` claims a fingerprint; `guests` removes register-journey Owners | `up`, `down`, `guests`, `customer`, `customer-clear`, `card` |
 | `drive.sh <journey> [folder]` | run one journey in Playwright, write evidence | evidence only |
 | `browser-suite.sh [pest args]` | run `tests/Browser` in the Playwright + PHP image | a scratch copy under `state/` |
 | `db.sh "<select>"` | read-only SQL on the dev database | no |
@@ -244,6 +267,7 @@ entrypoint wrote back to UID 1001. Leaves an already-running stack up. Never del
 | `media.sh up\|down\|seed\|clear` | switch the media disk to r2 and back; seed or remove the media proof | stack, `medias` rows, the bucket |
 | `mail.sh list\|latest\|wait\|show\|clear` | read the dev Mailpit inbox | `clear` empties it |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
+| `stripe-clock.sh create\|customer\|attach\|advance\|status\|fingerprint\|delete` | a Stripe test clock, its Customer and the fixture Account | Stripe sandbox, fixture, state |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
 | `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | no |
 

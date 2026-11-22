@@ -15,6 +15,14 @@ mkdir -p "$out"
 
 fixture="$("$(dirname "$0")/fixture.sh" show)"
 
+# Only a journey that pays on Stripe needs the card; pass it when set so the
+# default stays the 4242 card in drive.ts.
+card_env=()
+
+if [ -n "${VERIFY_TEST_CARD:-}" ]; then
+    card_env+=(-e "VERIFY_TEST_CARD=$VERIFY_TEST_CARD")
+fi
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -23,6 +31,7 @@ docker run --rm --network host --ipc=host \
     -e VERIFY_FIXTURE="$fixture" \
     -e VERIFY_GUEST_EMAIL_LIKE="$GUEST_EMAIL_LIKE" \
     -e VERIFY_MAILPIT_URL="$MAILPIT_URL" \
+    "${card_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \
