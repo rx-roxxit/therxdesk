@@ -122,8 +122,18 @@ services:
       PASSPORT_PRIVATE_KEY: ${PASSPORT_PRIVATE_KEY:?set PASSPORT_PRIVATE_KEY}
       PASSPORT_PUBLIC_KEY: ${PASSPORT_PUBLIC_KEY:?set PASSPORT_PUBLIC_KEY}
 
-      # ===== Storage (local disk, in the "storage" volume) =====
-      FILESYSTEM_DISK: public
+      # ===== Storage (Cloudflare R2) =====
+      # Media lives on R2 and is served from the public custom domain
+      # media.<SITE_DOMAIN>, never r2.dev (LinkedIn drops media served from
+      # r2.dev). The "storage" volume now only holds temp files, chunks, logs
+      # and framework caches.
+      FILESYSTEM_DISK: r2
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?set R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?set R2_SECRET_ACCESS_KEY}
+      R2_ENDPOINT: ${R2_ENDPOINT:?set R2_ENDPOINT}
+      R2_BUCKET: ${R2_BUCKET:?set R2_BUCKET}
+      R2_REGION: ${R2_REGION:-auto}
+      R2_URL: https://media.${SITE_DOMAIN}
 
       # ===== Mail =====
       MAIL_MAILER: ${MAIL_MAILER:-log}

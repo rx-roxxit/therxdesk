@@ -94,6 +94,37 @@ const animationsSettled = async (page: Page): Promise<void> => {
     });
 };
 
+/**
+ * Records every image a canvas draws from now on in `window.__images`, so a
+ * test can tell which photo the share card actually painted (`drawImage` is
+ * only called for an image that loaded, CORS included).
+ */
+const hookCanvasImages = async (page: Page): Promise<void> => {
+    await page.evaluate(() => {
+        const state = window as unknown as { __images?: string[] };
+
+        if (state.__images !== undefined) {
+            return;
+        }
+
+        state.__images = [];
+
+        const drawImage = CanvasRenderingContext2D.prototype.drawImage as (
+            ...args: unknown[]
+        ) => void;
+
+        CanvasRenderingContext2D.prototype.drawImage = function (
+            this: CanvasRenderingContext2D,
+            ...args: unknown[]
+        ): void {
+            state.__images?.push(
+                String((args[0] as { src?: string }).src ?? ''),
+            );
+            drawImage.apply(this, args);
+        };
+    });
+};
+
 /** The signed-in user's email, read from the Inertia page props. */
 const signedInEmail = async (page: Page): Promise<string | null> => {
     return page.evaluate(() => {
@@ -158,10 +189,17 @@ const SELLING_JOURNEYS = [
     'selling-mode',
     'welcome-checkout',
     'billing',
+    'media-on-r2',
 ];
 
 /** The test card Stripe's sandbox always accepts. */
 const TEST_CARD = '4242424242424242';
+
+/** A 1×1 PNG, the image the media-on-R2 proof uploads (`tests/fixtures/1x1.png`). */
+const PROOF_IMAGE = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av6jNYGEAAAAAElFTkSuQmCC',
+    'base64',
+);
 
 /** An expiry two years ahead, as MM / YY. */
 const testCardExpiry = (): string => {
@@ -633,6 +671,246 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
                 (await portalPlan.count()) > 0,
             new URL(page.url()).hostname,
         );
+    },
+
+    /**
+     * features/media-on-r2.md
+     *
+     * Needs `selling.sh up` with the proof overlay (FILESYSTEM_DISK=r2), a
+     * subscribed fixture (run `welcome-checkout` once), and `media.sh seed`.
+     * Proves the share card draws a channel avatar from the media host and
+     * that an image and a >5 MiB video uploaded through the composer are on
+     * that host, the video intact after its multipart upload.
+     */
+    'media-on-r2': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        // The Insights share card draws the seeded channel's avatar from R2.
+        await page.goto(`${run.baseUrl}/insights`);
+        const followers = page.locator(tid('@share-followers'));
+        await followers.waitFor();
+        await page.waitForFunction(
+            () =>
+                document
+                    .querySelector('[data-testid="share-followers"]')
+                    ?.getAttribute('data-state') === 'ready',
+            undefined,
+            { timeout: 30_000 },
+        );
+        await run.step('insights');
+
+        await hookCanvasImages(page);
+        await followers.click();
+        await page.waitForFunction(
+            () =>
+                document
+                    .querySelector('[data-testid="share-chart-preview"]')
+                    ?.getAttribute('data-state') === 'ready',
+            undefined,
+            { timeout: 30_000 },
+        );
+        await animationsSettled(page);
+        await run.step('share-card');
+
+        const drawn = await page.evaluate(() => {
+            return (
+                (window as unknown as { __images?: string[] }).__images ?? []
+            );
+        });
+        const avatarUrl =
+            drawn.find(
+                (source) =>
+                    source.startsWith('http') && source.includes('cors=1'),
+            ) ?? null;
+
+        run.check(
+            'the share card drew the channel avatar fetched with CORS',
+            avatarUrl !== null,
+            { avatarUrl, drawn },
+        );
+        run.note('shareCardAvatarUrl', avatarUrl);
+
+        const mediaHost = avatarUrl === null ? null : new URL(avatarUrl).host;
+        run.note('mediaHost', mediaHost);
+
+        await page.keyboard.press('Escape');
+        await page
+            .locator(tid('@share-chart-dialog'))
+            .waitFor({ state: 'detached' })
+            .catch(() => undefined);
+
+        // A new post's composer, with the shared editor's media tray. The
+        // List view lives on the Schedule, not on Insights.
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.getByRole('link', { name: 'List', exact: true }).click();
+        await page.waitForURL((url) => url.pathname === '/schedule');
+        await page.locator(tid('@posts-new-post')).waitFor();
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page
+            .locator(tid('@composer-file-input'))
+            .waitFor({ state: 'attached' });
+        await run.step('composer-open');
+
+        const completed: Array<{
+            url: string;
+            type: string;
+            size: number;
+        }> = [];
+        const chunks: number[] = [];
+
+        page.on('response', (response) => {
+            if (
+                !response.url().includes('/media/chunked') ||
+                response.request().method() !== 'POST'
+            ) {
+                return;
+            }
+
+            void response
+                .json()
+                .then(
+                    (body: {
+                        done?: boolean;
+                        url?: string;
+                        type?: string;
+                        size?: number;
+                    }) => {
+                        if (
+                            body.done === true &&
+                            typeof body.url === 'string'
+                        ) {
+                            completed.push({
+                                url: body.url,
+                                type: String(body.type),
+                                size: Number(body.size),
+                            });
+                        }
+                    },
+                )
+                .catch(() => undefined);
+        });
+
+        page.on('request', (request) => {
+            if (
+                !request.url().includes('/media/chunked') ||
+                request.method() !== 'POST'
+            ) {
+                return;
+            }
+
+            const match = request.headers()['content-range']?.match(/\/(\d+)$/);
+
+            if (match !== undefined) {
+                chunks.push(Number(match[1]));
+            }
+        });
+
+        const videoSize = 6 * 1024 * 1024;
+        const video = Buffer.alloc(videoSize);
+        video.write('\0\0\0\x18ftypmp42\0\0\0\0mp42isom', 0, 'binary');
+
+        await page.locator(tid('@composer-file-input')).setInputFiles([
+            {
+                name: 'r2-proof.png',
+                mimeType: 'image/png',
+                buffer: PROOF_IMAGE,
+            },
+            {
+                name: 'r2-proof.mp4',
+                mimeType: 'video/mp4',
+                buffer: video,
+            },
+        ]);
+
+        for (
+            let attempt = 0;
+            attempt < 600 && completed.length < 2;
+            attempt++
+        ) {
+            await page.waitForTimeout(100);
+        }
+
+        await page.waitForFunction(
+            () =>
+                document.querySelectorAll('[data-testid="composer-media-item"]')
+                    .length >= 2,
+            undefined,
+            { timeout: 30_000 },
+        );
+        await run.step('uploads-done');
+
+        const image = completed.find((item) => item.type === 'image') ?? null;
+        const clip = completed.find((item) => item.type === 'video') ?? null;
+
+        run.check('the image upload completed', image !== null, completed);
+        run.check('the video upload completed', clip !== null, completed);
+        run.check(
+            'both uploads are served from the media host',
+            image !== null &&
+                clip !== null &&
+                mediaHost !== null &&
+                new URL(image.url).host === mediaHost &&
+                new URL(clip.url).host === mediaHost,
+            { mediaHost, image, clip },
+        );
+
+        const videoChunks = chunks.filter(
+            (total) => total === videoSize,
+        ).length;
+        run.check(
+            'the video was sent in more than one chunk',
+            videoChunks >= 2,
+            videoChunks,
+        );
+        run.note('imageUrl', image?.url ?? null);
+        run.note('videoUrl', clip?.url ?? null);
+        run.note('videoChunks', videoChunks);
+
+        if (image !== null) {
+            await page.waitForFunction(
+                (source) =>
+                    [...document.images].some(
+                        (element) =>
+                            element.src === source && element.naturalWidth > 0,
+                    ),
+                image.url,
+                { timeout: 30_000 },
+            );
+            run.check('the image renders from its media URL', true, image.url);
+        }
+
+        if (clip !== null) {
+            const facts = await page.evaluate(
+                async ({ url, size }) => {
+                    const response = await fetch(url);
+                    const bytes = new Uint8Array(await response.arrayBuffer());
+
+                    return {
+                        status: response.status,
+                        length: bytes.length,
+                        head: String.fromCharCode(...bytes.slice(4, 12)),
+                        size,
+                    };
+                },
+                { url: clip.url, size: clip.size },
+            );
+
+            run.check(
+                'the stored video is the uploaded bytes on the media host',
+                facts.status === 200 &&
+                    facts.length === clip.size &&
+                    facts.head === 'ftypmp42',
+                facts,
+            );
+            run.note('videoFacts', facts);
+        }
+
+        await run.step('after-uploads');
     },
 };
 

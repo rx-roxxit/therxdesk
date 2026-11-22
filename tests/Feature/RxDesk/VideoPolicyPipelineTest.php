@@ -27,7 +27,8 @@ use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->freezeTime();
-    Storage::fake();
+    config(['filesystems.default' => 'r2']);
+    Storage::fake('r2', ['url' => 'https://media.therxdesk.test']);
     config()->set('queue.default', 'database');
 
     Queue::swap(Queue::getFacadeRoot()->queue);

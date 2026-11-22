@@ -13,8 +13,9 @@ use Illuminate\Console\Command;
 
 /**
  * The System admin's way to see and change an Owner's Quota, by email and in
- * human-readable sizes. Every change reports the Quotas handed out against
- * the space the disk can give to media, and warns when they add up to more.
+ * human-readable sizes. Every change reports the Quotas handed out, and warns
+ * when they add up to more than the local disk can give to media, while media
+ * lives on that disk.
  */
 class QuotaCommand extends Command
 {
@@ -125,11 +126,19 @@ class QuotaCommand extends Command
     /**
      * Compares the Quotas handed out with the space media can actually use:
      * free disk plus what the Owners store, minus the Disk guard threshold.
+     * On object storage the VPS disk says nothing about it, so it only reports
+     * the total.
      */
     private function reportCommitment(AccountStorage $storage): void
     {
         $usable = $storage->usableSize();
         $total = $storage->totalQuota();
+
+        if (blank($usable)) {
+            $this->line("The Quotas add up to {$this->size($total)}.");
+
+            return;
+        }
 
         if ($total > $usable) {
             $this->warn("Warning: the Quotas add up to {$this->size($total)}, more than the {$this->size($usable)} the disk can give to media (free disk plus Storage used, minus the Disk guard threshold).");
