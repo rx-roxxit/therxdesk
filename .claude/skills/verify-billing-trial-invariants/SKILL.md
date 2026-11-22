@@ -160,11 +160,12 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **bc0f5932**. Confirmed against these files and functions:
+Sync commit: **cee5136d**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
-| `ConfigureSubscriptionCheckout::trialDays()` / `apply()` — the Trial decision is frozen in the Stripe session | `OpenCheckout` |
+| `ConfigureSubscriptionCheckout::trialDays()` / `apply()` — the Trial decision is frozen in the Stripe session; an Offer that does not cover the Plan and interval gives no trial | `OpenCheckout` |
+| `StartSubscriptionCheckout::redirect()` — an uncovered or leftover Offer is dropped before the session, so the model's `CanStartTrial` is a superset of the Trials a Checkout can start | `OpenCheckout` |
 | `OpenCheckoutSessions::expire()` — the Account's other sessions are expired, or the race misses them | `OpenCheckout`'s `expireOthers` |
 | Stripe creating the subscription after the session completes | `CompleteCheckout` |
 | `StripeEventListener::handleSubscriptionCreated()` with `trialing` | `HandleCreatedTrialNewCard` / `HandleCreatedTrialRepeatCard` / `HandleCreatedTrialAccountTaken` |
@@ -221,9 +222,16 @@ Covered files: `app/Listeners/StripeEventListener.php`,
   multi-subscription "latest row" selection is not modelled. Two subscriptions
   can coexist, which is reported separately, not checked here.
 
-Not covered: fingerprint retrieval failures, Offers' `trial_days`, generic
-Trials, plan and Offer writes, PostHog, dunning schedules, deletion/re-signup,
-tax, currency and price logic.
+No-card Trials are gone (November 2026): `StartGenericTrial`,
+`Offer::startsWithoutCard()`, `requires_card` and the listener's
+`subscribedDuringTrialWithoutCard` conversion were removed, so every Trial now
+starts at Stripe Checkout and is covered by `CanStartTrial`/`OpenCheckout`. A
+legacy generic trial (`accounts.trial_ends_at`) still grants access, which
+`Account::hasAppAccess()` models.
+
+Not covered: fingerprint retrieval failures, an Offer's `trial_days` and
+coverage beyond the gate above, plan and Offer writes, PostHog, dunning
+schedules, deletion/re-signup, tax, currency and price logic.
 
 ## Add a check
 
