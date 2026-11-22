@@ -8,4 +8,12 @@ enum Interval: string
 {
     case Monthly = 'monthly';
     case Yearly = 'yearly';
+
+    public function stripeInterval(): string
+    {
+        return match ($this) {
+            self::Monthly => 'month',
+            self::Yearly => 'year',
+        };
+    }
 }

@@ -27,6 +27,7 @@ class PlanFactory extends Factory
             'workspace_limit' => 1,
             'sort' => 1,
             'is_archived' => false,
+            'stripe_product_id' => null,
         ];
     }
 

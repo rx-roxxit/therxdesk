@@ -18,13 +18,25 @@ beforeEach(function () {
 
 test('an internal route answers 404 without a token', function (string $route) {
     $this->getJson(route($route))->assertNotFound();
-})->with(['internal.site', 'internal.accounts.index', 'internal.audit-log.index']);
+})->with([
+    'internal.site',
+    'internal.accounts.index',
+    'internal.audit-log.index',
+    'internal.plans.index',
+    'internal.catalog-settings.show',
+]);
 
 test('an internal route answers 404 with a wrong token', function (string $route) {
     $this->withHeaders(['Authorization' => 'Bearer wrong-token'])
         ->getJson(route($route))
         ->assertNotFound();
-})->with(['internal.site', 'internal.accounts.index', 'internal.audit-log.index']);
+})->with([
+    'internal.site',
+    'internal.accounts.index',
+    'internal.audit-log.index',
+    'internal.plans.index',
+    'internal.catalog-settings.show',
+]);
 
 test('the internal API is off when no token is configured', function () {
     config([

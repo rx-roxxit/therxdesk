@@ -89,11 +89,17 @@ class UsageCommand extends Command
     {
         $formatted = ByteSize::format($limit);
 
-        if (blank($account->quota_bytes)) {
-            return "{$formatted} (default)";
+        if (filled($account->quota_bytes)) {
+            return $formatted;
         }
 
-        return $formatted;
+        $plan = $account->plan;
+
+        if (filled($plan?->quota_bytes)) {
+            return "{$formatted} ({$plan->name} Plan)";
+        }
+
+        return "{$formatted} (default)";
     }
 
     private function share(StorageUsage $usage): string

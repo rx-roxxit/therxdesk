@@ -28,8 +28,8 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Billing
 - Checks: Mini, `$11.90`, Active; the `4242` card listed; the dialog's Yearly shows `$9.92` a month; choosing
   Standard (`@plan-select-standard`) makes it the current plan at `$17.90`; "Manage on Stripe" opens
   `billing.stripe.com` on the Standard subscription at `$17.90 per month`.
-- Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | active | <the
-  rxdesk-verify-standard-monthly price>`.
+- Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | active | <the Standard monthly
+  Price id in plan_prices>`.
 
 ## Gotchas
 

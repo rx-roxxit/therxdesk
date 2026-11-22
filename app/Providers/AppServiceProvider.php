@@ -14,6 +14,7 @@ use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
 use App\Models\AuditLog;
 use App\Models\BackupRun;
+use App\Models\CatalogSetting;
 use App\Models\ChangelogEntry;
 use App\Models\ChangelogEntryView;
 use App\Models\CoverOutcome;
@@ -150,6 +151,7 @@ class AppServiceProvider extends ServiceProvider
             'analyticsSyncState' => AnalyticsSyncState::class,
             'auditLog' => AuditLog::class,
             'backupRun' => BackupRun::class,
+            'catalogSetting' => CatalogSetting::class,
             'changelogEntry' => ChangelogEntry::class,
             'changelogEntryView' => ChangelogEntryView::class,
             'idea' => Idea::class,

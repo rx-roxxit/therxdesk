@@ -3,7 +3,7 @@
 # selling mode (SELF_HOSTED=false, Stripe sandbox, webhooks forwarded by the
 # Stripe CLI), without editing .env. See compose.selling.yaml.
 #
-#   selling.sh up       app catalog + sandbox prices, webhook secret, recreate app in selling mode, start the listener
+#   selling.sh up       app catalog synced to Stripe, webhook secret, recreate app in selling mode, start the listener
 #   selling.sh down     stop the listener, recreate app from .env (self-hosted)
 #   selling.sh status   the marker, the app container's SELF_HOSTED, what php-fpm serves, the listener
 #   selling.sh logs     the listener's log, with the signing secret redacted
@@ -14,98 +14,62 @@ source "$(dirname "$0")/env.sh"
 
 STRIPE="$(dirname "$0")/stripe.sh"
 
-# scripts/plans.php reads the app's Plan catalog from the DEV database and
-# writes the sandbox price ids back. The prices themselves live in
-# plan_prices, never in this script.
-plans() {
-    app_run php "$SKILL_IN_APP/scripts/plans.php" "$@"
-}
-
-json_field() {
-    python3 -I -c "import json,sys; d=json.load(sys.stdin); print($1)"
-}
-
-# Prints the id of the sandbox price with this lookup key, creating its
-# product and the price when missing. Idempotent: a second run finds them.
-# A found price whose amount no longer matches the catalog stops the run:
-# Stripe prices are immutable, so silently reusing it would charge the wrong
-# amount.
-ensure_price() {
-    local slug="$1" interval="$2" amount="$3"
-    local lookup="rxdesk-verify-${slug}-${interval}"
-    local found found_amount product
-
-    found="$("$STRIPE" get /v1/prices -d "lookup_keys[]=$lookup" -d active=true \
-        | json_field 'd["data"][0]["id"] + " " + str(d["data"][0]["unit_amount"]) if d["data"] else ""')"
-    if [ -n "$found" ]; then
-        found_amount="${found#* }"
-        found="${found%% *}"
-        if [ "$found_amount" != "$amount" ]; then
-            echo "[selling] FAILED: sandbox price $lookup is $found_amount cents, the catalog says $amount." >&2
-            echo "[selling] Deactivate it in the sandbox (or clear its lookup key), then run selling.sh up again." >&2
-            exit 1
-        fi
-        echo "$found"
-        return
-    fi
-
-    # Reuse the product a sibling price of the same plan already has.
-    product="$("$STRIPE" get /v1/prices -d "lookup_keys[]=rxdesk-verify-${slug}-monthly" -d "lookup_keys[]=rxdesk-verify-${slug}-yearly" -d active=true \
-        | json_field 'd["data"][0]["product"] if d["data"] else ""')"
-    if [ -z "$product" ]; then
-        local name
-        name="$(python3 -I -c "import sys; print(sys.argv[1].capitalize())" "$slug")"
-        product="$("$STRIPE" post /v1/products -d "name=$name" -d "metadata[rxdesk_verify]=true" | json_field 'd["id"]')"
-        echo "[selling] created sandbox product $product ($name)" >&2
-    fi
-
-    # plan_prices says "monthly" / "yearly"; Stripe wants "month" / "year".
-    local stripe_interval="${interval%ly}"
-    found="$("$STRIPE" post /v1/prices -d "product=$product" -d currency=usd -d "unit_amount=$amount" \
-        -d "recurring[interval]=$stripe_interval" -d "lookup_key=$lookup" -d "metadata[rxdesk_verify]=true" | json_field 'd["id"]')"
-    echo "[selling] created sandbox price $found ($lookup)" >&2
-    echo "$found"
-}
-
-# Seeds the app's own Plan catalog (idempotent, no env), then gives every
-# active plan_prices row a sandbox Price and writes the ids back.
+# Seeds the app's own Plan catalog (idempotent, no env) and lets the app
+# create every Stripe Product and Price itself: Stripe first, then the
+# database, and a second run creates nothing.
 sync_catalog() {
-    local catalog slug interval amount id
-    local -a attached=()
-
     echo "[selling] seeding the app's Plan catalog"
-    # The running app may predate the plan_prices migration: migrate first, as
-    # the entrypoint does on every recreate.
+    # The running app may predate these migrations: migrate first, as the
+    # entrypoint does on every recreate.
     app_run php artisan migrate --force
     app_run php artisan db:seed --class='Database\Seeders\PlanSeeder' --force
 
-    catalog="$(plans catalog)"
-    if [ -z "$catalog" ] || [ "$catalog" = "[]" ]; then
-        echo "[selling] FAILED: no active Plan price rows after seeding: check PlanSeeder" >&2
+    echo "[selling] syncing the catalog to the sandbox"
+    app_run php artisan rxdesk:catalog-sync
+
+    archive_legacy_sandbox_objects
+}
+
+# Archives the sandbox Products and Prices that earlier selling.sh runs created
+# with metadata rxdesk_verify=true or a rxdesk-verify-* lookup key. Stripe
+# Prices are immutable, so they are deactivated (active=false), never deleted,
+# and the listing asks for active objects only: a second run finds nothing.
+archive_legacy_sandbox_objects() {
+    local listing id
+
+    if ! listing="$("$STRIPE" get /v1/products -d active=true -d limit=100)"; then
+        echo "[selling] FAILED: could not list the sandbox Products" >&2
         exit 1
     fi
 
-    while read -r slug interval amount; do
-        id="$(ensure_price "$slug" "$interval" "$amount")"
-        [[ "$id" == price_* ]] || { echo "[selling] FAILED: no sandbox price for $slug $interval" >&2; exit 1; }
-        attached+=("$slug $interval $id")
-        echo "[selling] price $slug $interval: $id"
-    done < <(printf '%s' "$catalog" | python3 -I -c '
+    while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        "$STRIPE" post "/v1/products/$id" -d active=false >/dev/null
+        echo "[selling] archived legacy sandbox product $id"
+    done <<< "$(printf '%s' "$listing" | python3 -I -c '
 import json, sys
-for row in json.load(sys.stdin):
-    print(row["slug"], row["interval"], row["amount"])
-')
+for product in json.load(sys.stdin).get("data", []):
+    if str((product.get("metadata") or {}).get("rxdesk_verify")) == "true":
+        print(product["id"])
+')"
 
-    if [ "${#attached[@]}" -eq 0 ]; then
-        echo "[selling] FAILED: read no rows from the catalog: check plans.php" >&2
+    if ! listing="$("$STRIPE" get /v1/prices -d active=true -d limit=100)"; then
+        echo "[selling] FAILED: could not list the sandbox Prices" >&2
         exit 1
     fi
 
-    printf '%s\n' "${attached[@]}" | python3 -I -c '
+    while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        "$STRIPE" post "/v1/prices/$id" -d active=false >/dev/null
+        echo "[selling] archived legacy sandbox price $id"
+    done <<< "$(printf '%s' "$listing" | python3 -I -c '
 import json, sys
-rows = [dict(zip(("slug", "interval", "price_id"), line.split())) for line in sys.stdin if line.strip()]
-print(json.dumps(rows))
-' | plans attach
+for price in json.load(sys.stdin).get("data", []):
+    metadata = price.get("metadata") or {}
+    lookup = price.get("lookup_key") or ""
+    if str(metadata.get("rxdesk_verify")) == "true" or lookup.startswith("rxdesk-verify-"):
+        print(price["id"])
+')"
 }
 
 write_webhook_secret() {

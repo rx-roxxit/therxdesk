@@ -36,7 +36,7 @@ the Plan step. On Stripe's page type the test card and press "Subscribe".
   (`08-after-checkout.png`).
 - Side effects, from the host:
   `$V/db.sh "select p.slug, s.stripe_status, s.stripe_price from accounts a left join plans p on p.id = a.plan_id left join subscriptions s on s.account_id = a.id where a.id = '<accountId>'"`
-  shows `mini | active | <the rxdesk-verify-mini-monthly price>`. `$V/selling.sh logs` shows every event
+  shows `mini | active | <the Mini monthly Price id in plan_prices>`. `$V/selling.sh logs` shows every event
   answered `<-- [200]` (a wrong signing secret answers 403).
 
 ## Gotchas
