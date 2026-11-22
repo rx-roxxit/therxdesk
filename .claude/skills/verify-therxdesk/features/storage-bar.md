@@ -6,7 +6,7 @@ policy on Preferences.
 ## Sub-features
 
 - Usage text "used of limit" (`@sidebar-menu-storage-usage`) and a progress bar (`@sidebar-menu-storage-progress`),
-  red at 100% or more.
+  red at 100% (the server caps `percent` at 100).
 - The bar links to `/settings/preferences#video-policy`.
 - Shown to the Account's Owner only, and only when the Account owns a Workspace (the `storage` Inertia prop is null
   otherwise). A member never sees it.
@@ -18,16 +18,18 @@ row. Click it to reach the video policy.
 
 ## Driving it with Playwright
 
-- No journey yet. To write one: `signIn`, then click `@sidebar-workspace-menu`, wait for `@sidebar-menu-storage`,
-  read `@sidebar-menu-storage-usage`, `run.step()`, click `@sidebar-menu-storage`, wait for the path
-  `/settings/preferences` and the `#video-policy` hash.
-- End state: the usage text is visible and matches the `storage` prop
-  (`window.history.state.page.props.storage.used_label` / `limit_label`); after the click, Preferences shows the
-  video policy section.
-- Side effect: none (read-only feature). To prove a non-zero usage, upload media through the composer first.
+- Journey: `$V/drive.sh storage-bar`.
+- Selectors: `@sidebar-workspace-menu`, `@sidebar-menu-storage`, `@sidebar-menu-storage-usage`,
+  `@sidebar-menu-storage-progress`. The Video policy row is `#video-policy`; its select carries
+  `@preferences-video-policy-trigger` (a `SettingsSelect` puts the test id on its trigger).
+- End state: the usage text matches the `storage` prop
+  (`window.history.state.page.props.storage.used_label` / `limit_label`); after the click the URL is
+  `/settings/preferences#video-policy` and the Video policy row is visible.
+- Side effect: none (read-only feature).
 
 ## Gotchas
 
-- The fixture Owner has no media, so usage reads zero; proving the red full state needs real uploads past the
-  quota, not a database edit.
+- The fixture Owner has no media, so usage reads zero. To prove the red state, upload media and lower the Quota
+  under the usage with `php artisan rxdesk:quota set verify-agent@example.com 1MB` (then
+  `... default` to restore): `percent` caps at 100 and the bar turns red. A database edit is not the way.
 - The storage copy is English in every locale (an exception kept on purpose until it is translated).

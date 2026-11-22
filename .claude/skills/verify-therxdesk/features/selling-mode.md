@@ -1,7 +1,8 @@
 # Selling mode
 
-The app sells Plans: an Owner without a subscription (or a no-card trial) is held at Welcome until they check out;
-a member of such an Account waits on "Waiting for the account owner". Self-hosted mode skips all of it.
+The app sells Plans: an Owner without app access (no subscription and no no-card trial) is held at Welcome until
+they check out; a member of such an Account waits on "Waiting for the account owner". A no-card trial already has
+app access, so its Owner goes straight to the Schedule. Self-hosted mode skips all of it.
 
 ## Sub-features
 
@@ -10,9 +11,11 @@ a member of such an Account waits on "Waiting for the account owner". Self-hoste
 - Shared Inertia props: `selfHosted` (every page, the login page included), `auth.hasActiveSubscription`,
   `auth.plan`, `plans` (the active Plans, from `plan_prices`: Mini $11.90 / $119, Standard $17.90 / $179, Plus
   $29.90 / $299, Max $49.90 / $499; empty in self-hosted mode), `usage` and `features`.
-- Plans, prices and Stripe ids are app data: `plan_prices` holds a monthly and a yearly row per Plan, and
+- Plans, prices and Stripe ids are app data: `plan_prices` holds the active monthly and yearly rows per Plan (a
+  price change archives the old row instead of deleting it, so a Plan may hold several inactive rows), and
   `selling.sh` seeds the catalog and fills the Stripe ids (see `SKILL.md`, "Selling mode").
-- Billing, Plans and Processing pages answer only here (they redirect to the Schedule when self-hosted).
+- Billing and Processing answer only here (they redirect to the Schedule when self-hosted); the Welcome plan step
+  does too.
 
 ## How to get to it (user POV)
 

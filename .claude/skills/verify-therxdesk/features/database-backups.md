@@ -37,7 +37,7 @@ Run everything from the dev machine, with the stack in selling mode. `$V` is
    The receiver log shows `GET /backup-hb` from the app.
 
 4. Health: `$V/internal.sh GET /health --token admin` answers `backup.last_run_at` with the run time.
-   `restore_drill` shows `due` and `last_performed_at`.
+   `restore_drill` shows `due`, `last_performed_at` and `due_at`.
 
 5. Download the newest proof object into the checkout (the checkout is bind-mounted, so the file is
    on the host):
@@ -97,12 +97,12 @@ Run everything from the dev machine, with the stack in selling mode. `$V` is
    compose run --rm -T -u app app php artisan rxdesk:restore-drill
    ```
 
-9. Digest line. Backdate the recorded drill past three months, clear Mailpit, and run the digest:
+9. Digest line. Backdate every recorded drill past three months — update all rows, because an earlier
+   run's drill can be newer than the one just recorded — clear Mailpit, and run the digest:
 
    ```sh
    compose run --rm -T -u app app php artisan tinker --execute='
-   App\Models\RestoreDrill::query()->latest("performed_at")->first()
-       ->forceFill(["performed_at" => now()->subMonthsNoOverflow(4)])->save();
+   App\Models\RestoreDrill::query()->update(["performed_at" => now()->subMonthsNoOverflow(4)]);
    '
    $V/mail.sh clear
    compose run --rm -T -u app app php artisan rxdesk:digest

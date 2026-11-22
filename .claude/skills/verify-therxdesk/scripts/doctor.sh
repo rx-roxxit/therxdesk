@@ -65,6 +65,17 @@ else
     if [ "$mode" = "self-hosted" ]; then ok "mode: self-hosted (from .env)"; else bad "no selling.sh marker, but php-fpm serves $mode"; fi
 fi
 
+# Which default disk the app runs with, against media.sh's marker.
+disk_env=""
+if [ -n "$app_id" ]; then
+    disk_env="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$app_id" 2>/dev/null | sed -n 's/^FILESYSTEM_DISK=//p' | head -1)"
+fi
+if [ -f "$R2_MARKER" ]; then
+    if [ "$disk_env" = "r2" ]; then ok "media disk: r2 (media.sh up; media.sh down returns to .env)"; else bad "media.sh up was run, but the app container's FILESYSTEM_DISK=${disk_env:-<not set>} (run media.sh up again)"; fi
+else
+    ok "media disk: from .env (${disk_env:-not overridden}; media.sh up switches to r2)"
+fi
+
 if "$(dirname "$0")/fixture.sh" show >/dev/null 2>&1; then
     ok "fixture Owner exists (fixture.sh show)"
 else

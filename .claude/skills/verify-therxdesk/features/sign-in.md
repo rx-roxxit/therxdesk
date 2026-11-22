@@ -6,9 +6,16 @@ A user with an email and password signs in and lands on the Schedule of their cu
 
 - Email and password form (`/login`).
 - Show/hide password toggle (`@login-password-toggle`).
-- Link to sign up (`@login-sign-up-link`) and to reset the password (`/forgot-password`).
-- Google and GitHub sign-in (`/auth/google/redirect`, `/auth/github/redirect`): external OAuth, not drivable here.
-- After sign-in, the Schedule opens on the view the user picked last (Calendar for a new user).
+- Link to reset the password (`/forgot-password`). The sign-up link (`@login-sign-up-link`) shows only in selling
+  mode.
+- Google and GitHub sign-in (`/auth/google/redirect`, `/auth/github/redirect`): off by default
+  (`GOOGLE_AUTH_ENABLED` / `GITHUB_AUTH_ENABLED`), so the buttons are absent on the fixture stack; external OAuth,
+  not drivable here.
+- "Remember me", the guest language picker, an `?email=` prefill, and an invite link (`?invite=`) that takes the
+  signed-in user to the invite.
+- After sign-in the app redirects to `app.calendar` (`/schedule/calendar`), which renders the Week view; it never
+  reads the remembered view. `redirect()->intended()` lands on a previously guarded page, and an invite lands on the
+  invite page.
 
 ## How to get to it (user POV)
 
@@ -28,4 +35,5 @@ Open `http://localhost:8000/` signed out: the app sends guests to `/login`. Type
 
 - A new user sees the "Switch views" tour over the view switch. The journey leaves it on purpose (it is what a new
   user sees). Other journeys call `quietFirstVisits` and reload.
-- The landing path depends on the remembered view, so check for `/schedule`, not one exact path.
+- The landing path is `/schedule/calendar` in a fresh context; check for `/schedule`, not one exact path, because
+  `redirect()->intended()` can land elsewhere. The page's `view` prop is `week` for a new user, not "Calendar".

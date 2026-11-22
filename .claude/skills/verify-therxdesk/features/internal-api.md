@@ -30,6 +30,9 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/audit-log` (admin): paginated, newest first. A row has `id`, `actor`, `action`, `target_type`
   (the table), `target_id`, `before`, `after` and `created_at`. Every internal write and every CLI write records
   one (the CLI actor is `cli`); a password or secret key is never stored.
+- `GET /internal/v1/health` (admin): `queue` (`available`, `waits`), `backup` (`last_run_at`, null until a run),
+  `restore_drill` (`last_performed_at`, `due_at`, `due`), `disk`, and `nightwatch` (`open`, `recent`). The site
+  token answers 404.
 - `GET /internal/v1/plans` (admin): paginated, ordered by `sort` then `name`; `?search=` matches name or slug,
   `?archived=1|0|all` (default all). A row has `id`, `slug`, `name`, `quota_bytes`, `ai_credits_per_month`,
   `sort`, `is_archived`, `stripe_product_id`, `prices.monthly` and `prices.yearly` (each the active row as
@@ -37,16 +40,19 @@ prints them. `selling.sh down` removes the file.
 - `POST /internal/v1/plans` (admin): `slug` (lowercase, immutable), `name`, `quota_bytes`,
   `ai_credits_per_month`, `monthly_amount` in USD cents and `sort`. 201. The app creates the Stripe Product and
   the monthly Price plus the yearly Price at ten times monthly, then stores their ids in `plan_prices`.
-- `PATCH /internal/v1/plans/{uuid}` (admin): the same fields without `slug`. A changed `monthly_amount` creates
-  new Prices and archives the old ones in Stripe and in `plan_prices`; an unchanged amount touches no Price.
-- `POST /internal/v1/plans/{uuid}/archive` (admin): archives the Plan, its Product and its active Prices.
-- `POST /internal/v1/plans/{uuid}/quota-cut-dry-run` (admin): `{ "quota_bytes": <int> }` in; lists the Owners on
-  that Plan, without their own override, whose Storage used is over the proposed Quota.
+- `PATCH /internal/v1/plans/{uuid}` (admin): the same fields without `slug` (`slug` is `prohibited`, so sending it
+  answers 422). A changed `monthly_amount` creates new Prices and archives the old ones in Stripe and in
+  `plan_prices`; an unchanged amount touches no Price. An archived Plan answers 422.
+- `POST /internal/v1/plans/{uuid}/archive` (admin): archives the Plan, its Product and its active Prices. A second
+  archive is a no-op and records no audit row.
+- `POST /internal/v1/plans/{uuid}/quota-cut-dry-run` (admin): `{ "quota_bytes": <int> }` in; answers
+  `{ "quota_bytes", "owners": [{ "account_id", "owner_name", "owner_email", "used_bytes" }] }`, the Owners on that
+  Plan, without their own override, whose Storage used is over the proposed Quota.
 - `GET` / `PATCH /internal/v1/catalog-settings` (admin): `trial_days`, `tokens_per_credit`, `trial_ai_credits`
-  (defaults 7, 150, 1,000). `trial_ai_credits` may not exceed any active Plan's monthly credits, and a Plan's
-  credits may not fall below it.
-- A Stripe failure answers `502` and saves nothing. Every write above records an audit row with the admin email
-  from `X-Internal-Admin-Email`.
+  (defaults 7, 150, 1,000); `GET` also returns `updated_at`. `trial_ai_credits` may not exceed any active Plan's
+  monthly credits, and a Plan's credits may not fall below it.
+- A Stripe failure answers `502` and saves nothing. Every write above that changes something records an audit row
+  with the admin email from `X-Internal-Admin-Email`.
 
 ## Helper
 
@@ -71,6 +77,8 @@ $V/internal.sh PATCH /plans/<uuid> --token admin --body '{"monthly_amount":1090}
 $V/internal.sh POST /plans/<uuid>/archive --token admin
 $V/internal.sh POST /plans/<uuid>/quota-cut-dry-run --token admin --body '{"quota_bytes":536870912}'
 $V/internal.sh GET /catalog-settings --token admin
+$V/internal.sh PATCH /catalog-settings --token admin --body '{"trial_days":14}'
+$V/internal.sh GET /health --token admin
 ```
 
 ## Proof checklist
@@ -85,6 +93,9 @@ $V/internal.sh GET /catalog-settings --token admin
   `plan_prices` rows; `/audit-log` has `plan.create` with the admin email.
 - A `PATCH` that changes `monthly_amount` returns 200; the old sandbox Prices answer `active=false`; the old
   `plan_prices` rows are `is_active=false` and still carry their `stripe_price_id` (they are never deleted).
-- A `POST /plans` whose amount Stripe rejects (for example `monthly_amount` far above Stripe's maximum) answers
-  502, and no `plans` row and no audit row were written.
+- The 502 path (a Stripe rejection saves nothing) is covered by `tests/Feature/Internal/PlansTest.php` with a faked
+  Stripe. A live request cannot provoke it: `monthly_amount` is validated to `1..99999999`, and Stripe accepted the
+  yearly ten-times amount even at that ceiling (checked November 2026).
 - `--token site` on any of the write endpoints answers 404.
+- `GET /health` with the admin token answers 200 with `queue`, `backup`, `restore_drill`, `disk` and `nightwatch`;
+  with the site token it answers 404.

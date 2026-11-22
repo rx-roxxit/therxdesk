@@ -1,0 +1,13 @@
+# Media on R2 for the dev stack, merged on top of compose.yaml and
+# compose.override.yaml by `compose` in env.sh while the r2 marker exists
+# (media.sh up writes it, media.sh down removes it). .env stays untouched:
+# FILESYSTEM_DISK=r2 is container env, and Laravel keeps the container value
+# over .env. The R2_* credentials come from the project's .env.
+#
+# The proof needs object storage only for uploads and reads: the Disk guard
+# still watches the VPS volume. See features/media-on-r2.md.
+
+services:
+    app:
+        environment:
+            FILESYSTEM_DISK: r2
