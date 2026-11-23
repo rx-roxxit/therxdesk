@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Internal;
 
+use App\Enums\Availability\ServiceSwitch;
+use App\Enums\Billing\Interval;
+use App\Enums\SocialAccount\Platform;
+use App\Enums\User\Locale;
 use App\Http\Resources\Internal\SitePlanResource;
+use App\Models\CatalogSetting;
 use App\Models\Offer;
 use App\Models\Operator;
 use App\Models\Plan;
+use App\Support\Billing\OfferCopy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
 
 class SiteController
 {
@@ -29,12 +37,28 @@ class SiteController
             ->first();
 
         return response()->json([
-            'operator' => $this->operator(Operator::current()),
-            'offer' => $this->offer($offer),
             'plans' => $plans
                 ->map(fn (Plan $plan): array => SitePlanResource::make($plan, $offer)->resolve($request))
                 ->all(),
+            'trial_days' => CatalogSetting::current()->trial_days,
+            'offer' => $this->offer($offer),
+            'networks' => $this->networks(),
+            'signups_open' => ! ServiceSwitch::newSignupsClosed(),
+            'operator' => $this->operator(Operator::current()),
         ]);
+    }
+
+    /**
+     * The network keys a customer can connect right now: installed and
+     * switched on. Variants collapse the way the accounts grid's connect
+     * cards do, so a LinkedIn page sits under LinkedIn and Instagram via
+     * Facebook under Instagram.
+     *
+     * @return list<string>
+     */
+    private function networks(): array
+    {
+        return Arr::pluck(Platform::connectableOptions(), 'value');
     }
 
     /**
@@ -76,6 +100,7 @@ class SiteController
         return [
             'slug' => $offer->slug,
             'name' => $offer->name,
+            'banner' => $this->banner($offer),
             'trial_days' => $offer->trial_days,
             'starts_at' => $offer->starts_at,
             'ends_at' => $offer->ends_at,
@@ -90,5 +115,30 @@ class SiteController
             'plan_ids' => $offer->plan_ids,
             'intervals' => $offer->coveredIntervals(),
         ];
+    }
+
+    /**
+     * The Offer's banner sentence in every locale, so the website can show it
+     * in the visitor's language without translating the campaign name. The
+     * locale is restored before the response, whatever happens.
+     *
+     * @return array<string, string>
+     */
+    private function banner(Offer $offer): array
+    {
+        $original = App::currentLocale();
+
+        try {
+            $banner = [];
+
+            foreach (Locale::cases() as $locale) {
+                App::setLocale($locale->value);
+                $banner[$locale->value] = OfferCopy::line($offer, Interval::Monthly);
+            }
+        } finally {
+            App::setLocale($original);
+        }
+
+        return $banner;
     }
 }

@@ -16,11 +16,16 @@ prints them. `selling.sh down` removes the file.
 
 ## Endpoints
 
-- `GET /internal/v1/site` (site or admin token): top-level `{ "offer": {...}|null, "plans": [...] }`. Each Plan has
-  `slug`, `name`, `quota_bytes`, `ai_credits_per_month`, `monthly` / `yearly` in USD cents and `offer.monthly` /
-  `offer.yearly` (`regular`, `discount`, `discounted` in cents, or null). `offer` is the running general Offer
-  (never a link one) with its name, discount, `trial_days`, dates, `plan_ids` and `intervals`. Only active Plans, by
-  `sort`.
+- `GET /internal/v1/site` (site or admin token): top-level `{ "plans": [...], "trial_days", "offer": {...}|null,
+  "networks": [...], "signups_open", "operator": {...}|null }`. Each Plan has `slug`, `name`, `quota_bytes`,
+  `ai_credits_per_month`, `monthly` / `yearly` in USD cents and `offer.monthly` / `offer.yearly` (`regular`,
+  `discount`, `discounted` in cents, or null). `offer` is the running general Offer (never a link one) with its
+  name, discount, `trial_days`, dates, `plan_ids`, `intervals` and `banner.<locale>`: the banner sentence rendered
+  from the `rxdesk.php` templates in all 16 locales. `networks` lists the platform keys a customer can connect now
+  (installed and switched on; network variants collapse the way the connect cards do). `signups_open` is false
+  while the `new_signups` switch is off. `trial_days` is the Catalog Trial length, and `operator` the
+  customer-facing fields (null until one is recorded). Values are raw (cents, ISO dates); the site formats them.
+  Only active Plans, by `sort`.
 - `GET /internal/v1/accounts?search=<email>` (admin): paginated `{ "data": [...], "links": {...}, "meta": {...} }`,
   the configured page size (25). A row has `id`, `name`, `owner` (`id`, `name`, `email`), `plan` (`id`, `slug`,
   `name`), `subscription_status`, `members_count` and `created_at`. `search` matches any User email in the Account.
@@ -186,6 +191,11 @@ $V/internal.sh GET /health --token admin
 
 - `--token none` and `--token bogus`: `HTTP 404` on `/site`, `/accounts` and `/audit-log`.
 - `--token site`: `HTTP 200` on `/site`, `HTTP 404` on `/accounts` and `/audit-log`.
+- `internal.sh GET /site --token site` shows `plans` (4), `trial_days`, `offer` (null, or with a `banner` holding all
+  16 locale keys), `networks`, `signups_open` and `operator`. After
+  `internal.sh PATCH /availability/platform:tiktok --token admin --body '{"enabled":false}'` the `tiktok` key drops
+  out of `networks`; with `new_signups` off, `signups_open` is false. `internal.sh POST /site --token site`
+  answers `HTTP 405`, and no write reaches the database.
 - `--token admin` without `--email`: `HTTP 422`; with the email: `HTTP 200`.
 - After `php artisan rxdesk:quota set <owner email> 20GB`, `/audit-log` shows the `account.quota.set` row with
   actor `cli` and its `before` / `after`.
