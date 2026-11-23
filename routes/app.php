@@ -57,6 +57,8 @@ use App\Http\Controllers\App\Settings\PreferencesController;
 use App\Http\Controllers\App\Settings\ProfileController;
 use App\Http\Controllers\App\Settings\SessionController;
 use App\Http\Controllers\App\Settings\VideoPolicyController;
+use App\Http\Controllers\App\SupportConversationController;
+use App\Http\Controllers\App\SupportMessageController;
 use App\Http\Controllers\App\TourController;
 use App\Http\Controllers\App\UnsplashController;
 use App\Http\Controllers\App\VideoBackupRetryController;
@@ -436,6 +438,14 @@ Route::middleware(['auth', EnsureAccountReady::class, EnsureHasWorkspace::class]
     Route::get('settings/account/billing/portal', [BillingController::class, 'portal'])->name('app.billing.portal');
     Route::post('settings/account/billing/change-plan', [BillingController::class, 'changePlan'])->name('app.billing.change-plan');
     Route::post('settings/account/billing/checkout', [BillingController::class, 'checkout'])->name('app.billing.checkout');
+
+    Route::middleware('support.chat')->prefix('support-chat')->name('app.support.')->group(function (): void {
+        Route::get('/', [SupportConversationController::class, 'index'])->name('conversations.index');
+        Route::post('conversations', [SupportConversationController::class, 'store'])->name('conversations.store');
+        Route::post('conversations/{conversation}/messages', [SupportMessageController::class, 'store'])->name('messages.store');
+        Route::post('messages/{message}/retry', [SupportMessageController::class, 'retry'])->name('messages.retry');
+        Route::patch('messages/{message}/feedback', [SupportMessageController::class, 'feedback'])->name('messages.feedback');
+    });
 
 });
 

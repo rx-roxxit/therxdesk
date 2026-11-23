@@ -338,6 +338,8 @@ const SELLING_JOURNEYS = [
     'gate-retry',
     'availability-off',
     'availability-retry',
+    'support-chat',
+    'support-chat-limit',
     'ai-credits',
 ];
 
@@ -2958,6 +2960,153 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             return window.history.state?.page?.props?.locale ?? null;
         });
         run.check('the shared locale is ja', locale === 'ja', locale);
+    },
+
+    /**
+     * features/support-chat.md
+     *
+     * The Help menu opens the Support assistant, and one short question gets
+     * a real answer from the configured provider (support-chat.sh up switches
+     * the chat on; one conversation costs a fraction of a cent).
+     */
+    'support-chat': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.locator(tid('@sidebar-workspace-menu')).waitFor();
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        const trigger = page.locator(tid('@sidebar-support-trigger'));
+        await trigger.waitFor();
+
+        // A Radix sub-trigger opens on a pointer move, not on a click alone.
+        await trigger.dispatchEvent('pointermove');
+        await trigger.click();
+
+        const chatItem = page.locator(tid('@sidebar-support-chat'));
+        await chatItem.waitFor();
+        run.check(
+            'the Help menu offers Chat support',
+            (await chatItem.count()) === 1,
+            await chatItem.count(),
+        );
+
+        await chatItem.click();
+        await page.locator(tid('@support-chat-sheet')).waitFor();
+        await page.locator(tid('@support-chat-empty')).waitFor();
+        await animationsSettled(page);
+        await run.step('chat-open');
+
+        const title = await page
+            .locator(tid('@support-chat-title'))
+            .innerText();
+        const sheet = await page
+            .locator(tid('@support-chat-sheet'))
+            .innerText();
+
+        run.check(
+            'the sheet is titled Support assistant',
+            title.trim() === 'Support assistant',
+            title,
+        );
+        run.check(
+            'the sheet carries the AI disclosure',
+            sheet.includes('AI answers from our help pages'),
+            sheet.slice(0, 300),
+        );
+        run.check(
+            'the empty state offers three suggested questions',
+            (await page.locator('[data-testid^="support-chat-suggestion-"]').count()) === 3,
+            await page.locator('[data-testid^="support-chat-suggestion-"]').count(),
+        );
+
+        await page
+            .locator(tid('@support-chat-input'))
+            .fill('Where do I change my plan?');
+        await page.locator(tid('@support-chat-send')).click();
+
+        // The whole answer arrives at once; the corpus makes the first call slower.
+        await page
+            .locator(tid('@support-chat-message-assistant'))
+            .first()
+            .waitFor({ timeout: 90_000 });
+        await animationsSettled(page);
+        await run.step('answer');
+
+        const answer = await page
+            .locator(tid('@support-chat-message-assistant'))
+            .first()
+            .innerText();
+
+        run.check(
+            'the answer is written',
+            answer.trim().length > 40,
+            answer.slice(0, 400),
+        );
+        run.check(
+            'the answer names no provider or model',
+            !/anthropic|claude|openai|gpt/i.test(answer),
+            answer.slice(0, 400),
+        );
+
+        run.note('answer', answer.slice(0, 400));
+    },
+
+    /**
+     * features/support-chat.md
+     *
+     * The conversation is at its 20-message cap (`support-chat.sh limit`): the
+     * sheet opens on the conversation-limit line with the input disabled, and
+     * New conversation clears it.
+     */
+    'support-chat-limit': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.locator(tid('@sidebar-workspace-menu')).waitFor();
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        const trigger = page.locator(tid('@sidebar-support-trigger'));
+        await trigger.waitFor();
+        await trigger.dispatchEvent('pointermove');
+        await trigger.click();
+        await page.locator(tid('@sidebar-support-chat')).click();
+
+        const limitLine = page.locator(tid('@support-chat-limit-conversation'));
+        await limitLine.waitFor();
+        await animationsSettled(page);
+        await run.step('conversation-limit');
+
+        const line = await limitLine.innerText();
+        run.check(
+            'the conversation limit names the 20-message cap',
+            line.includes('20 messages'),
+            line,
+        );
+        run.check(
+            'the input is locked at the cap',
+            await page.locator(tid('@support-chat-input')).isDisabled(),
+            await page.locator(tid('@support-chat-input')).isDisabled(),
+        );
+
+        await page.locator(tid('@support-chat-new')).click();
+        await page.locator(tid('@support-chat-empty')).waitFor();
+        await run.step('new-conversation');
+
+        run.check(
+            'New conversation clears the limit',
+            (await limitLine.count()) === 0,
+            await limitLine.count(),
+        );
+        run.check(
+            'the input works again',
+            !(await page.locator(tid('@support-chat-input')).isDisabled()),
+            await page.locator(tid('@support-chat-input')).isDisabled(),
+        );
     },
 };
 

@@ -14,6 +14,7 @@ import ConnectChannelDialog from '@/components/channels/ConnectChannelDialog.vue
 import CommandPalette from '@/components/command-palette/CommandPalette.vue';
 import GlobalPostComposer from '@/components/posts/composer/GlobalPostComposer.vue';
 import ReferralSourceSurvey from '@/components/ReferralSourceSurvey.vue';
+import SupportChatSheet from '@/components/support/SupportChatSheet.vue';
 import Toast from '@/components/Toast.vue';
 import McpPromptTour from '@/components/tours/McpPromptTour.vue';
 import TourOverlay from '@/components/tours/TourOverlay.vue';
@@ -122,6 +123,7 @@ watch(isCompactViewport, (isCompact) => {
     <GlobalPostComposer />
     <ConnectChannelDialog />
     <ChangelogDialog />
+    <SupportChatSheet />
     <CommandPalette />
     <ReferralSourceSurvey />
     <McpPromptTour />

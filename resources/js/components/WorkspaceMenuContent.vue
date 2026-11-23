@@ -9,6 +9,8 @@ import {
     IconLanguage,
     IconLayoutGrid,
     IconLogout,
+    IconMail,
+    IconMessageCircle,
     IconMoon,
     IconPlus,
     IconSettings,
@@ -36,6 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useChangelogDialog } from '@/composables/useChangelogDialog';
 import { clearAllComposerAutosaves } from '@/composables/useComposerAutosave';
+import { useSupportChat } from '@/composables/useSupportChat';
 import { useWorkspaceAbilities } from '@/composables/useWorkspaceAbilities';
 import { cn } from '@/lib/utils';
 import posthog from '@/posthog';
@@ -140,6 +143,18 @@ const handleLogout = (): void => {
 
 const showChangelog = computed(() => Boolean(page.props.changelog));
 const { openList: openChangelog } = useChangelogDialog();
+const { open: openSupportChat } = useSupportChat();
+const showSupportChat = computed(() => page.props.supportChat === true);
+const showEmailSupport = computed(() => !selfHosted.value);
+const supportMailto = computed((): string => {
+    const email = page.props.supportEmail;
+
+    if (typeof email !== 'string') {
+        return '';
+    }
+
+    return `mailto:${email}`;
+});
 
 const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
 </script>
@@ -392,6 +407,20 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
                     >
                         {{ $t('sidebar.help') }}
                     </DropdownMenuLabel>
+                    <DropdownMenuItem
+                        v-if="showSupportChat"
+                        data-testid="sidebar-support-chat"
+                        @click="openSupportChat"
+                    >
+                        <IconMessageCircle />
+                        {{ $t('sidebar.support.chat') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem v-if="showEmailSupport" as-child>
+                        <a :href="supportMailto" data-testid="sidebar-support-email">
+                            <IconMail />
+                            {{ $t('rxdesk.help.support_email') }}
+                        </a>
+                    </DropdownMenuItem>
                     <DropdownMenuItem as-child>
                         <a
                             :href="sourceCodeUrl"

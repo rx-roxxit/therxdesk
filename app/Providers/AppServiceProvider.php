@@ -45,6 +45,8 @@ use App\Models\RssFeedItem;
 use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Models\SupportConversation;
+use App\Models\SupportMessage;
 use App\Models\TrialAccount;
 use App\Models\TrialCard;
 use App\Models\User;
@@ -66,6 +68,8 @@ use App\Socialite\InstagramProvider;
 use App\Socialite\LinkedInPageExtendSocialite;
 use App\Support\Auth\PasswordRequirements;
 use App\Support\Availability\Availability;
+use App\Support\SupportChat\HelpCorpus;
+use App\Support\SupportChat\SupportChatLinks;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -105,6 +109,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(HostMetrics::class, ProcHostMetrics::class);
         $this->app->bind(QueueMetrics::class, HorizonQueueMetrics::class);
         $this->app->scoped(Availability::class);
+        $this->app->scoped(HelpCorpus::class);
+        $this->app->scoped(SupportChatLinks::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
@@ -191,6 +197,8 @@ class AppServiceProvider extends ServiceProvider
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,
+            'supportConversation' => SupportConversation::class,
+            'supportMessage' => SupportMessage::class,
             'trialAccount' => TrialAccount::class,
             'trialCard' => TrialCard::class,
             'user' => User::class,

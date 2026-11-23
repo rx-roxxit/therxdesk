@@ -29,6 +29,7 @@ use App\Services\Storage\AccountStorage;
 use App\Support\ByteSize;
 use App\Support\HeicConverter;
 use App\Support\LinkTlds;
+use App\Support\SupportChat\SupportChatGate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -84,6 +85,7 @@ class HandleInertiaRequests extends Middleware
             'env' => config('app.env'),
             'locale' => app()->getLocale(),
             'selfHosted' => $isSelfHosted,
+            'supportChat' => fn (): bool => app(SupportChatGate::class)->enabled(),
         ];
     }
 
@@ -119,6 +121,7 @@ class HandleInertiaRequests extends Middleware
                 'privacy' => config('trypost.legal.privacy_url'),
             ],
             'languages' => fn (): array => Locale::options(),
+            'supportEmail' => fn (): string => (string) config('trypost.support.email'),
             'aiEnabled' => fn (): bool => filled(config('ai.providers.'.config('ai.default').'.key')),
             'googleAuthEnabled' => fn (): bool => SocialAuthProvider::Google->isEnabled(),
             'githubAuthEnabled' => fn (): bool => SocialAuthProvider::GitHub->isEnabled(),

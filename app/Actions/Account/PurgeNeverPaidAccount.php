@@ -10,6 +10,7 @@ use App\Actions\User\StrandedSettlement;
 use App\Actions\Workspace\PurgeWorkspace;
 use App\Models\Account;
 use App\Models\Invite;
+use App\Models\SupportConversation;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,8 @@ class PurgeNeverPaidAccount
                 });
 
             Invite::query()->where('account_id', $locked->id)->delete();
+
+            SupportConversation::query()->where('account_id', $locked->id)->delete();
 
             $settlement = StrandedSettlement::none();
 
