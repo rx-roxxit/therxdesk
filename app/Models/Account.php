@@ -203,6 +203,22 @@ class Account extends Model
             ->first();
     }
 
+    /**
+     * The Accounts the Business figures describe: a billable Subscription, a
+     * generic Trial, a Complimentary Plan ever given, or a Suspension. An
+     * abandoned checkout (incomplete) alone is not one.
+     */
+    public function scopeWithBillingFootprint(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $query): Builder => $query
+            ->whereHas('subscriptions', fn (Builder $subscriptions): Builder => $subscriptions
+                ->whereNotIn('stripe_status', ['incomplete', 'incomplete_expired']))
+            ->orWhereNotNull('trial_ends_at')
+            ->orWhereNotNull('complimentary_since')
+            ->orWhereNotNull('suspended_at')
+            ->orWhereNotNull('first_paid_at'));
+    }
+
     public function posts(): HasManyThrough
     {
         return $this->hasManyThrough(Post::class, Workspace::class);

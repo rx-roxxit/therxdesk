@@ -27,6 +27,7 @@ use App\Support\Billing\TrialAccounts;
 use App\Support\Billing\TrialCards;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Events\WebhookHandled;
 use Stripe\Event as StripeEvent;
@@ -195,6 +196,15 @@ class StripeEventListener
 
         if (is_string($priceId) && filled($priceId)) {
             $subscription->stripe_price = $priceId;
+        }
+
+        // The Offer the checkout carried, so the Business figures read it from
+        // our database instead of Stripe. A payload without it (older events)
+        // keeps the stored value.
+        $offerId = data_get($payload, 'data.object.metadata.'.ConfigureSubscriptionCheckout::OFFER_METADATA_KEY);
+
+        if (is_string($offerId) && Str::isUuid($offerId)) {
+            $subscription->offer_id = $offerId;
         }
 
         if ($subscription->isDirty()) {

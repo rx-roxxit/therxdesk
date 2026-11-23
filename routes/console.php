@@ -18,6 +18,7 @@ use App\Console\Commands\Repurpose\PollRepurposes;
 use App\Console\Commands\ResolveTikTokVideoIds;
 use App\Console\Commands\RssFeed\PollRssFeeds;
 use App\Console\Commands\RxDesk\BackupCommand;
+use App\Console\Commands\RxDesk\BusinessSnapshotCommand;
 use App\Console\Commands\RxDesk\CapacityCommand;
 use App\Console\Commands\RxDesk\DigestCommand;
 use App\Console\Commands\RxDesk\LifecycleCommand;
@@ -85,6 +86,13 @@ Schedule::command(LifecycleCommand::class)
 
 Schedule::command(PruneSupportChatCommand::class)
     ->dailyAt('04:00')
+    ->timezone('UTC')
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(BusinessSnapshotCommand::class)
+    ->dailyAt('00:05')
     ->timezone('UTC')
     ->when(fn (): bool => ! config('trypost.self_hosted'))
     ->withoutOverlapping()
