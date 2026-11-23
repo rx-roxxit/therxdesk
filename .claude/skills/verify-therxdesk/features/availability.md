@@ -53,6 +53,9 @@ $V/selling.sh up
 $V/fixture.sh up
 $V/complimentary.sh up
 
+# Apply this branch's migrations: launch reuses an already-running stack.
+( source "$V/env.sh"; app_run php artisan migrate --force )
+
 # 1. With LinkedIn still on, schedule a post a few minutes ahead.
 VERIFY_GATE_LEAD_MINUTES=8 $V/drive.sh gate-schedule
 BLOCKED=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["notes"]["blockedPostId"])' \
