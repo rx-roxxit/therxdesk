@@ -68,13 +68,21 @@ const headingKey = computed(() => {
     return 'posts.publish.failure.title';
 });
 
-const blockReasonKey = computed(() => {
+const blockReason = (
+    $t: (key: string, params?: Record<string, unknown>) => string,
+): string => {
     if (blocked.value === null) {
-        return 'posts.publish.failure.generic';
+        return $t('posts.publish.failure.generic');
     }
 
-    return `rxdesk.publishing_block.${blocked.value}`;
-});
+    if (blocked.value === 'unavailable') {
+        return $t('rxdesk.publishing_block.unavailable', {
+            network: getPlatformLabel(props.post.platform ?? ''),
+        });
+    }
+
+    return $t(`rxdesk.publishing_block.${blocked.value}`);
+};
 
 const failure = computed(() => {
     const post = props.post;
@@ -149,7 +157,7 @@ const retry = (): void => {
                     class="text-sm text-foreground"
                     :data-testid="`post-failure-reason-${testKey}`"
                 >
-                    {{ $t(blockReasonKey) }}
+                    {{ blockReason($t) }}
                 </p>
                 <Button
                     v-if="canPublishDirectly"

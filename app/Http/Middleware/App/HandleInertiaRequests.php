@@ -96,6 +96,11 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::shareOnce($request),
             'connectablePlatforms' => fn (): array => SocialPlatform::connectableOptions(),
+            'unavailablePlatforms' => fn (): array => collect(SocialPlatform::cases())
+                ->reject(fn (SocialPlatform $platform): bool => $platform->isAvailable())
+                ->map(fn (SocialPlatform $platform): string => $platform->value)
+                ->values()
+                ->all(),
             'contentTypeMediaRules' => fn (): array => ContentType::mediaRulesForFrontend(),
             'defaultCropPresets' => fn (): array => ContentType::defaultCropPresets(),
             'plans' => function (): array {
