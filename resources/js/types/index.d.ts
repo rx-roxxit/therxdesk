@@ -119,9 +119,12 @@ export interface StorageSummary {
 
 /** The Account's monthly AI credit balance (`HandleInertiaRequests` and every AI response). */
 export interface AiCredits {
+    used: number;
     remaining: number;
     total: number;
     low: boolean;
+    percent: number;
+    renews_at: string;
 }
 
 export interface SharedData {

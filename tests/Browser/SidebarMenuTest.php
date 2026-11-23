@@ -76,6 +76,8 @@ test('account owners see settings, channels and plans and billing in the sidebar
         ->assertVisible('@sidebar-menu-billing')
         ->assertVisible('@sidebar-menu-channels')
         ->assertVisible('@sidebar-menu-manage-team')
+        ->assertVisible('@sidebar-menu-storage')
+        ->assertVisible('@sidebar-menu-ai-credits')
         ->assertVisible('@logout-button');
 
     expect($page->script('document.querySelector(\'[data-testid="sidebar-menu-settings"]\').getAttribute("href")'))
@@ -83,7 +85,9 @@ test('account owners see settings, channels and plans and billing in the sidebar
         ->and($page->script('document.querySelector(\'[data-testid="sidebar-menu-channels"]\').getAttribute("href")'))
         ->toBe(route('app.workspace.channels', absolute: false))
         ->and($page->script('document.querySelector(\'[data-testid="sidebar-menu-billing"]\').getAttribute("href")'))
-        ->toBe(route('app.billing.index', absolute: false));
+        ->toBe(route('app.billing.index', absolute: false))
+        ->and($page->script('document.querySelector(\'[data-testid="sidebar-menu-ai-credits"]\').getAttribute("href")'))
+        ->toBe(route('app.billing.index', absolute: false).'#usage');
 
     expect($page->script(<<<'JS'
         [...document.querySelectorAll('[data-testid^="sidebar-menu-section-"], [data-testid="sidebar-workspaces-trigger"], [data-testid="sidebar-menu-settings"], [data-testid="sidebar-theme-trigger"], [data-testid="sidebar-support-trigger"], [data-testid="logout-button"]')]
@@ -171,6 +175,7 @@ test('workspace members do not see channels or plans and billing in the sidebar 
         ->assertMissing('@sidebar-menu-billing')
         ->assertMissing('@sidebar-menu-channels')
         ->assertMissing('@sidebar-menu-manage-team')
+        ->assertMissing('@sidebar-menu-ai-credits')
         ->assertVisible('@logout-button');
 });
 

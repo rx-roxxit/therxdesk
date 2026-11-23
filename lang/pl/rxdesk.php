@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Wykorzystano kredyty AI na ten miesiąc. Poproś właściciela konta o zmianę planu.',
         'low' => 'W tym miesiącu zostały tylko :remaining z :total kredytów AI.',
         'change_plan' => 'Zmień plan',
+        'label' => 'Kredyty AI',
+        'usage_line' => 'wykorzystano :used z :total · odnowienie :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Saldo konta',
+        'usage' => [
+            'title' => 'Użycie',
+        ],
+        'status' => [
+            'trial_monthly' => 'Próba do :date, potem :price miesięcznie',
+            'trial_yearly' => 'Próba do :date, potem :price rocznie',
+            'renews_monthly' => 'Odnowienie :date · :price miesięcznie',
+            'renews_yearly' => 'Odnowienie :date · :price rocznie',
+            'cancelling' => 'Kończy się :date',
+        ],
+        'confirm' => [
+            'title' => 'Zmienić na :plan?',
+            'charge_today' => 'Dziś zostanie naliczona proporcjonalna różnica.',
+            'credit_balance' => 'Niewykorzystany czas trafi na saldo konta.',
+            'no_charge_trial' => 'W okresie próbnym nic nie zostanie naliczone.',
+            'offer_kept' => 'Twoja zniżka :name zostaje.',
+            'offer_dropped' => 'Tracisz zniżkę :name.',
+            'quota_pause' => 'Nowe przesyłanie zostanie wstrzymane, dopóki nie zejdziesz poniżej :limit.',
+            'ai_pause' => 'AI będzie niedostępne do :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Miejsce',
+        'usage' => 'wykorzystano :used z :limit',
     ],
     'cover' => [
         'mode_label' => 'Cover',

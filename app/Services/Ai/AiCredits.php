@@ -28,7 +28,7 @@ final class AiCredits
     public const string DENIAL_MEMBER = 'ai_credits_exhausted_member';
 
     /**
-     * @return array{remaining: int, total: int, low: bool}|null
+     * @return array{used: int, remaining: int, total: int, low: bool, percent: int, renews_at: string}|null
      */
     public function payload(Account $account): ?array
     {
@@ -37,12 +37,16 @@ final class AiCredits
         }
 
         $total = $this->allowance($account);
-        $remaining = $this->remaining($account);
+        $used = $this->used($account);
+        $remaining = max(0, $total - $used);
 
         return [
+            'used' => $used,
             'remaining' => $remaining,
             'total' => $total,
             'low' => $this->isLow($remaining, $total),
+            'percent' => $this->percentOf($used, $total),
+            'renews_at' => $this->renewsAt($account)->toIso8601String(),
         ];
     }
 
@@ -170,5 +174,14 @@ final class AiCredits
     private function isLow(int $remaining, int $total): bool
     {
         return $total > 0 && $remaining < $total * 0.1;
+    }
+
+    private function percentOf(int $used, int $total): int
+    {
+        if ($total <= 0) {
+            return 0;
+        }
+
+        return min(100, (int) round($used / $total * 100));
     }
 }

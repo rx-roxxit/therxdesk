@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Je AI-credits van deze maand zijn op. Vraag de accounteigenaar om van plan te wisselen.',
         'low' => 'Deze maand zijn er nog maar :remaining van :total AI-credits over.',
         'change_plan' => 'Plan wijzigen',
+        'label' => 'AI-credits',
+        'usage_line' => ':used van :total gebruikt · vernieuwt op :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Accountsaldo',
+        'usage' => [
+            'title' => 'Gebruik',
+        ],
+        'status' => [
+            'trial_monthly' => 'Proefperiode tot :date, daarna :price per maand',
+            'trial_yearly' => 'Proefperiode tot :date, daarna :price per jaar',
+            'renews_monthly' => 'Wordt vernieuwd op :date · :price per maand',
+            'renews_yearly' => 'Wordt vernieuwd op :date · :price per jaar',
+            'cancelling' => 'Eindigt op :date',
+        ],
+        'confirm' => [
+            'title' => 'Wisselen naar :plan?',
+            'charge_today' => 'Je wordt vandaag het naar rato berekende verschil in rekening gebracht.',
+            'credit_balance' => 'De ongebruikte tijd gaat naar je accountsaldo.',
+            'no_charge_trial' => 'Tijdens je proefperiode wordt niets in rekening gebracht.',
+            'offer_kept' => 'Je :name-korting blijft.',
+            'offer_dropped' => 'Je verliest je :name-korting.',
+            'quota_pause' => 'Nieuwe uploads worden gepauzeerd tot je onder :limit zit.',
+            'ai_pause' => 'AI is niet beschikbaar tot :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Opslag',
+        'usage' => ':used van :limit gebruikt',
     ],
     'cover' => [
         'mode_label' => 'Cover',

@@ -13,7 +13,9 @@ export interface PlanOption {
     workspace_limit: number | null;
     sort: number;
     quota_bytes: number | null;
+    quota_label: string | null;
     ai_credits_per_month: number | null;
+    ai_credits_label: string | null;
     monthly_amount: number | null;
     yearly_amount: number | null;
     monthly_price: string | null;
@@ -97,6 +99,48 @@ export interface AuthPlan {
     name: string;
     interval: BillingInterval;
 }
+
+export const PLAN_CHANGE_DIRECTIONS = ['upgrade', 'downgrade', 'same'] as const;
+
+export type PlanChangeDirection = (typeof PLAN_CHANGE_DIRECTIONS)[number];
+
+/**
+ * Which way a change moves the bill: a dearer Plan by sort, or the same Plan
+ * switching monthly → yearly, is an upgrade; the reverse is a downgrade. The
+ * change-plan dialog says what happens to the money from this.
+ */
+export const planChangeDirection = (
+    current: PlanOption | null,
+    currentInterval: BillingInterval,
+    target: PlanOption,
+    targetInterval: BillingInterval,
+): PlanChangeDirection => {
+    if (current === null) {
+        return 'same';
+    }
+
+    if (current.id === target.id) {
+        if (targetInterval === currentInterval) {
+            return 'same';
+        }
+
+        if (targetInterval === 'yearly') {
+            return 'upgrade';
+        }
+
+        return 'downgrade';
+    }
+
+    if (target.sort > current.sort) {
+        return 'upgrade';
+    }
+
+    if (target.sort < current.sort) {
+        return 'downgrade';
+    }
+
+    return 'same';
+};
 
 export interface Features {
     workspaceLimit: number | null;

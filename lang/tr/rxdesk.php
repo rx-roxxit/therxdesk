@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Bu ayki AI kredilerinizi kullandınız. Hesap sahibinden planı değiştirmesini isteyin.',
         'low' => 'Bu ay :total AI kredisinden yalnızca :remaining kaldı.',
         'change_plan' => 'Planı değiştir',
+        'label' => 'AI kredileri',
+        'usage_line' => ':total içinden :used kullanıldı · :date yenilenir',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Hesap bakiyesi',
+        'usage' => [
+            'title' => 'Kullanım',
+        ],
+        'status' => [
+            'trial_monthly' => ':date tarihine kadar deneme, sonra ayda :price',
+            'trial_yearly' => ':date tarihine kadar deneme, sonra yılda :price',
+            'renews_monthly' => ':date tarihinde yenilenir · ayda :price',
+            'renews_yearly' => ':date tarihinde yenilenir · yılda :price',
+            'cancelling' => ':date tarihinde sona erer',
+        ],
+        'confirm' => [
+            'title' => ':plan planına geçilsin mi?',
+            'charge_today' => 'Bugün orantılı fark tahsil edilecek.',
+            'credit_balance' => 'Kullanılmayan süre hesap bakiyenize eklenir.',
+            'no_charge_trial' => 'Deneme sırasında ücret alınmaz.',
+            'offer_kept' => ':name indiriminiz devam eder.',
+            'offer_dropped' => ':name indiriminizi kaybedersiniz.',
+            'quota_pause' => ':limit altına inene kadar yeni yüklemeler duraklatılır.',
+            'ai_pause' => 'AI :date tarihine kadar kullanılamaz.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Depolama',
+        'usage' => ':limit içinden :used kullanıldı',
     ],
     'cover' => [
         'mode_label' => 'Cover',

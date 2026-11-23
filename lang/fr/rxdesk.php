@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Vous avez utilisé les crédits IA du mois. Demandez au propriétaire du compte de changer d’offre.',
         'low' => 'Il ne reste que :remaining crédits IA sur :total ce mois-ci.',
         'change_plan' => 'Changer d’offre',
+        'label' => 'Crédits IA',
+        'usage_line' => ':used sur :total utilisés · renouvellement le :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Solde du compte',
+        'usage' => [
+            'title' => 'Utilisation',
+        ],
+        'status' => [
+            'trial_monthly' => 'Essai jusqu’au :date, puis :price par mois',
+            'trial_yearly' => 'Essai jusqu’au :date, puis :price par an',
+            'renews_monthly' => 'Renouvellement le :date · :price par mois',
+            'renews_yearly' => 'Renouvellement le :date · :price par an',
+            'cancelling' => 'Se termine le :date',
+        ],
+        'confirm' => [
+            'title' => 'Passer à :plan ?',
+            'charge_today' => 'La différence au prorata vous sera facturée aujourd’hui.',
+            'credit_balance' => 'La période non utilisée est ajoutée au solde de votre compte.',
+            'no_charge_trial' => 'Vous ne serez pas facturé pendant votre essai.',
+            'offer_kept' => 'Votre remise :name est conservée.',
+            'offer_dropped' => 'Vous perdez votre remise :name.',
+            'quota_pause' => 'Les nouveaux envois seront suspendus jusqu’à repasser sous :limit.',
+            'ai_pause' => 'L’IA sera indisponible jusqu’au :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Stockage',
+        'usage' => ':used sur :limit utilisés',
     ],
     'cover' => [
         'mode_label' => 'Cover',

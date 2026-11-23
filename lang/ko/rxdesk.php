@@ -16,6 +16,8 @@ return [
         'exhausted_member' => '이번 달 AI 크레딧을 모두 사용했습니다. 워크스페이스 소유자에게 요금제 변경을 요청하세요.',
         'low' => '이번 달 AI 크레딧이 :total 중 :remaining만 남았습니다.',
         'change_plan' => '요금제 변경',
+        'label' => 'AI 크레딧',
+        'usage_line' => ':total 중 :used 사용 · :date에 갱신',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => '계정 잔액',
+        'usage' => [
+            'title' => '사용량',
+        ],
+        'status' => [
+            'trial_monthly' => ':date까지 무료 체험, 이후 월 :price',
+            'trial_yearly' => ':date까지 무료 체험, 이후 연 :price',
+            'renews_monthly' => ':date에 갱신 · 월 :price',
+            'renews_yearly' => ':date에 갱신 · 연 :price',
+            'cancelling' => ':date에 종료',
+        ],
+        'confirm' => [
+            'title' => ':plan(으)로 변경할까요?',
+            'charge_today' => '오늘 일할 계산한 차액이 청구됩니다.',
+            'credit_balance' => '사용하지 않은 기간은 계정 잔액으로 전환됩니다.',
+            'no_charge_trial' => '체험 기간에는 청구되지 않습니다.',
+            'offer_kept' => ':name 할인이 유지됩니다.',
+            'offer_dropped' => ':name 할인이 사라집니다.',
+            'quota_pause' => ':limit 아래로 내려갈 때까지 새 업로드가 일시 중지됩니다.',
+            'ai_pause' => 'AI는 :date까지 사용할 수 없습니다.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => '저장 공간',
+        'usage' => ':limit 중 :used 사용',
     ],
     'cover' => [
         'mode_label' => 'Cover',

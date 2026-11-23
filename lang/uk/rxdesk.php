@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Ви використали кредити ШІ цього місяця. Попросіть власника акаунта змінити план.',
         'low' => 'Цього місяця залишилося :remaining із :total кредитів ШІ.',
         'change_plan' => 'Змінити план',
+        'label' => 'ШІ-кредити',
+        'usage_line' => 'використано :used з :total · оновлення :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Баланс акаунта',
+        'usage' => [
+            'title' => 'Використання',
+        ],
+        'status' => [
+            'trial_monthly' => 'Пробний період до :date, далі :price на місяць',
+            'trial_yearly' => 'Пробний період до :date, далі :price на рік',
+            'renews_monthly' => 'Продовження :date · :price на місяць',
+            'renews_yearly' => 'Продовження :date · :price на рік',
+            'cancelling' => 'Завершується :date',
+        ],
+        'confirm' => [
+            'title' => 'Перейти на :plan?',
+            'charge_today' => 'Сьогодні спишеться пропорційна різниця.',
+            'credit_balance' => 'Невикористаний час перейде на баланс акаунта.',
+            'no_charge_trial' => 'Під час пробного періоду кошти не списуються.',
+            'offer_kept' => 'Ваша знижка :name зберігається.',
+            'offer_dropped' => 'Ви втрачаєте знижку :name.',
+            'quota_pause' => 'Нові завантаження призупиняться, доки ви не опуститеся нижче :limit.',
+            'ai_pause' => 'ШІ буде недоступний до :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Сховище',
+        'usage' => 'використано :used з :limit',
     ],
     'cover' => [
         'mode_label' => 'Cover',

@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Вы использовали ИИ-кредиты этого месяца. Попросите владельца аккаунта сменить план.',
         'low' => 'В этом месяце осталось :remaining из :total ИИ-кредитов.',
         'change_plan' => 'Сменить план',
+        'label' => 'ИИ-кредиты',
+        'usage_line' => 'использовано :used из :total · обновление :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Баланс аккаунта',
+        'usage' => [
+            'title' => 'Использование',
+        ],
+        'status' => [
+            'trial_monthly' => 'Пробный период до :date, затем :price в месяц',
+            'trial_yearly' => 'Пробный период до :date, затем :price в год',
+            'renews_monthly' => 'Продление :date · :price в месяц',
+            'renews_yearly' => 'Продление :date · :price в год',
+            'cancelling' => 'Заканчивается :date',
+        ],
+        'confirm' => [
+            'title' => 'Перейти на :plan?',
+            'charge_today' => 'Сегодня спишется пропорциональная разница.',
+            'credit_balance' => 'Неиспользованное время перейдёт на баланс аккаунта.',
+            'no_charge_trial' => 'В течение пробного периода списаний не будет.',
+            'offer_kept' => 'Ваша скидка :name сохраняется.',
+            'offer_dropped' => 'Вы теряете скидку :name.',
+            'quota_pause' => 'Новые загрузки приостановятся, пока вы не окажетесь ниже :limit.',
+            'ai_pause' => 'ИИ будет недоступен до :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Хранилище',
+        'usage' => 'использовано :used из :limit',
     ],
     'cover' => [
         'mode_label' => 'Cover',

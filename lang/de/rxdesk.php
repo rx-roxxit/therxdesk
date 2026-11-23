@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Die KI-Credits für diesen Monat sind aufgebraucht. Bitte den Kontoinhaber, den Tarif zu ändern.',
         'low' => 'Diesen Monat sind nur noch :remaining von :total KI-Credits übrig.',
         'change_plan' => 'Tarif ändern',
+        'label' => 'KI-Credits',
+        'usage_line' => ':used von :total verbraucht · erneuert am :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Kontoguthaben',
+        'usage' => [
+            'title' => 'Nutzung',
+        ],
+        'status' => [
+            'trial_monthly' => 'Testphase bis :date, danach :price pro Monat',
+            'trial_yearly' => 'Testphase bis :date, danach :price pro Jahr',
+            'renews_monthly' => 'Verlängert sich am :date · :price pro Monat',
+            'renews_yearly' => 'Verlängert sich am :date · :price pro Jahr',
+            'cancelling' => 'Endet am :date',
+        ],
+        'confirm' => [
+            'title' => 'Zu :plan wechseln?',
+            'charge_today' => 'Die anteilige Differenz wird heute abgebucht.',
+            'credit_balance' => 'Die ungenutzte Zeit wird deinem Kontoguthaben gutgeschrieben.',
+            'no_charge_trial' => 'Während deiner Testphase wird nichts abgebucht.',
+            'offer_kept' => 'Dein :name-Rabatt bleibt.',
+            'offer_dropped' => 'Du verlierst deinen :name-Rabatt.',
+            'quota_pause' => 'Neue Uploads pausieren, bis du unter :limit bist.',
+            'ai_pause' => 'KI ist bis :date nicht verfügbar.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Speicher',
+        'usage' => ':used von :limit belegt',
     ],
     'cover' => [
         'mode_label' => 'Cover',

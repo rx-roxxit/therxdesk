@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Has usado los créditos de IA de este mes. Pide al propietario del espacio de trabajo que cambie de plan.',
         'low' => 'Solo quedan :remaining de :total créditos de IA este mes.',
         'change_plan' => 'Cambiar plan',
+        'label' => 'Créditos de IA',
+        'usage_line' => ':used de :total usados · se renueva el :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Saldo de la cuenta',
+        'usage' => [
+            'title' => 'Uso',
+        ],
+        'status' => [
+            'trial_monthly' => 'Prueba hasta el :date; después, :price al mes',
+            'trial_yearly' => 'Prueba hasta el :date; después, :price al año',
+            'renews_monthly' => 'Se renueva el :date · :price al mes',
+            'renews_yearly' => 'Se renueva el :date · :price al año',
+            'cancelling' => 'Termina el :date',
+        ],
+        'confirm' => [
+            'title' => '¿Cambiar a :plan?',
+            'charge_today' => 'Hoy se te cobrará la diferencia prorrateada.',
+            'credit_balance' => 'El tiempo no usado pasa al saldo de tu cuenta.',
+            'no_charge_trial' => 'No se te cobrará durante la prueba.',
+            'offer_kept' => 'Tu descuento :name se mantiene.',
+            'offer_dropped' => 'Pierdes tu descuento :name.',
+            'quota_pause' => 'Las subidas nuevas se pausarán hasta que estés por debajo de :limit.',
+            'ai_pause' => 'La IA no estará disponible hasta el :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Almacenamiento',
+        'usage' => ':used de :limit usados',
     ],
     'cover' => [
         'mode_label' => 'Cover',

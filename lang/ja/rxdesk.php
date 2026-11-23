@@ -16,6 +16,8 @@ return [
         'exhausted_member' => '今月のAIクレジットを使い切りました。プランの変更はワークスペースの所有者に依頼してください。',
         'low' => '今月のAIクレジットは :total 中あと :remaining です。',
         'change_plan' => 'プランを変更',
+        'label' => 'AIクレジット',
+        'usage_line' => ':total 中 :used 使用済み · :date に更新',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'アカウント残高',
+        'usage' => [
+            'title' => '使用状況',
+        ],
+        'status' => [
+            'trial_monthly' => ':date まで無料トライアル、その後は月額 :price',
+            'trial_yearly' => ':date まで無料トライアル、その後は年額 :price',
+            'renews_monthly' => ':date に更新 · 月額 :price',
+            'renews_yearly' => ':date に更新 · 年額 :price',
+            'cancelling' => ':date に終了',
+        ],
+        'confirm' => [
+            'title' => ':plan に変更しますか？',
+            'charge_today' => '本日、日割り計算した差額を請求します。',
+            'credit_balance' => '未使用分はアカウント残高に加算されます。',
+            'no_charge_trial' => 'トライアル中は請求されません。',
+            'offer_kept' => ':name の割引は継続します。',
+            'offer_dropped' => ':name の割引は失われます。',
+            'quota_pause' => '新しいアップロードは :limit を下回るまで停止します。',
+            'ai_pause' => 'AIは :date まで利用できません。',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'ストレージ',
+        'usage' => ':limit 中 :used 使用',
     ],
     'cover' => [
         'mode_label' => 'Cover',

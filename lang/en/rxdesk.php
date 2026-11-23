@@ -16,6 +16,8 @@ return [
         'exhausted_member' => "You've used this month's AI credits. Ask the workspace owner to change plan.",
         'low' => 'Only :remaining of :total AI credits left this month.',
         'change_plan' => 'Change plan',
+        'label' => 'AI credits',
+        'usage_line' => ':used of :total used · renews :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -100,6 +102,29 @@ return [
             'import_owner' => "You're out of storage, so this file can't be added. Delete posts or media you no longer need, then try again.",
             'disk_guard' => "The server is out of space, so this file can't be added. Ask the admin to free some space, then try again.",
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
+        ],
+    ],
+    'billing' => [
+        'account_balance' => 'Account balance',
+        'usage' => [
+            'title' => 'Usage',
+        ],
+        'status' => [
+            'trial_monthly' => 'Trial until :date, then :price a month',
+            'trial_yearly' => 'Trial until :date, then :price a year',
+            'renews_monthly' => 'Renews on :date · :price a month',
+            'renews_yearly' => 'Renews on :date · :price a year',
+            'cancelling' => 'Cancels on :date',
+        ],
+        'confirm' => [
+            'title' => 'Change to :plan?',
+            'charge_today' => 'You\'ll be charged the prorated difference today.',
+            'credit_balance' => 'The unused time becomes your Account balance.',
+            'no_charge_trial' => 'You won\'t be charged during your trial.',
+            'offer_kept' => 'Your :name discount stays.',
+            'offer_dropped' => 'You lose your :name discount.',
+            'quota_pause' => 'New uploads will be paused until you\'re under :limit.',
+            'ai_pause' => 'AI will be unavailable until :date.',
         ],
     ],
     'storage_bar' => [

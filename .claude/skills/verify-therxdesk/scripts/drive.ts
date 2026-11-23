@@ -325,6 +325,7 @@ const SELLING_JOURNEYS = [
     'welcome-checkout',
     'welcome-offer',
     'billing',
+    'billing-downgrade',
     'complimentary',
     'complimentary-ended',
     'payment-retry',
@@ -1541,6 +1542,18 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.reload();
 
         await page.locator(tid('@sidebar-workspace-menu')).click();
+        const menuStorage = page.locator(tid('@sidebar-menu-storage'));
+        const menuAiCredits = page.locator(tid('@sidebar-menu-ai-credits'));
+        await menuAiCredits.first().waitFor();
+        run.check(
+            'the account menu shows the Storage and AI credits bars',
+            (await menuStorage.count()) > 0 &&
+                (await menuAiCredits.count()) > 0,
+            {
+                storage: await menuStorage.count(),
+                aiCredits: await menuAiCredits.count(),
+            },
+        );
         await page.locator(tid('@sidebar-menu-billing')).click();
         await page.waitForURL(
             (url) => url.pathname === '/settings/account/billing',
@@ -1581,6 +1594,25 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             await card.count(),
         );
 
+        const usage = {
+            storage: await page
+                .locator(tid('@billing-usage-storage-line'))
+                .innerText(),
+            ai: await page.locator(tid('@billing-usage-ai-line')).innerText(),
+        };
+        run.check(
+            'Usage shows Storage used of Quota and AI credits used of total',
+            usage.storage.length > 0 && usage.ai.includes('used'),
+            usage,
+        );
+
+        run.check(
+            'the status strip says when the Trial ends or the Plan renews',
+            (await page.locator(tid('@billing-current-plan-status')).count()) >
+                0,
+            await page.locator(tid('@billing-current-plan-status')).innerText(),
+        );
+
         await page.locator(tid('@billing-change-plan')).click();
         await page.locator(tid('@plan-card-standard')).waitFor();
         await animationsSettled(page);
@@ -1598,6 +1630,30 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         await page.locator(tid('@plan-interval-monthly')).click();
         await page.locator(tid('@plan-select-standard')).click();
+        await page.locator(tid('@billing-confirm-dialog')).waitFor();
+        await animationsSettled(page);
+        await run.step('confirm-change');
+
+        const confirmation = {
+            price: await page
+                .locator(tid('@billing-confirm-price'))
+                .innerText(),
+            timing: await page
+                .locator(tid('@billing-confirm-timing'))
+                .innerText(),
+        };
+        run.check(
+            'the confirmation shows the new price and when it is charged',
+            confirmation.price.includes('$17.90') &&
+                (confirmation.timing.includes('prorated') ||
+                    confirmation.timing.includes('trial')),
+            confirmation,
+        );
+
+        await page.locator(tid('@billing-confirm-change')).click();
+        await page
+            .locator(tid('@billing-confirm-dialog'))
+            .waitFor({ state: 'detached' });
         await page
             .locator(tid('@billing-plan-dialog'))
             .waitFor({ state: 'detached' });
@@ -1634,6 +1690,78 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             new URL(page.url()).hostname === 'billing.stripe.com' &&
                 (await portalPlan.count()) > 0,
             new URL(page.url()).hostname,
+        );
+    },
+
+    /**
+     * features/billing.md (a paid Standard subscription, past its Trial).
+     *
+     * A downgrade settles at once and turns the unused time into Account
+     * balance: the confirmation says so, and the current-plan card shows the
+     * credit after the change.
+     */
+    'billing-downgrade': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        await page.locator(tid('@sidebar-menu-billing')).click();
+        await page.waitForURL(
+            (url) => url.pathname === '/settings/account/billing',
+        );
+        await page.locator(tid('@billing-current-plan')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('billing-downgrade');
+
+        const before = await page
+            .locator(tid('@billing-current-plan-name'))
+            .innerText();
+        run.check(
+            'the fixture is on Standard before the downgrade',
+            before.includes('Standard'),
+            before,
+        );
+
+        await page.locator(tid('@billing-change-plan')).click();
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.locator(tid('@plan-select-mini')).click();
+        await page.locator(tid('@billing-confirm-dialog')).waitFor();
+        await animationsSettled(page);
+        await run.step('confirm-downgrade');
+
+        const timing = await page
+            .locator(tid('@billing-confirm-timing'))
+            .innerText();
+        run.check(
+            'the downgrade turns the difference into Account balance',
+            timing.includes('Account balance'),
+            timing,
+        );
+
+        await page.locator(tid('@billing-confirm-change')).click();
+        await page
+            .locator(tid('@billing-confirm-dialog'))
+            .waitFor({ state: 'detached' });
+        await page
+            .locator(tid('@billing-current-plan-name'))
+            .filter({ hasText: 'Mini' })
+            .waitFor({ timeout: 60_000 });
+        await page.locator(tid('@billing-account-balance')).waitFor({
+            timeout: 60_000,
+        });
+        await page.waitForLoadState('networkidle');
+        await run.step('after-downgrade');
+
+        const balance = await page
+            .locator(tid('@billing-account-balance'))
+            .innerText();
+        run.check(
+            'the Account balance shows the credit left by the downgrade',
+            balance.includes('Account balance') && /\$\d/.test(balance),
+            balance,
         );
     },
 
@@ -2339,7 +2467,11 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.locator(tid('@composer-schedule-custom')).click();
         await page.locator(tid('@composer-schedule-picker')).waitFor();
 
-        if ((await page.locator(tid(`@composer-schedule-day-${day}`)).count()) === 0) {
+        if (
+            (await page
+                .locator(tid(`@composer-schedule-day-${day}`))
+                .count()) === 0
+        ) {
             await page.locator(tid('@composer-schedule-calendar-next')).click();
         }
 
@@ -2375,7 +2507,9 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         const reason = observed.reason ?? '';
         run.check(
             'the blocked post says the network is unavailable',
-            observed.opened && /unavailable/i.test(reason) && /LinkedIn/i.test(reason),
+            observed.opened &&
+                /unavailable/i.test(reason) &&
+                /LinkedIn/i.test(reason),
             observed,
         );
         await page.locator(tid(`@post-status-${blockedPost}`)).click();
