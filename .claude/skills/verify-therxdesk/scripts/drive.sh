@@ -55,6 +55,10 @@ gate_env=()
 invite_env=()
 [ -n "${VERIFY_INVITE_ID:-}" ] && invite_env+=(-e "VERIFY_INVITE_ID=$VERIFY_INVITE_ID")
 
+# The review-access journey schedules this many days ahead (7 in drive.ts).
+review_env=()
+[ -n "${VERIFY_REVIEW_LEAD_DAYS:-}" ] && review_env+=(-e "VERIFY_REVIEW_LEAD_DAYS=$VERIFY_REVIEW_LEAD_DAYS")
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -68,6 +72,7 @@ docker run --rm --network host --ipc=host \
     "${complimentary_env[@]}" \
     "${gate_env[@]}" \
     "${invite_env[@]}" \
+    "${review_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

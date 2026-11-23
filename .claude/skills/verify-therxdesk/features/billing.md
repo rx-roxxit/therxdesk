@@ -9,10 +9,12 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   `@settings-nav-billing`. Owner only (any non-owner, a member or a non-owner admin, gets 403); selling mode only.
 - Plan tab: current plan (`@billing-current-plan-name`, `-price`, `-badge`, `-discount`), the Account balance in
   credit (`@billing-account-balance`, only when Stripe holds a credit), "Change plan" (`@billing-change-plan`),
-  "Subscribe" (`@billing-subscribe`, a generic trial).
+  "Subscribe" (`@billing-subscribe`: an Account past its one Trial opens Checkout on the monthly price charged at
+  once; it does not start a new Trial).
 - Status strip (`@billing-status-strip`, line `@billing-current-plan-status`) renders from the Account's state:
   "Trial until <date>, then $X a month" (`@billing-current-plan-trial-icon`), "Renews on <date> · $X a month",
-  "Cancels on <date>", or "Payment past due…" with `@billing-update-payment`. The renewal date comes from Stripe's
+  "Cancels on <date>", or a past-due strip: "Payment past due" with "Update your payment method to keep your
+  subscription active." and `@billing-update-payment`. The renewal date comes from Stripe's
   current period (`renewsAt`), so an active Plan shows no strip when there is no Stripe customer to read.
 - Usage (`@billing-usage`, anchor `#usage`): Storage used of Quota (`@billing-usage-storage-line`) and AI credits
   used of total with their renewal date in the Owner's zone (`@billing-usage-ai-line`).
@@ -31,13 +33,21 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   plan, Subscribe, payment methods, Manage on Stripe, the plan dialog and the Invoices tab; a strip says the Plan was
   given by The RX Desk with its end date. Checkout, Change plan, Subscribe and the portal answer with the toast
   "Your plan was given by The RX Desk; contact The RX Desk to subscribe."
-- "Change plan" and "Subscribe" refuse an Account whose Owner country is blocked, or whose completed checkout was
-  billed to a blocked country (`accounts.blocked_country_at`), with the toast "Not available in the EU/UK yet": no
-  swap and no Checkout Session.
+- "Change plan" and "Subscribe" refuse an Account whose Owner country is blocked with the toast "Not available in
+  the EU/UK yet": no swap and no Checkout Session. An Account whose completed checkout was billed to a blocked
+  country (`accounts.blocked_country_at`) never reaches Billing at all: that column makes `hasAppAccess()` false, so
+  `EnsureAccountReady` sends the Owner to `/welcome/plan`.
+- After any Stripe Checkout the buyer lands on `/billing/processing` (`features/welcome-checkout.md`): a spinner
+  until the webhook records this Checkout Session's facts, then the Schedule. A Thailand-billed buyer reads the Thai
+  purchase document there and presses Continue; the same document is emailed once per Session.
 - Payment methods (`@billing-payment-methods`, `@billing-card-<id>`), "Manage on Stripe" (`@billing-manage-stripe`,
   the Customer Portal).
 - Invoices tab (`@billing-tab-invoices`, `@billing-invoices`, `@billing-invoice-download-<id>`, empty state
   `@billing-invoices-empty`); `/settings/account/billing?tab=invoices` deep-links to it.
+- The System admin can refund and cancel a Thai purchase inside its 7-day window with
+  `POST /internal/v1/accounts/{uuid}/refund-and-cancel`: the latest paid charge is refunded, the Subscription is
+  cancelled at once (`ends_at` now, `cancellation_type = admin`) and `account.refund_and_cancel` is audited
+  (`features/internal-api.md`).
 
 ## How to get to it (user POV)
 
@@ -76,8 +86,10 @@ Price id in plan_prices>` right after the run (the swap keeps the trial); a repe
   sidebar banner and the `Past due` badge (`$V/drive.sh past-due`, see `trial-and-payment.md`). A lapse (Smart Retries
   exhausted, then `canceled`) is `$V/drive.sh lapsed` there too.
 - The fixture Owner's country is `TH`, so the plan actions work. To see the refusal, set `users.country` to an EU/UK
-  code (or `accounts.blocked_country_at`) on the fixture Owner and press "Change plan": the page stays and the toast
-  shows the notice.
+  code on the fixture Owner and press "Change plan": the page stays and the toast shows the notice. Setting
+  `accounts.blocked_country_at` instead removes access, so Billing redirects to `/welcome/plan`.
 - Not driven yet: the Invoices tab, Subscribe on a generic trial, a yearly swap (the discount is kept only when its
-  Offer covers yearly, and dropped otherwise). The confirmation dialog's copy per state is covered by
-  `tests/Browser/BillingPageTest.php`; the downgrade's Account balance is `billing-downgrade`.
+  Offer covers yearly, and dropped otherwise), and the admin refund-and-cancel (no journey; prove it with
+  `internal.sh POST /accounts/<id>/refund-and-cancel` and the `subscriptions` / `audit_logs` rows). The confirmation
+  dialog's copy per state is covered by `tests/Browser/BillingPageTest.php`; the downgrade's Account balance is
+  `billing-downgrade`.

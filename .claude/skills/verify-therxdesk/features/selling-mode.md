@@ -7,8 +7,10 @@ Every new Trial now needs a card and goes through Stripe Checkout. Self-hosted m
 
 ## Sub-features
 
-- `config('trypost.self_hosted')` false: `EnsureAccountReady` sends an Owner without app access to
-  `/welcome/plan` (which first walks the unfinished Welcome steps), a member to `/welcome/subscription-required`.
+- `config('trypost.self_hosted')` false: `EnsureAccountReady` checks a Suspension first, so a suspended Account
+  goes to `/welcome/suspended` (Owner or Member); otherwise it sends an Owner without app access to
+  `/welcome/plan` (which first walks the unfinished Welcome steps) and a member to
+  `/welcome/subscription-required`.
 - Shared Inertia props: `selfHosted` (every page, the login page included), `auth.hasActiveSubscription`,
   `auth.plan`, `plans` (the active Plans, from `plan_prices`: Mini $11.90 / $119, Standard $17.90 / $179, Plus
   $29.90 / $299, Max $49.90 / $499; empty in self-hosted mode), `usage` and `features`.
@@ -16,8 +18,10 @@ Every new Trial now needs a card and goes through Stripe Checkout. Self-hosted m
   price change archives the old row instead of deleting it, so a Plan may hold several inactive rows), and
   `selling.sh` seeds the catalog and fills the Stripe ids (see `SKILL.md`, "Selling mode").
 - Billing and Processing answer only here (they redirect to the Schedule when self-hosted); the Welcome plan step
-  does too. `/register` requires a country, and an EU/UK one is refused; a blocked Owner country or a completed
-  checkout billed to a blocked country never reaches Checkout (see `registration.md` and `welcome-checkout.md`).
+  does too, except for an Owner with a Complimentary Plan, who keeps the plan step (the given Plan and no cards)
+  even while self-hosted. `/register` requires a country, and an EU/UK one is refused; a blocked Owner country or a
+  completed checkout billed to a blocked country never reaches Checkout (see `registration.md` and
+  `welcome-checkout.md`).
 
 ## How to get to it (user POV)
 

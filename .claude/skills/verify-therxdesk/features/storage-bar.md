@@ -32,4 +32,6 @@ row. Click it to reach the video policy.
 - The fixture Owner has no media, so usage reads zero. To prove the red state, upload media and lower the Quota
   under the usage with `php artisan rxdesk:quota set verify-agent@example.com 1MB` (then
   `... default` to restore): `percent` caps at 100 and the bar turns red. A database edit is not the way.
-- The storage copy is English in every locale (an exception kept on purpose until it is translated).
+- The storage copy is translated in all 16 locales (`rxdesk.storage_bar.label` / `.usage`). `StorageBarPropTest`
+  still asserts the English string for every locale and is red on `main`; that is a test to update, not a behavior
+  of this feature.

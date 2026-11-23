@@ -19,8 +19,9 @@ $V/mail.sh clear
 - `latest` prints the newest matching `ID` and subject, and exits 1 when nothing matches.
 - `wait` polls every 2 seconds until a matching email arrives (60 seconds by default), then prints its
   `ID` and subject.
-- `show` prints the subject, recipients, date and body, because callers need the body: the plain-text part, or the
-  HTML part with its tags stripped when the mail has none (the app's own mail is HTML-only).
+- `show` prints the subject, recipients, date and body, because callers need the body. The app's own mail is
+  HTML-only, and Mailpit's v1 API returns a generated plain-text `Text` for it, so `show` prints that; only a
+  message whose `Text` is empty falls back to the HTML with its tags stripped.
 - `clear` empties the inbox. It also removes unrelated mail the dev stack sent earlier.
 
 The script reads Mailpit at `MAILPIT_URL` (`VERIFY_MAILPIT_URL`, default `http://localhost:8025`).

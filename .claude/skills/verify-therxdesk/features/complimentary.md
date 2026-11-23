@@ -10,14 +10,16 @@ date that defaults to 30 days ahead (ADR 0006). There is no Checkout, no card, n
   the Quota and the AI credits follow that Plan at once. Audited as `account.complimentary.give`.
 - **End.** `POST /internal/v1/accounts/{uuid}/complimentary/end` with an optional `ends_at`, defaulting to 30 days
   ahead; an earlier date (now, or in the past) ends it at once. Audited as `account.complimentary.end`. When the end
-  passes the Account is Lapsed and follows the Lapsed path.
+  passes the Account is Lapsed, `SyncDeletionClock` starts the 30-day data-deletion clock and the plan step shows
+  `@welcome-plan-lapsed-deletion` (`lifecycle-deletion.md`).
 - **Plan step.** `/welcome/plan` shows the Plan, `Plan given by The RX Desk`, and the end date (`No end date` without
   one) in place of the cards: `@welcome-plan-complimentary`, `@welcome-plan-complimentary-plan`,
   `@welcome-plan-complimentary-until` or `@welcome-plan-complimentary-no-end`, and a Continue button
   (`@welcome-plan-complimentary-continue`) that opens the Schedule.
 - **Billing.** `/settings/account/billing` keeps the Plan name and shows the same strip
   (`@billing-current-plan-complimentary`, `-until` / `-no-end`) with no price, Change plan, Subscribe, payment
-  methods, Manage on Stripe, plan dialog or Invoices tab.
+  methods, Manage on Stripe, plan dialog or Invoices tab. The Usage section (Storage and AI credits,
+  `@billing-usage`) still renders.
 - **No self-service.** Checkout, Change plan, Subscribe and the Customer Portal answer with the toast
   `Your plan was given by The RX Desk; contact The RX Desk to subscribe.` The Account never gets a Trial afterwards,
   and the System admin ends the Plan before it can pay.
@@ -69,4 +71,6 @@ with `until` one minute ago. The audit table holds one `account.complimentary.gi
 - `complimentary.sh up` needs selling mode (`selling.sh up`); with no fixture it fails.
 - Ending a Complimentary Plan is immediate only because the helper sends a date one minute in the past. The admin
   app's default is 30 days ahead.
-- The Account stays Lapsed until the System admin gives another Plan: Checkout is refused, so the cards do not help.
+- Once the end date has passed the Account is Lapsed but the cards work again: Checkout is refused only while the
+  Complimentary Plan is in force, so the plan step offers Subscribe (charged at once, no Trial because the Account
+  had a Plan) and a 30-day deletion clock runs from the end.

@@ -10,12 +10,14 @@ spends no AI credits, so it keeps working when the balance is gone. See ADR 0007
   installed and Availability's `service:support_chat` row switched on.
 - **The help corpus** is `resources/help/*.md`: English, ten topics plus a glossary. The whole corpus goes into
   every prompt, and a test fails above about 40k tokens.
-- **The brief** is built on the server each turn: Plan, status, Trial end, AI credits, Storage (Owner only), the
-  workspace count, channels with state and last error, up to five failed posts, the pending-approval count and the
-  page the chat was opened from. No email, name or avatar, and the agent has no tools.
+- **The brief** is built on the server each turn. For the Owner it carries Plan, status, Trial end, AI credits and
+  Storage; a Member's brief has none of the Account block, only the workspace count, channels with state and last
+  error, up to five failed posts, the pending-approval count and the page the chat was opened from. No email, name
+  or avatar, and the agent has no tools.
 - **Limits:** 20 messages per conversation, 40 per user per day (00:00 UTC), 2,000 characters a message, 10 a
-  minute. A refusal returns `code` = `conversation`, `daily` or `minute`, and the input locks with the matching
-  line. The `daily` line carries the reset time in the user's time zone.
+  minute. A refusal returns `code` = `conversation`, `daily` or `minute`. A `conversation` or `daily` refusal locks
+  the input with the matching line; a `minute` refusal shows its own line but leaves the input enabled. The `daily`
+  line carries the reset time in the user's time zone.
 - **The ledger** gets one row per call with feature `support_chat` and `credits` 0; the balance does not move.
 - **A provider failure** shows "Can't answer right now." with **Try again**, stores the question, spends nothing
   and raises the URGENT `ai_provider_failure` alert naming the model.
@@ -70,8 +72,10 @@ $V/drive.sh support-chat-limit
 
 The journey opens the sheet on `@support-chat-limit-conversation`: "This conversation has reached 20 messages.
 Start a new conversation to keep going." The input is disabled and **New conversation** in the header clears it.
-The same happens at 40 messages a day, with the reset time (`@support-chat-limit-daily`); the per-minute refusal
-(`@support-chat-limit-minute`) clears by itself.
+The same happens at 40 messages a day, with the reset time (`@support-chat-limit-daily`). The per-minute refusal
+(`@support-chat-limit-minute`) has no timer: its line stays until the next send, retry or **New conversation**.
+`support-chat-limit` drives the conversation cap only; the daily and minute lines are covered by
+`tests/Feature/Support/SupportChatLimitsTest.php`, not by a journey.
 
 ## The hand-off
 

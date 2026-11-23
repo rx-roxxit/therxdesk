@@ -6,14 +6,15 @@ there is something to report. The scheduler dispatches a heartbeat job every 5 m
 capacity command every 5 minutes reads host RAM and load, the Horizon queue wait, free disk and the
 Nightwatch burst. Nightwatch's webhook feeds the TODAY burst alert and the digest. `GET
 /internal/v1/health` gives the admin app the figures. There is no UI. All three scheduled jobs run
-only in selling mode (`routes/console.php`); call the command directly to exercise them otherwise.
+only in selling mode (`routes/console.php`), and the commands themselves return success without doing
+anything while self-hosted, so the selling overlay is required to exercise them.
 
 ## Alerts
 
 | Level | When | De-duplication |
 | --- | --- | --- |
-| `[URGENT]` | free disk near the Disk guard threshold | once per open cycle |
-| `[RESOLVED]` | an URGENT condition clears | once per open cycle |
+| `[URGENT]` | free disk near the Disk guard threshold; an AI provider failure (`AiProviderFailure`, raised from the AI entry points) | once per open cycle |
+| `[RESOLVED]` | an URGENT disk condition clears; the AI failure alert has no clear path, so it sends no RESOLVED mail | once per open cycle |
 | `[TODAY]` | RAM > 75%, 5-minute load > 5, queue wait > 2 min, free disk < 30 GB, a Nightwatch burst (5 issues an hour) | one per condition per 6 hours |
 | `[DIGEST]` | 08:00 Asia/Bangkok, only when non-empty | cleared TODAY alerts, new issues, yesterday's failed jobs, a due restore drill (a fresh install sends it daily until a drill is recorded) |
 

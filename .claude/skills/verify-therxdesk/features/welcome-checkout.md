@@ -18,10 +18,16 @@ until the webhook gives the Account access, and lands on the Schedule.
 - An Owner who never had a Trial sees "Start 7-day free trial" and "Then $11.90/month from <date>. Cancel anytime.
   One free trial per card."; one who had one sees "Subscribe". A trial always needs a card and always goes through
   Stripe Checkout: there is no no-card trial path any more.
+- The Plan step has other states after the steps above: a Complimentary Plan replaces the cards with
+  `@welcome-plan-complimentary*` and Continue (`complimentary.md`), a Lapsed Owner gets the
+  `@welcome-plan-lapsed-deletion` alert above the cards (`lifecycle-deletion.md`), and a never-paid Owner whose
+  first charge failed gets `PaymentRetryState` instead of cards (`trial-and-payment.md`).
 - A card that already started a Trial is charged at once: the webhook ends the Trial, sets `trial_skipped_at` and
   `trial_ended_at`, and the charge that follows sets `paid_without_trial_at`. `fixture.sh up`, `down` and `guests`
-  delete the Account's `trial_cards` rows, so `4242` starts a fresh Trial on the next run; `trial-and-payment.md`
-  proves the repeat-card path.
+  delete the Account's `trial_cards` and `trial_accounts` rows, so `4242` starts a fresh Trial on the next run;
+  `trial-and-payment.md` proves the repeat-card path. Known live gap (November 23, 2026): the sandbox's invoice
+  payload has `subscription: null` (the field moved under `parent`), so `paid_without_trial_at` stays null even
+  though `first_paid_at` is set; that is a product bug to fix, not a doc change.
 - An Offer created through `/internal/v1/offers` changes the step: the banner
   (`@welcome-plan-offer`, `@welcome-plan-offer-name`, `@welcome-plan-offer-headline`) when `show_banner` is on, and,
   on the Plans and intervals it covers, the discount badge (`@plan-offer-badge-<slug>`), the struck regular price
@@ -42,15 +48,20 @@ until the webhook gives the Account access, and lands on the Schedule.
   trial-only local rows, because a discount Offer must create its Stripe coupon through `/internal/v1/offers`.
 - Stripe Checkout (hosted, sandbox): the Owner's language (never `auto`), a required billing address, a required
   Terms consent checkbox, no promotion code field, and `subscription_data.trial_end` on a first checkout.
-- The billing country must be allowed: the completed-checkout webhook cancels a subscription billed to an EU/UK
-  country at once and the plan step then shows "Not available in the EU/UK yet". A blocked Owner country never
-  opens Checkout at all.
-- Processing (`/billing/processing`) polls until the Account has access, then opens the Schedule; it also polls
-  `countryBlocked` and returns to `/welcome/plan` when the webhook cancelled the checkout.
+- The billing country must be allowed: the completed-checkout webhook cancels a subscription billed to an
+  EU/UK/EEA/Crown-dependency country at once and the plan step then shows "Not available in the EU/UK yet". A
+  blocked Owner country never opens Checkout at all.
+- Processing (`/billing/processing?session_id=...`) waits until the webhook has recorded this Checkout Session's
+  facts (`accounts.checkout_session_id` equals the `session_id`), then opens the Schedule. When
+  `accounts.billing_country` is `TH` it first renders the Thai purchase document (seller fields from the Operator,
+  dates in Buddhist Era, the 7-day cancellation right) and waits for Continue; the same document is emailed once
+  per Session. It also polls `countryBlocked` and returns to `/welcome/plan` when the webhook cancelled the
+  checkout.
 - The webhooks: Cashier's handlers write the `subscriptions` row, and `customer.subscription.created` / `updated`
   writes the Account's Plan (`accounts.plan_id`). `checkout.session.completed` (subscription mode) cancels a
-  blocked billing country and records `blocked_country`, `blocked_country_at` and
-  `blocked_country_payment_status` on the Account (first fact wins).
+  blocked billing country, records `blocked_country`, `blocked_country_at` and
+  `blocked_country_payment_status` on the Account (first fact wins), and always records `checkout_completed_at`,
+  `checkout_session_id`, `billing_country` and `billing_name`.
 
 ## How to get to it (user POV)
 
@@ -86,7 +97,10 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
   `http://localhost:8025`), clicks Resend, waits for a different message, and opens its `/verify-email/...` link.
 - End state: the path is `/schedule...` and `auth.hasActiveSubscription` is `true`; `auth.plan.name` is `Mini` for
   `welcome-checkout` and `welcome-offer` (`08-after-checkout.png`) and `Plus` for `welcome-plan`
-  (`10-after-checkout.png`). The subscription is `trialing` for the Catalog's trial days (14 on the Offer path), not
+  (`10-after-checkout.png`). Before that, Processing shows a spinner until this Session's facts land; a TH-billed
+  buyer sees `@thai-purchase-document` (the `welcome-plan` shots `09-processing.png` and
+  `10-thai-purchase-document.png`) and the journey clicks `@purchase-document-continue`. The subscription is
+  `trialing` for the Catalog's trial days (14 on the Offer path), not
   `active`, unless a repeat card skipped the Trial: then it is `active` and `first_paid_at` / `first_invoice_id` are
   set. On the Offer path, `db.sh "select o.slug, ao.redeemed_at from account_offer ao join offers o on o.id =
   ao.offer_id where ao.account_id = '<accountId>'"` shows the no-banner Offer redeemed, and

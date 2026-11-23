@@ -1,13 +1,15 @@
 # Sign in
 
-A user with an email and password signs in and lands on the Schedule of their current Workspace.
+A user with an email and password signs in and lands on the Schedule of their current Workspace, in self-hosted
+mode. In selling mode the landing depends on access: an Owner without it goes to `/welcome`, a Member to
+`/welcome/subscription-required`, and a suspended Account to `/welcome/suspended` (`selling-mode.md`).
 
 ## Sub-features
 
 - Email and password form (`/login`).
 - Show/hide password toggle (`@login-password-toggle`).
-- Link to reset the password (`/forgot-password`). The sign-up link (`@login-sign-up-link`) shows only in selling
-  mode.
+- Link to reset the password (`/forgot-password`). The sign-up link (`@login-sign-up-link`) shows in selling mode
+  even while the `new_signups` switch is off; that link then opens `/register`'s "Signups are closed for now" page.
 - Google and GitHub sign-in (`/auth/google/redirect`, `/auth/github/redirect`): off by default
   (`GOOGLE_AUTH_ENABLED` / `GITHUB_AUTH_ENABLED`), so the buttons are absent on the fixture stack; external OAuth,
   not drivable here.
