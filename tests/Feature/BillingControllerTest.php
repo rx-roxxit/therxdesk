@@ -10,6 +10,7 @@ use App\Models\Offer;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Route;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
@@ -877,4 +878,50 @@ test('processing does not send countryBlocked without a blocked fact', function 
         ->get(route('app.billing.processing'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('countryBlocked', false));
+});
+
+test('billing index shows a credit on the Stripe customer as the Account balance', function () {
+    config(['trypost.self_hosted' => false]);
+    fakeStripeBilling($this->account, balance: -1240);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('accountBalance', '$12.40'));
+});
+
+test('billing index leaves an amount owed out of the Account balance', function () {
+    config(['trypost.self_hosted' => false]);
+    fakeStripeBilling($this->account, balance: 500);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('accountBalance', null));
+});
+
+test('billing index sends when the subscription renews', function () {
+    config(['trypost.self_hosted' => false]);
+    $periodEnd = now()->addMonth()->startOfSecond();
+    fakeStripeBilling($this->account, renewsAt: $periodEnd->timestamp);
+
+    $expected = CarbonImmutable::createFromTimestamp($periodEnd->timestamp)->toIso8601String();
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('renewsAt', $expected)
+            ->where('accountBalance', null)
+        );
+});
+
+test('billing index sends no renewal without a Stripe customer', function () {
+    config(['trypost.self_hosted' => false]);
+    subscribeAccount($this->account);
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.billing.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('renewsAt', null));
 });

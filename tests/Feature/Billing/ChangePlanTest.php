@@ -235,7 +235,8 @@ test('change-plan swaps the price and writes plan_id', function () use ($withWor
         ]));
 
     expect($account->fresh()->plan_id)->toBe($this->workspaces->id)
-        ->and(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_monthly']);
+        ->and(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_monthly'])
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '', 'proration_behavior' => 'always_invoice']]);
 });
 
 test('change-plan swaps to the yearly price', function () use ($withWorkspace) {
@@ -294,7 +295,7 @@ test('a swap to a yearly price removes a discount whose offer covers monthly onl
         ->assertRedirect(route('app.billing.index'));
 
     expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_socials_yearly'])
-        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '']]);
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '', 'proration_behavior' => 'always_invoice']]);
 });
 
 test('a swap keeps the discount when the offer covers the new plan and interval', function () use ($withWorkspace) {
@@ -324,7 +325,7 @@ test('a swap keeps the discount when the offer covers the new plan and interval'
         ->assertRedirect(route('app.billing.index'));
 
     expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_monthly'])
-        ->and(RecordingSwapSubscription::$swapOptions)->toBe([[]]);
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['proration_behavior' => 'always_invoice']]);
 });
 
 test('a swap to a yearly price keeps the discount when the offer covers yearly', function () use ($withWorkspace) {
@@ -354,7 +355,7 @@ test('a swap to a yearly price keeps the discount when the offer covers yearly',
         ->assertRedirect(route('app.billing.index'));
 
     expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_socials_yearly'])
-        ->and(RecordingSwapSubscription::$swapOptions)->toBe([[]]);
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['proration_behavior' => 'always_invoice']]);
 });
 
 test('change-plan downgrades workspaces to socials', function () use ($withWorkspace) {
@@ -383,7 +384,35 @@ test('change-plan downgrades workspaces to socials', function () use ($withWorks
         ]));
 
     expect($account->fresh()->plan_id)->toBe($this->socials->id)
-        ->and(RecordingSwapSubscription::$swappedPrices)->toBe(['price_socials_monthly']);
+        ->and(RecordingSwapSubscription::$swappedPrices)->toBe(['price_socials_monthly'])
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '', 'proration_behavior' => 'always_invoice']]);
+});
+
+test('change-plan during a trial never invoices the proration', function () use ($withWorkspace) {
+    Cashier::useSubscriptionModel(RecordingSwapSubscription::class);
+
+    $user = User::factory()->create();
+    $account = $user->account;
+    $account->update(['plan_id' => $this->socials->id]);
+    $withWorkspace($user);
+
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_'.fake()->uuid(),
+        'stripe_status' => 'trialing',
+        'stripe_price' => 'price_socials_monthly',
+        'trial_ends_at' => now()->addDays(5),
+    ]);
+
+    $this->actingAs($user->fresh())
+        ->post(route('app.billing.change-plan'), [
+            'plan_id' => $this->workspaces->id,
+            'interval' => 'monthly',
+        ])
+        ->assertRedirect(route('app.billing.index'));
+
+    expect(RecordingSwapSubscription::$swappedPrices)->toBe(['price_workspaces_monthly'])
+        ->and(RecordingSwapSubscription::$swapOptions)->toBe([['discounts' => '']]);
 });
 
 test('change-plan writes plan_id when the subscription is already on that price', function () use ($withWorkspace) {

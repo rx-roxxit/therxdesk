@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Enums\Billing\Interval;
 use App\Models\Account;
+use App\Models\AiCreditUsage;
+use App\Models\Media;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
@@ -260,5 +263,78 @@ test('a trial cancelled in Stripe shows when it ends instead of the trial', func
 
     $page->assertSeeIn('@billing-current-plan-badge', 'Cancelled')
         ->assertDontSeeIn('@billing-current-plan-status', 'Trial until')
+        ->assertNoJavaScriptErrors();
+});
+
+test('the billing page shows the renewal, the Account balance and the usage', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = billingPageOwner(subscribed: false);
+    $renewsAt = now()->addMonth()->startOfSecond();
+    fakeStripeBilling($user->account, balance: -1240, renewsAt: $renewsAt->timestamp);
+    $this->actingAs($user->fresh());
+
+    $page = visit(route('app.billing.index'));
+    waitFor($page, '@billing-current-plan');
+
+    $page->assertSeeIn('@billing-account-balance', 'Account balance')
+        ->assertSeeIn('@billing-account-balance', '$12.40')
+        ->assertSeeIn('@billing-current-plan-status', 'Renews on')
+        ->assertSeeIn('@billing-usage-storage', 'Storage')
+        ->assertSeeIn('@billing-usage-ai', 'AI credits')
+        ->assertNoJavaScriptErrors();
+});
+
+test('changing plan asks first, showing the new price and when it is charged', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $this->actingAs(billingPageOwner());
+
+    $page = visit(route('app.billing.index'));
+    waitFor($page, '@billing-current-plan');
+
+    $page->click('@billing-change-plan');
+    waitFor($page, '@plan-card-standard');
+    $page->click('@plan-select-standard');
+    waitForOpen($page, '@billing-confirm-dialog');
+
+    $page->assertSeeIn('@billing-confirm-price', '$17.90')
+        ->assertSeeIn('@billing-confirm-timing', 'prorated difference today')
+        ->assertMissing('@billing-confirm-offer')
+        ->assertVisible('@billing-confirm-change')
+        ->click('@billing-confirm-cancel');
+
+    waitForOpen($page, '@billing-plan-dialog');
+    $page->assertNoJavaScriptErrors();
+});
+
+test('a downgrade confirmation warns about the Account balance, the Quota and AI credits', function () {
+    config(['trypost.self_hosted' => false]);
+
+    $user = billingPageOwner(subscribed: false);
+    $standard = Plan::query()->where('slug', 'standard')->firstOrFail();
+    $user->account->update(['plan_id' => $standard->id]);
+    givePlanPrice($standard, Interval::Monthly, 'price_standard_monthly');
+    $user->account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_standard',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_standard_monthly',
+    ]);
+    Media::factory()->temporaryUpload($user->currentWorkspace)->create(['size' => 3 * 1024 ** 3]);
+    AiCreditUsage::factory()->create(['account_id' => $user->account_id, 'credits' => 999999]);
+    $this->actingAs($user->fresh());
+
+    $page = visit(route('app.billing.index'));
+    waitFor($page, '@billing-current-plan');
+
+    $page->click('@billing-change-plan');
+    waitFor($page, '@plan-card-mini');
+    $page->click('@plan-select-mini');
+    waitForOpen($page, '@billing-confirm-dialog');
+
+    $page->assertSeeIn('@billing-confirm-timing', 'Account balance')
+        ->assertSeeIn('@billing-confirm-quota', "New uploads will be paused until you're under 2 GB")
+        ->assertSeeIn('@billing-confirm-ai', 'AI will be unavailable until')
         ->assertNoJavaScriptErrors();
 });
