@@ -10,6 +10,7 @@ use App\Actions\User\StrandedSettlement;
 use App\Actions\Workspace\PurgeWorkspace;
 use App\Models\Account;
 use App\Models\Invite;
+use App\Models\SupportConversation;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\DB;
 
@@ -51,11 +52,10 @@ class PurgeAccountData
 
             Invite::query()->where('account_id', $locked->id)->delete();
 
+            SupportConversation::query()->where('account_id', $locked->id)->delete();
+
             // Every non-owner member is deleted with the data; the Owner stays.
             $settlement = SettleStrandedMember::forAccountMembers($locked, exceptUserId: $owner?->id);
-
-            // Support chat transcripts will be deleted here too once the chat
-            // ships; there is no table for them yet.
 
             $locked->forceFill([
                 'deletion_scheduled_at' => null,

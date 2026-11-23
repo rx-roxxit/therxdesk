@@ -21,6 +21,7 @@ use App\Console\Commands\RxDesk\BackupCommand;
 use App\Console\Commands\RxDesk\CapacityCommand;
 use App\Console\Commands\RxDesk\DigestCommand;
 use App\Console\Commands\RxDesk\LifecycleCommand;
+use App\Console\Commands\RxDesk\PruneSupportChatCommand;
 use App\Console\Commands\SyncPostHogLifecycleStages;
 use App\Enums\SocialAccount\Platform;
 use App\Jobs\Analytics\FinalizeAccountDailySnapshots;
@@ -77,6 +78,13 @@ Schedule::job(new FinalizeAccountDailySnapshots(daysAgo: 1))
 
 Schedule::command(LifecycleCommand::class)
     ->dailyAt('01:00')
+    ->timezone('UTC')
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(PruneSupportChatCommand::class)
+    ->dailyAt('04:00')
     ->timezone('UTC')
     ->when(fn (): bool => ! config('trypost.self_hosted'))
     ->withoutOverlapping()

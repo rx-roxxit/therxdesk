@@ -149,6 +149,10 @@ export interface SharedData {
     changelogEntries?: ScrollChangelogEntries;
     mediaUploadLimits?: MediaUploadLimits | null;
     toursEnabled?: boolean;
+    /** True while the System admin has Support chat switched on (selling mode). */
+    supportChat?: boolean;
+    /** The support address the Help menu and the chat link to. */
+    supportEmail?: string;
     [key: string]: unknown;
 }
 

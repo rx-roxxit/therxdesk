@@ -10,6 +10,7 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Write a post and save it as a draft | [compose-draft.md](compose-draft.md) | `compose-draft` |
 | Storage bar in the account menu | [storage-bar.md](storage-bar.md) | `storage-bar` |
 | AI credits: the low line, the Owner/Member refusal and the monthly override (`selling.sh up`, `fixture.sh up`, `ai-credits.sh none`) | [ai-credits.md](ai-credits.md) | `ai-credits` |
+| Support chat: the Help menu, one real answer, the limit copy (`selling.sh up`, `complimentary.sh up`, `support-chat.sh up\|limit`) | [support-chat.md](support-chat.md) | `support-chat`, `support-chat-limit` |
 | Switch the app language from the sidebar | [language-switch.md](language-switch.md) | `language-switch` |
 | Selling mode holds an unpaid Owner at Welcome (`selling.sh up`) | [selling-mode.md](selling-mode.md) | `selling-mode` |
 | Welcome steps, Plan and Stripe Checkout (`selling.sh up`) | [welcome-checkout.md](welcome-checkout.md) | `welcome-checkout`, `welcome-plan` |

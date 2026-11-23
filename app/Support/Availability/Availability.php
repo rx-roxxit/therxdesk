@@ -7,20 +7,26 @@ namespace App\Support\Availability;
 use App\Models\AvailabilitySwitch;
 
 /**
- * The System admin's Availability switches, read from the database. A missing
- * row counts as on, and the disabled keys are read once per request or job
- * (the container binding is scoped).
+ * The System admin's Availability switches, read from the database once per
+ * request or job (the container binding is scoped). A missing row counts as
+ * on, except for the services that start off.
  */
 class Availability
 {
     /**
-     * @var list<string>|null
+     * @var array<string, bool>|null
      */
-    private ?array $disabledKeys = null;
+    private ?array $states = null;
 
-    public function isOn(string $key): bool
+    /**
+     * `$default` decides a key with no row yet. It is true for networks and
+     * most services, and false for the two the owner decided start off
+     * (Support chat and new signups), so they stay closed until the System
+     * admin switches them on.
+     */
+    public function isOn(string $key, bool $default = true): bool
     {
-        return ! in_array($key, $this->disabledKeys(), true);
+        return $this->states()[$key] ?? $default;
     }
 
     public function set(string $key, bool $enabled): AvailabilitySwitch
@@ -29,19 +35,19 @@ class Availability
         $switch->enabled = $enabled;
         $switch->save();
 
-        $this->disabledKeys = null;
+        $this->states = null;
 
         return $switch;
     }
 
     /**
-     * @return list<string>
+     * @return array<string, bool>
      */
-    private function disabledKeys(): array
+    private function states(): array
     {
-        return $this->disabledKeys ??= AvailabilitySwitch::query()
-            ->where('enabled', false)
-            ->pluck('key')
+        return $this->states ??= AvailabilitySwitch::query()
+            ->pluck('enabled', 'key')
+            ->map(fn (mixed $enabled): bool => (bool) $enabled)
             ->all();
     }
 }

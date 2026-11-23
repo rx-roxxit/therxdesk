@@ -73,6 +73,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Support address
+    |--------------------------------------------------------------------------
+    |
+    | Where a customer reaches a person. The Support chat may link to it, the
+    | Help menu offers it, and a hand-off email is sent to it.
+    |
+    */
+
+    'support' => [
+        'email' => env('RXDESK_SUPPORT_EMAIL', 'support@therxdesk.com'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Well-known files
     |--------------------------------------------------------------------------
     |

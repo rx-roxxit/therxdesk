@@ -7,6 +7,7 @@ use App\Http\Middleware\Api\LoadWorkspaceFromToken;
 use App\Http\Middleware\App\CaptureOffer;
 use App\Http\Middleware\App\CapturePlan;
 use App\Http\Middleware\App\EnsureRegistrationEnabled;
+use App\Http\Middleware\App\EnsureSupportChatAvailable;
 use App\Http\Middleware\App\HandleInertiaRequests;
 use App\Http\Middleware\App\SetLocale;
 use App\Http\Middleware\Internal\AuthenticateInternalApi;
@@ -49,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'workspace.token' => LoadWorkspaceFromToken::class,
             'registration.enabled' => EnsureRegistrationEnabled::class,
+            'support.chat' => EnsureSupportChatAvailable::class,
             'internal' => AuthenticateInternalApi::class,
         ]);
 
