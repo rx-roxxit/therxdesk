@@ -3,12 +3,31 @@
 declare(strict_types=1);
 
 use App\Enums\Account\VideoPolicy;
+use App\Enums\Availability\ServiceSwitch;
+use App\Enums\Media\Source;
+use App\Models\MediaSourceConnection;
 use App\Models\User;
+use App\Support\Availability\Availability;
 use Inertia\Testing\AssertableInertia;
 
 function memberOfAccountOf(User $owner): User
 {
     return User::factory()->create(['account_id' => $owner->account_id]);
+}
+
+function connectDriveForBackup(User $owner): void
+{
+    config([
+        'services.google_media.client_id' => 'media-client-id',
+        'services.google_media.client_secret' => 'media-client-secret',
+        'services.google_media.backup_redirect' => 'https://app.test/settings/preferences/drive/callback',
+    ]);
+
+    MediaSourceConnection::factory()->create([
+        'user_id' => $owner->id,
+        'source' => Source::GoogleDriveBackup,
+        'access_token' => 'drive-access',
+    ]);
 }
 
 test('the owner sees the video policy on the preferences page, keep by default', function () {
@@ -79,6 +98,61 @@ test('backup cannot be chosen yet', function () {
         ->assertJsonValidationErrors('video_policy');
 
     expect($owner->account->refresh()->video_policy)->toBe(VideoPolicy::Keep);
+});
+
+test('backup can be chosen with a Drive connection while its switch is on', function () {
+    $owner = User::factory()->create();
+    connectDriveForBackup($owner);
+
+    $this->actingAs($owner)
+        ->patchJson(route('app.settings.video-policy.update'), ['video_policy' => 'backup'])
+        ->assertNoContent();
+
+    expect($owner->account->refresh()->video_policy)->toBe(VideoPolicy::Backup);
+});
+
+test('backup is refused with a translated message while Drive backup is switched off', function () {
+    $owner = User::factory()->create();
+    connectDriveForBackup($owner);
+    app(Availability::class)->set(ServiceSwitch::DriveBackup->value, false);
+
+    $this->actingAs($owner)
+        ->patchJson(route('app.settings.video-policy.update'), ['video_policy' => 'backup'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'video_policy' => __('rxdesk.video_policy.errors.backup_unavailable'),
+        ]);
+
+    expect($owner->account->refresh()->video_policy)->toBe(VideoPolicy::Keep);
+});
+
+test('an owner already on backup keeps it while Drive backup is switched off', function () {
+    $owner = User::factory()->create();
+    $owner->account->forceFill(['video_policy' => VideoPolicy::Backup])->save();
+    connectDriveForBackup($owner);
+    app(Availability::class)->set(ServiceSwitch::DriveBackup->value, false);
+
+    $this->actingAs($owner)
+        ->patchJson(route('app.settings.video-policy.update'), ['video_policy' => 'backup'])
+        ->assertNoContent();
+
+    expect($owner->account->refresh()->video_policy)->toBe(VideoPolicy::Backup);
+});
+
+test('the preferences page tells the Owner whether Drive backup is offered', function () {
+    $owner = User::factory()->create();
+    connectDriveForBackup($owner);
+    $availability = app(Availability::class);
+
+    $this->actingAs($owner)
+        ->get(route('app.settings.preferences'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('driveBackupEnabled', true));
+
+    $availability->set(ServiceSwitch::DriveBackup->value, false);
+
+    $this->actingAs($owner)
+        ->get(route('app.settings.preferences'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('driveBackupEnabled', false));
 });
 
 test('an unknown video policy is refused', function () {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\VideoPolicy\BackupPostVideos;
 use App\Enums\Account\VideoPolicy;
+use App\Enums\Availability\ServiceSwitch;
 use App\Enums\Media\Source;
 use App\Enums\Post\PublishStatus;
 use App\Enums\Post\Status as PostStatus;
@@ -18,6 +19,7 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\VideoRecord;
 use App\Models\Workspace;
+use App\Support\Availability\Availability;
 use Illuminate\Http\Client\Request;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\Bus;
@@ -574,6 +576,55 @@ test('retry runs the backup again right away and uploads when the policy is stil
     expect($record->outcome)->toBe(Outcome::BackedUp)
         ->and(Media::query()->whereKey($video->id)->exists())->toBeFalse();
     Storage::assertMissing($video->path);
+});
+
+test('a backup that runs while Drive backup is off keeps the file, records the reason and emails nobody', function () {
+    $drive = fakeDrive();
+    app(Availability::class)->set(ServiceSwitch::DriveBackup->value, false);
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+
+    markBackupPostPublished($post);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+
+    $record = VideoRecord::query()->sole();
+
+    expect($drive->sessions)->toHaveCount(0)
+        ->and(queuedPolicyJobs())->toBe(0)
+        ->and($record->outcome)->toBe(Outcome::BackupFailed)
+        ->and($record->last_error)->toBe(BackupPostVideos::UNAVAILABLE_REASON)
+        ->and($record->attempts)->toBe(1)
+        ->and($post->refresh()->status)->toBe(PostStatus::Published);
+    Storage::assertExists($video->path);
+    expect(Media::query()->whereKey($video->id)->exists())->toBeTrue();
+    Mail::assertNothingQueued();
+});
+
+test('retry uploads a backup that failed while Drive backup was off once the switch is back on', function () {
+    $drive = fakeDrive();
+    $availability = app(Availability::class);
+    $availability->set(ServiceSwitch::DriveBackup->value, false);
+    ['post' => $post, 'video' => $video] = backupGroupPost('deskchannel');
+
+    markBackupPostPublished($post);
+    $this->travel(1)->hours();
+    runDueBackupJobs();
+    expect(VideoRecord::query()->sole()->outcome)->toBe(Outcome::BackupFailed);
+
+    $availability->set(ServiceSwitch::DriveBackup->value, true);
+
+    $this->actingAs(retryOwner())
+        ->post(route('app.posts.video-backup.retry', $post))
+        ->assertRedirect();
+    runDueBackupJobs();
+
+    $record = VideoRecord::query()->sole();
+
+    expect($drive->sessions)->toHaveCount(1)
+        ->and($record->outcome)->toBe(Outcome::BackedUp)
+        ->and(Media::query()->whereKey($video->id)->exists())->toBeFalse();
+    Storage::assertMissing($video->path);
+    Mail::assertNothingQueued();
 });
 
 test('retry applies the policy in force at that moment', function (VideoPolicy $policy, ?Outcome $outcome, bool $fileKept) {

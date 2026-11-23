@@ -13,6 +13,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 
 beforeEach(function () {
     config(['trypost.self_hosted' => false]);
+    enableSignups();
 
     $this->offer = Offer::factory()->create(['slug' => 'black-friday-2026']);
 });

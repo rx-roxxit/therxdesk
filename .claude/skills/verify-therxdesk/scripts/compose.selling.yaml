@@ -28,6 +28,21 @@ services:
             # LinkedIn installed so its switch can be flipped. Never real.
             LINKEDIN_CLIENT_ID: verify-linkedin-client-id
             LINKEDIN_CLIENT_SECRET: verify-linkedin-client-secret
+            # Dev-only fake media credentials, for the same reason: the
+            # composer's pickers and Drive backup are installed (and their
+            # switches can be flipped) only while their keys are filled. The
+            # services-off journey flips them off and checks the composer.
+            # Never real, and never used to reach a provider in a journey.
+            UNSPLASH_ACCESS_KEY: verify-unsplash-key
+            CANVA_CLIENT_ID: verify-canva-client-id
+            CANVA_CLIENT_SECRET: verify-canva-client-secret
+            GOOGLE_MEDIA_CLIENT_ID: verify-google-media-client-id
+            GOOGLE_MEDIA_CLIENT_SECRET: verify-google-media-client-secret
+            GOOGLE_MEDIA_REDIRECT: http://localhost:8000/integrations/google/callback
+            GOOGLE_MEDIA_BACKUP_REDIRECT: http://localhost:8000/settings/preferences/drive/callback
+            GOOGLE_MEDIA_API_KEY: verify-google-media-api-key
+            GOOGLE_MEDIA_APP_ID: verify-google-media-app-id
+            GOOGLE_PHOTOS_ENABLED: 'true'
         env_file:
             - path: ${HOME}/.cache/verify-therxdesk/state/stripe-webhook.env
               required: true

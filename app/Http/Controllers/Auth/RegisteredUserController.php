@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\User\CreateUser;
+use App\Enums\Availability\ServiceSwitch;
 use App\Http\Controllers\Auth\Concerns\PreservesAttributionParameters;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Auth\RegisterRequest;
+use App\Models\Invite;
 use App\Support\Auth\PasswordRequirements;
 use App\Support\Countries;
 use Illuminate\Auth\Events\Registered;
@@ -25,9 +27,14 @@ class RegisteredUserController extends Controller
     {
         $this->storeAttributionParameters($request);
 
+        $inviteId = $request->query('invite') ?? $request->session()->get('pending_invite_id');
+        $invite = Invite::fromId(is_string($inviteId) ? $inviteId : null);
+        $signupsClosed = ServiceSwitch::newSignupsClosed() && $invite === null;
+
         return Inertia::render('auth/Register', [
             'email' => $request->query('email'),
-            'invite' => $request->query('invite'),
+            'invite' => $signupsClosed ? null : $invite?->id,
+            'signupsClosed' => $signupsClosed,
             'passwordRequirements' => PasswordRequirements::checklist(),
             'countries' => config('trypost.self_hosted') ? null : Countries::ISO,
         ]);

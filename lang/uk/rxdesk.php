@@ -92,6 +92,9 @@ return [
         'no_end' => 'Без дати завершення',
         'checkout_blocked' => 'Ваш план надано The RX Desk, тож щоб оформити підписку, зверніться до The RX Desk.',
     ],
+    'signup' => [
+        'closed' => 'Реєстрація наразі закрита.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => 'Резервне копіювання в Drive зараз недоступне. Виберіть іншу політику для відео або повторіть спробу пізніше.',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

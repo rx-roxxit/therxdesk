@@ -92,6 +92,9 @@ return [
         'no_end' => 'Χωρίς ημερομηνία λήξης',
         'checkout_blocked' => 'Το πλάνο σου το παρέχει το The RX Desk, οπότε επικοινώνησε με το The RX Desk για να εγγραφείς.',
     ],
+    'signup' => [
+        'closed' => 'Οι εγγραφές είναι κλειστές προς το παρόν.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => 'Η δημιουργία αντιγράφου ασφαλείας στο Drive δεν είναι διαθέσιμη αυτή τη στιγμή. Διάλεξε άλλη πολιτική βίντεο ή δοκίμασε ξανά αργότερα.',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

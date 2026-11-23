@@ -39,6 +39,8 @@ const props = defineProps<{
     videoPolicy: VideoPolicy | null;
     /** Null for a Member: only the account's Owner sees the Drive connection. */
     driveConnection: DriveConnection | null;
+    /** False while the System admin has Drive backup switched off. */
+    driveBackupEnabled: boolean;
 }>();
 
 type PreferenceField =
@@ -207,13 +209,17 @@ const backupOption: SettingsSelectOption = {
 
 const isDriveConnected = computed(() => props.driveConnection === 'connected');
 
-/** Backup is offered with a working Drive, and kept visible while it is the saved choice. */
+/** Backup is offered with a working Drive and its switch on, and kept visible while it is the saved choice. */
 const offersBackup = computed(() => {
-    if (isDriveConnected.value) {
+    if (selectedVideoPolicy.value === 'backup') {
         return true;
     }
 
-    return selectedVideoPolicy.value === 'backup';
+    if (!isDriveConnected.value) {
+        return false;
+    }
+
+    return props.driveBackupEnabled;
 });
 
 const videoPolicyOptions = computed<SettingsSelectOption[]>(() => {

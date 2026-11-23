@@ -7,6 +7,7 @@ namespace App\Http\Middleware\App;
 use App\Actions\AccessToken\HasConnectedMcpClient;
 use App\Actions\Changelog\BuildChangelogProps;
 use App\Enums\Auth\SocialAuthProvider;
+use App\Enums\Availability\ServiceSwitch;
 use App\Enums\Media\Source as MediaSource;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\PostPlatform\ContentType;
@@ -86,6 +87,7 @@ class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'selfHosted' => $isSelfHosted,
             'supportChat' => fn (): bool => app(SupportChatGate::class)->enabled(),
+            'aiEnabled' => fn (): bool => $user !== null && ServiceSwitch::Ai->effective(),
         ];
     }
 
@@ -122,7 +124,6 @@ class HandleInertiaRequests extends Middleware
             ],
             'languages' => fn (): array => Locale::options(),
             'supportEmail' => fn (): string => (string) config('trypost.support.email'),
-            'aiEnabled' => fn (): bool => filled(config('ai.providers.'.config('ai.default').'.key')),
             'googleAuthEnabled' => fn (): bool => SocialAuthProvider::Google->isEnabled(),
             'githubAuthEnabled' => fn (): bool => SocialAuthProvider::GitHub->isEnabled(),
             'toursEnabled' => fn (): bool => (bool) config('trypost.tours.enabled'),

@@ -29,6 +29,27 @@ plus credentials) and switched on.
   network that is not installed answers `422`. Every PATCH writes an `availability.enable` or `availability.disable`
   audit row (even when the value did not change), with the admin email, `target_type = availability_switches` and
   `before` / `after` holding `{ enabled }`. The site token answers `404`.
+  After the 14 network rows come the services and signups in the same flat list (22 rows):
+  `service:ai`, `service:support_chat`, `service:drive_backup`, `service:drive_picker`, `service:canva`,
+  `service:google_photos`, `service:unsplash` (`kind: "service"`, `value` without the prefix), then `new_signups`
+  (`kind: "signups"`). A missing row is on, except Support chat and new signups, which start off. `installed` reads
+  the provider key or the provider's credentials; Support chat also needs selling mode. `effective` is installed and
+  switched on, and for Support chat it also follows the AI switch.
+
+## Service switches
+
+- **AI off** joins `aiEnabled`, so every AI button disappears (writing assistant in the composer and idea editor,
+  idea generation, alt-text generation). Credits are untouched, and Support chat goes down with it.
+- **Support chat off** removes "Chat support" from the Help menu; "Email support" stays. The chat routes answer 404.
+- **Drive backup off** stops offering "Backup to Drive" in the Video policy (an Owner already on Backup keeps it),
+  and saving Backup is refused with `rxdesk.video_policy.errors.backup_unavailable`. A policy job that runs while
+  off keeps the file, records `backup_failed` with `last_error = "backup unavailable"` and sends no email; Retry
+  uploads once the switch is back on.
+- **Drive picker, Canva, Google Photos and Unsplash off** drop their entries from the composer media menu; imports
+  already running finish.
+- **New signups off** closes `/register` ("Signups are closed for now") and refuses the POST; an Invite still
+  registers.
+- In self-hosted mode new signups stay upstream's (the 404 without an invite), and Support chat is never installed.
 - **Horizon.** The `social-publishing` supervisor listens to every platform queue (`Platform::allQueues()`), so a
   network's queue is still worked while it is switched off.
 
@@ -67,7 +88,7 @@ BLOCKED=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["no
 $V/internal.sh PATCH /availability/platform:linkedin --body '{"enabled":false}'
 #   HTTP 200, {"key":"platform:linkedin",...,"installed":true,"switched_on":false,"effective":false}
 $V/internal.sh PATCH /availability/platform:linkedin-page --body '{"enabled":false}'
-$V/internal.sh GET /availability --token admin        # no X row; 14 switches
+$V/internal.sh GET /availability --token admin        # no X row; 14 networks + services + signups
 
 # 3. Scheduling is refused on the public API (and the web/MCP surfaces).
 CHANNEL=$($V/fixture.sh show | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["channelId"])')
@@ -98,10 +119,70 @@ $V/complimentary.sh down
 $V/fixture.sh down
 ```
 
+## Service switches: how to drive it (host sequence)
+
+Needs `selling.sh up` (internal API tokens, fake media and LinkedIn credentials) and the fixture. The journey expects
+Support chat switched **on**, AI off, the media pickers, Drive backup and new signups off, plus a connected fixture
+Drive and one valid Invite.
+
+```sh
+V=.claude/skills/verify-therxdesk/scripts
+
+$V/launch.sh
+$V/selling.sh up
+$V/fixture.sh up
+$V/complimentary.sh up
+
+# Apply this branch's migrations: launch reuses an already-running stack.
+( source "$V/env.sh"; app_run php artisan migrate --force )
+
+# Fixture state: a connected Google Drive (the overlay's fake keys make it
+# installed) and an Invite for the guest form check.
+INVITE=$(
+  source "$V/env.sh"
+  app_run php artisan tinker --execute "
+    \$owner = App\\Models\\User::where('email', 'verify-agent@example.com')->firstOrFail();
+    App\\Models\\MediaSourceConnection::factory()->create([
+      'user_id' => \$owner->id,
+      'source' => App\\Enums\\Media\\Source::GoogleDriveBackup,
+      'access_token' => 'verify-drive-token',
+    ]);
+    \$invite = App\\Models\\Invite::factory()->create([
+      'account_id' => \$owner->account_id,
+      'invited_by' => \$owner->id,
+      'email' => 'verify-invitee@example.com',
+      'workspaces' => [\$owner->current_workspace_id],
+    ]);
+    echo \$invite->id;
+  " | tail -1
+)
+
+# AI off, Support chat on (to prove AI off takes the chat down), the rest off.
+$V/internal.sh PATCH /availability/service:support_chat --body '{"enabled":true}'
+$V/internal.sh PATCH /availability/service:ai --body '{"enabled":false}'
+for key in service:drive_backup service:drive_picker service:canva service:google_photos service:unsplash new_signups; do
+  $V/internal.sh PATCH "/availability/$key" --body '{"enabled":false}'
+done
+$V/internal.sh GET /availability --token admin     # 22 rows
+
+VERIFY_INVITE_ID=$INVITE $V/drive.sh services-off
+
+# Restore: everything on, Support chat and new signups back to their off default.
+for key in service:ai service:drive_backup service:drive_picker service:canva service:google_photos service:unsplash; do
+  $V/internal.sh PATCH "/availability/$key" --body '{"enabled":true}'
+done
+$V/internal.sh PATCH /availability/service:support_chat --body '{"enabled":false}'
+$V/internal.sh PATCH /availability/new_signups --body '{"enabled":false}'
+
+$V/complimentary.sh down
+$V/fixture.sh down
+```
+
 ## Host-side proof
 
-- `internal.sh GET /availability --token admin` lists 14 switches, no X, each `installed` / `switched_on` / `effective`;
-  the LinkedIn row flips with the PATCH.
+- `internal.sh GET /availability --token admin` lists 22 switches (14 networks, no X, then the services and
+  `new_signups`), each `installed` / `switched_on` / `effective`; the LinkedIn row and the service rows flip with the
+  PATCH, and the two off-default rows show `switched_on: false` until switched on.
 - `internal.sh GET /audit-log --token admin` holds an `availability.disable` and an `availability.enable` for each
   switch, with actor `verify-admin@example.com`, and `before` / `after` holding `{ "enabled": true|false }`.
 - `api.sh POST /posts` answers `HTTP 422` with the refusal naming LinkedIn while the switch is off, and `HTTP 201` once
@@ -109,6 +190,14 @@ $V/fixture.sh down
 - `db.sh` shows the due post `failed | failed | unavailable`, then `publish_block_reason` null after the retry.
 - `drive.sh availability-off` screenshots: `connect-card-hidden`, `composer-unavailable`, `schedule-refused`,
   `blocked-post`. `drive.sh availability-retry`: `blocked-post`, `after-retry`, `retry-cleared`.
+- `drive.sh services-off` checks and screenshots: no `@composer-ai-assistant` with AI off; the media menu's only item
+  is Upload (`composer-pickers-hidden`); the Help menu has no `@sidebar-support-chat` while
+  `@sidebar-support-email` stays (`help-menu-email-only`); Preferences shows the Drive as Connected and no
+  `preferences-video-policy-option-backup` (`drive-backup-not-offered`); `/register` shows `@register-closed` with no
+  form (`signups-closed`), and the same page with the Invite id opens `@register-name` (`invite-form-open`).
+- `db.sh "select key, enabled from availability_switches order by key"` shows the flipped rows, and `db.sh` on
+  `video_records` after the job runs shows `backup_failed` with `last_error = 'backup unavailable'` (covered by
+  `VideoBackupPipelineTest`; the journey does not run the job).
 
 ## Gotchas
 

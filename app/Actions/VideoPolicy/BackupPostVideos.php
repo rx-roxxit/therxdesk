@@ -38,6 +38,11 @@ class BackupPostVideos
     public const int UPLOAD_LOCK_SECONDS = ApplyVideoPolicy::TIMEOUT_SECONDS + 300;
 
     /**
+     * The recorded reason when the System admin has Drive backup switched off.
+     */
+    public const string UNAVAILABLE_REASON = 'backup unavailable';
+
+    /**
      * Returns false while another run holds the upload lock of one of the
      * post's files (another post of the group, or another run of this one,
      * is uploading it): the caller looks again later.

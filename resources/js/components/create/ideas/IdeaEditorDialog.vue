@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
 import {
     IconCheck,
     IconChevronDown,
@@ -163,6 +163,8 @@ form.transform((data) => ({
     ...data,
     media_ids: media.value.map((item) => item.id),
 }));
+const page = usePage();
+const aiEnabled = computed(() => page.props.aiEnabled === true);
 const open = ref(true);
 const assistantOpen = ref(false);
 
@@ -549,6 +551,7 @@ const iconButtonClass =
                                 $t('create.ideas.editor.body_placeholder')
                             }}</span>
                             <button
+                                v-if="aiEnabled"
                                 type="button"
                                 class="pointer-events-auto inline-flex h-6 items-center gap-1 rounded-md bg-primary-subtle px-2 text-xs font-medium text-primary-text transition-control hover:brightness-95"
                                 :aria-pressed="assistantOpen"
@@ -640,6 +643,7 @@ const iconButtonClass =
                         </PopoverContent>
                     </Popover>
                     <Button
+                        v-if="aiEnabled"
                         type="button"
                         variant="ghost"
                         size="sm"

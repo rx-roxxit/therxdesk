@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, useHttp } from '@inertiajs/vue3';
+import { Link, useHttp, usePage } from '@inertiajs/vue3';
 import { IconLoader2, IconRefresh, IconSparkles, IconX } from '@tabler/icons-vue';
 import { trans } from 'laravel-vue-i18n';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
@@ -33,6 +33,8 @@ const emit = defineEmits<{
     use: [idea: IdeaDraft];
 }>();
 
+const page = usePage();
+const aiEnabled = computed(() => page.props.aiEnabled === true);
 const open = ref(false);
 const error = ref('');
 const errorCode = ref<string | null>(null);
@@ -140,7 +142,7 @@ const useIdea = (): void => {
 </script>
 
 <template>
-    <Dialog v-model:open="open">
+    <Dialog v-if="aiEnabled" v-model:open="open">
         <DialogTrigger as-child>
             <Button
                 variant="ghost"

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\App\Settings;
 
 use App\Enums\Account\DriveConnection;
 use App\Enums\Account\VideoPolicy;
+use App\Enums\Availability\ServiceSwitch;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\App\Settings\UpdatePreferencesRequest;
 use App\Models\Account;
@@ -25,6 +26,7 @@ class PreferencesController extends Controller
             'timezones' => Timezone::options(),
             'videoPolicy' => $this->videoPolicyFor($request->user()),
             'driveConnection' => $this->driveConnectionFor($request->user()),
+            'driveBackupEnabled' => ServiceSwitch::DriveBackup->effective(),
         ]);
     }
 

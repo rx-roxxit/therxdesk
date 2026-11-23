@@ -14,11 +14,14 @@ use Illuminate\Support\Facades\Queue;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
-beforeEach(fn () => config([
-    'trypost.self_hosted' => false,
-    'trypost.google_auth_enabled' => true,
-    'trypost.github_auth_enabled' => true,
-]));
+beforeEach(function (): void {
+    config([
+        'trypost.self_hosted' => false,
+        'trypost.google_auth_enabled' => true,
+        'trypost.github_auth_enabled' => true,
+    ]);
+    enableSignups();
+});
 
 test('email registration stores the zone, week start and clock the browser reported', function () {
     $this->post(route('register.store'), [

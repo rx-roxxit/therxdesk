@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, useHttp } from '@inertiajs/vue3';
+import { Link, useHttp, usePage } from '@inertiajs/vue3';
 import { IconSparkles } from '@tabler/icons-vue';
 import { trans } from 'laravel-vue-i18n';
 import { computed, ref } from 'vue';
@@ -22,6 +22,8 @@ const props = defineProps<{
 
 const edit = defineModel<MediaEdit>('edit', { required: true });
 
+const page = usePage();
+const aiEnabled = computed(() => page.props.aiEnabled === true);
 const http = useHttp({ media_id: '' });
 const generating = ref(false);
 const error = ref<string | null>(null);
@@ -80,6 +82,7 @@ const generate = async (): Promise<void> => {
             :placeholder="$t('posts.composer.media_editor.alt_placeholder')"
         />
         <Button
+            v-if="aiEnabled"
             type="button"
             variant="outline"
             class="w-full"
@@ -90,7 +93,7 @@ const generate = async (): Promise<void> => {
             <IconSparkles class="size-4" />
             {{ $t('posts.composer.media_editor.alt_generate') }}
         </Button>
-        <AiCreditsNote />
+        <AiCreditsNote v-if="aiEnabled" />
         <div
             v-if="error"
             role="alert"

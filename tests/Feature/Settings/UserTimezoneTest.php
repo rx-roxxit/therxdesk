@@ -6,7 +6,10 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Support\Timezone;
 
-beforeEach(fn () => config()->set('trypost.self_hosted', false));
+beforeEach(function (): void {
+    config()->set('trypost.self_hosted', false);
+    enableSignups();
+});
 
 test('existing and new users default to UTC', function () {
     $user = User::factory()->create();

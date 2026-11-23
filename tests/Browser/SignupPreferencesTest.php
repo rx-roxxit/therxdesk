@@ -13,6 +13,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 
 test('the register form sends the zone, week start and clock the browser reports', function (string $locale, string $timezone, string $weekStart, string $timeFormat) {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
 
     $page = visit(route('register'))->withLocale($locale)->withTimezone($timezone);
     waitForState($page, '@register-time-format', "element.value !== ''");
@@ -43,6 +44,7 @@ test('the google and github buttons carry the detected preferences to the OAuth 
 
 test('the register form signs up in the browser language when the visitor picks none', function (string $browserLocale, string $expected) {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
 
     $page = visit(route('register'))->withLocale($browserLocale);
     waitForState($page, '@register-locale', "element.value !== ''");
@@ -58,6 +60,7 @@ test('the register form signs up in the browser language when the visitor picks 
 
 test('the google and github buttons carry the browser language to the OAuth start', function () {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
     config()->set('trypost.google_auth_enabled', true);
     config()->set('trypost.github_auth_enabled', true);
 
@@ -73,6 +76,7 @@ test('the google and github buttons carry the browser language to the OAuth star
 
 test('a language picked on the register page wins over the browser language', function () {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
     config()->set('trypost.google_auth_enabled', true);
     config()->set('trypost.github_auth_enabled', true);
 
@@ -95,6 +99,7 @@ test('a language picked on the register page wins over the browser language', fu
 
 test('signing up with the email form creates the account in the browser language', function () {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
     fakePwnedPasswords();
 
     $page = visit(route('register'))->withLocale('pt-BR');
@@ -113,6 +118,7 @@ test('signing up with the email form creates the account in the browser language
 
 test('a new person who starts on the login page signs up with google or github in the browser language', function (string $network, string $driver) {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
     config()->set('trypost.google_auth_enabled', true);
     config()->set('trypost.github_auth_enabled', true);
 
@@ -169,6 +175,7 @@ test('the register page opened from an invite sends the browser language with th
 
 test('with several browser languages the first one TryPost supports wins', function (array $browserLanguages, string $expected) {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
 
     $page = visit(route('login'))->withLocale('en-US');
     waitFor($page, '@login-sign-up-link');

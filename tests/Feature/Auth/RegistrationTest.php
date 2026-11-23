@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Enums\Availability\ServiceSwitch;
 use App\Models\Account;
 use App\Models\Invite;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\Availability\Availability;
 use App\Support\Countries;
 
-beforeEach(fn () => config()->set('trypost.self_hosted', false));
+beforeEach(function (): void {
+    config()->set('trypost.self_hosted', false);
+    enableSignups();
+});
 
 function createTestInvite(string $email): Invite
 {
@@ -32,6 +37,56 @@ test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
 
     $response->assertOk();
+});
+
+test('the register page shows the closed state while new signups are switched off', function () {
+    app(Availability::class)->set(ServiceSwitch::NewSignups->value, false);
+
+    $this->get(route('register'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('signupsClosed', true)
+            ->where('invite', null)
+        );
+});
+
+test('a registration while new signups are switched off is refused and creates no user', function () {
+    app(Availability::class)->set(ServiceSwitch::NewSignups->value, false);
+
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => strongPassword(),
+        'country' => 'TH',
+        'locale' => 'en',
+    ])->assertSessionHasErrors(['email' => __('rxdesk.signup.closed')]);
+
+    $this->assertGuest();
+
+    expect(User::where('email', 'test@example.com')->exists())->toBeFalse();
+});
+
+test('an invite still registers a member while new signups are switched off', function () {
+    app(Availability::class)->set(ServiceSwitch::NewSignups->value, false);
+    $invite = createTestInvite('invitee@example.com');
+
+    $this->get(route('register', ['invite' => $invite->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('signupsClosed', false)
+            ->where('invite', $invite->id)
+        );
+
+    $this->post(route('register.store', ['invite' => $invite->id]), [
+        'name' => 'Invitee',
+        'email' => 'invitee@example.com',
+        'password' => strongPassword(),
+        'country' => 'TH',
+        'locale' => 'en',
+    ])->assertSessionHasNoErrors();
+
+    $this->assertAuthenticated();
+    expect(User::where('email', 'invitee@example.com')->exists())->toBeTrue();
 });
 
 test('new users can register', function () {

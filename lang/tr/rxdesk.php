@@ -92,6 +92,9 @@ return [
         'no_end' => 'Bitiş tarihi yok',
         'checkout_blocked' => 'Planınızı The RX Desk verdi; abone olmak için The RX Desk ile iletişime geçin.',
     ],
+    'signup' => [
+        'closed' => 'Şu anda kayıtlar kapalı.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => "Drive'a yedekleme şu anda kullanılamıyor. Başka bir video ilkesi seçin ya da daha sonra tekrar deneyin.",
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

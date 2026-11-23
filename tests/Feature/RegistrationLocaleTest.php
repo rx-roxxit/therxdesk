@@ -9,7 +9,10 @@ use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
-beforeEach(fn () => config()->set('trypost.self_hosted', false));
+beforeEach(function (): void {
+    config()->set('trypost.self_hosted', false);
+    enableSignups();
+});
 
 /**
  * @param  array<string, string>  $overrides
