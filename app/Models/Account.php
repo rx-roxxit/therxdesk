@@ -29,6 +29,12 @@ class Account extends Model
 
     public const SUBSCRIPTION_NAME = 'default';
 
+    /**
+     * How long an Account's data stays after access stops. Written into the
+     * Terms; never an env value.
+     */
+    public const int DELETION_GRACE_DAYS = 30;
+
     public static function postsCountCacheKey(string $accountId): string
     {
         return "account:{$accountId}:posts_count";
@@ -70,6 +76,8 @@ class Account extends Model
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
         'blocked_country_at' => 'datetime',
+        'deletion_scheduled_at' => 'datetime',
+        'data_purged_at' => 'datetime',
         'video_policy' => VideoPolicy::class,
         'ai_credits_per_month' => 'integer',
     ];
@@ -123,6 +131,11 @@ class Account extends Model
     public function invites(): HasMany
     {
         return $this->hasMany(Invite::class);
+    }
+
+    public function lifecycleEmails(): HasMany
+    {
+        return $this->hasMany(LifecycleEmail::class);
     }
 
     public function offers(): BelongsToMany
@@ -341,6 +354,43 @@ class Account extends Model
         }
 
         return $this->subscribed(self::SUBSCRIPTION_NAME);
+    }
+
+    /**
+     * Never had a Subscription at all, and never a Complimentary Plan. That
+     * signup is deleted entirely 30 days after signup, with no email. A
+     * Complimentary Account is not one of these: it keeps its User and follows
+     * the Lapsed path when its Plan ends (ADR 0006).
+     */
+    public function isNeverPaid(): bool
+    {
+        if ($this->hadComplimentaryPlan()) {
+            return false;
+        }
+
+        return ! $this->hasEverSubscribed();
+    }
+
+    public function hasEverSubscribed(): bool
+    {
+        return $this->subscriptions()->exists();
+    }
+
+    public function deletionIsDue(): bool
+    {
+        return filled($this->deletion_scheduled_at) && $this->deletion_scheduled_at->isPast();
+    }
+
+    /**
+     * Whole days until the deletion clock fires, zero once it has passed.
+     */
+    public function deletionDaysLeft(): ?int
+    {
+        if (blank($this->deletion_scheduled_at)) {
+            return null;
+        }
+
+        return max(0, (int) ceil(now()->diffInDays($this->deletion_scheduled_at, false)));
     }
 
     public function subscriptionStatus(): string

@@ -36,7 +36,7 @@ class AccountController
     public function show(string $account): CustomerDetailResource
     {
         $account = Account::query()
-            ->with(['owner', 'plan.prices', 'subscriptions'])
+            ->with(['owner', 'plan.prices', 'subscriptions', 'lifecycleEmails'])
             ->withCount('users')
             ->findOrFail($account);
 

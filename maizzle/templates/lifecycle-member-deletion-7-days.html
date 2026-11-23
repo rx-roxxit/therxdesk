@@ -1,0 +1,20 @@
+<x-main>
+  <x-message authenticated="true">
+    <x-heading>
+      @{{ __('rxdesk.lifecycle.member_deletion_in_7_days.heading') }}
+    </x-heading>
+
+    <p class="m-0 leading-6">
+      @{{ __('rxdesk.lifecycle.member_deletion_in_7_days.body', ['date' => $deletionDate]) }}
+    </p>
+
+    <p class="m-0 mt-4 leading-6">
+      @{{ __('rxdesk.lifecycle.member_deletion_in_7_days.export') }}
+    </p>
+
+    <p class="m-0 mt-6 leading-6">
+      @{{ __('rxdesk.lifecycle.member_deletion_in_7_days.support') }}
+      <a href="@{{ $supportUrl }}">@{{ __('rxdesk.lifecycle.member_deletion_in_7_days.support_link') }}</a>
+    </p>
+  </x-message>
+</x-main>

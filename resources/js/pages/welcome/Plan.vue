@@ -19,6 +19,7 @@ import type { Offer } from '@/types/offer';
 import type {
     BillingInterval,
     WelcomePlan,
+    WelcomePlanLapsedDeletion,
     WelcomePlanRetry,
     WelcomePlanSelection,
     WelcomePlanTrial,
@@ -33,6 +34,7 @@ const props = defineProps<{
     trial: WelcomePlanTrial | null;
     retry: WelcomePlanRetry | null;
     countryBlocked: boolean;
+    lapsedDeletion: WelcomePlanLapsedDeletion | null;
     complimentary: ComplimentaryPlan | null;
 }>();
 
@@ -89,6 +91,16 @@ const complimentaryUntilLine = ($t: Translate): string => {
 
     return $t('rxdesk.complimentary.until', {
         date: date.formatDate(endsAt),
+    });
+};
+
+const lapsedDeletionLine = ($t: Translate): string => {
+    if (props.lapsedDeletion === null) {
+        return '';
+    }
+
+    return $t('rxdesk.welcome_plan.lapsed_deletion', {
+        date: date.formatDate(props.lapsedDeletion.date),
     });
 };
 
@@ -197,6 +209,17 @@ const closeVerifyDialog = (open: boolean): void => {
         </div>
 
         <div v-else-if="retry === null" class="flex w-full flex-col gap-6">
+            <Alert
+                v-if="lapsedDeletion !== null"
+                variant="destructive"
+                class="w-full"
+                data-testid="welcome-plan-lapsed-deletion"
+            >
+                <AlertDescription>{{
+                    lapsedDeletionLine($t)
+                }}</AlertDescription>
+            </Alert>
+
             <WelcomeOfferBanner
                 v-if="offer?.show_banner"
                 :name="offer.name"

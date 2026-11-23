@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Billing;
 
+use App\Actions\Account\SyncDeletionClock;
 use App\Actions\Audit\RecordAuditEntry;
 use App\Models\Account;
 use App\Models\Plan;
@@ -74,6 +75,10 @@ class ComplimentaryPlans
         $account->forceFill(['complimentary_until' => $endsAt])->save();
 
         RecordAuditEntry::execute($actor, 'account.complimentary.end', $account, $before, $this->snapshot($account));
+
+        // Ended at once (its date has passed): access is gone, so the deletion
+        // clock starts now and the plan step can name the date.
+        SyncDeletionClock::execute($account->fresh());
 
         return $account->fresh();
     }

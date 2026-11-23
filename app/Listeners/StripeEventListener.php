@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Actions\Account\SyncDeletionClock;
 use App\Actions\Offer\RedeemOffer;
 use App\Enums\Billing\CancellationType;
 use App\Enums\Billing\TrialClaim;
@@ -100,6 +101,8 @@ class StripeEventListener
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Created, $payload, $previousPlan);
         TrackTrialStarted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_TRIALING && blank($subscription?->trial_skipped_at), (string) $account->id, $payload);
         TrackCheckoutCompleted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_ACTIVE, (string) $account->id, $payload);
+
+        SyncDeletionClock::execute($account->refresh());
     }
 
     /**
@@ -121,6 +124,8 @@ class StripeEventListener
         TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Updated, $payload, $previousPlan);
         TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $this->convertedFromTrial($payload) && $this->isNowActive($payload), (string) $account->id, $payload);
         TrackPlanChanged::dispatchIf(PostHogService::shouldTrack() && $this->priceChanged($payload), (string) $account->id, $payload);
+
+        SyncDeletionClock::execute($account->refresh());
     }
 
     /**
@@ -130,6 +135,8 @@ class StripeEventListener
     {
         $this->recordTrialEnd($subscription, $payload);
         $this->recordCancellationFacts($subscription, $payload);
+
+        SyncDeletionClock::execute($account->refresh());
 
         if (blank($account->plan_id) && ! $account->hasPaidSubscription()) {
             return;

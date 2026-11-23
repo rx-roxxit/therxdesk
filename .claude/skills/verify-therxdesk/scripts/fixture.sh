@@ -8,6 +8,7 @@
 #   fixture.sh customer <cus_id>      point the fixture Account at a sandbox Customer
 #   fixture.sh customer-clear         forget that Customer
 #   fixture.sh card <fingerprint>     claim a card fingerprint for the fixture Account
+#   fixture.sh lifecycle <hours>      put the fixture on the Lapsed path with a deletion clock <hours> from now
 #   fixture.sh token                  print ONLY a fresh personal API token (api.sh captures it)
 #
 # The fixture is an Owner, their Workspace with one made-up LinkedIn channel,

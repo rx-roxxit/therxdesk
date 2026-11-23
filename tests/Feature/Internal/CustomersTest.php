@@ -149,10 +149,13 @@ test('customer detail returns the owner, plan, Subscription, usage, members and 
     expect($response->json('access_state'))->toBe([
         'has_app_access' => true,
         'lapsed' => false,
+        'never_paid' => false,
         'suspended' => false,
         'suspended_at' => null,
         'suspension_reason' => null,
-    ])->and($response->json('lifecycle_emails'))->toBeNull();
+        'deletion_scheduled_at' => null,
+        'data_purged_at' => null,
+    ])->and($response->json('lifecycle_emails'))->toBe([]);
 
     $recent = $response->json('recent_posts');
 

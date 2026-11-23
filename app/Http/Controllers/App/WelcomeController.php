@@ -173,6 +173,7 @@ class WelcomeController extends Controller
                 'trial' => null,
                 'retry' => null,
                 'countryBlocked' => filled($account->blocked_country_at),
+                'lapsedDeletion' => null,
                 'complimentary' => [
                     'plan_name' => $account->plan?->name,
                     'ends_at' => $account->complimentaryEndsAt()?->toIso8601String(),
@@ -203,6 +204,7 @@ class WelcomeController extends Controller
             'trial' => $this->trial($account, null),
             'retry' => $this->retry($account),
             'countryBlocked' => filled($account->blocked_country_at),
+            'lapsedDeletion' => $this->lapsedDeletion($account),
             'complimentary' => null,
         ]);
     }
@@ -392,6 +394,27 @@ class WelcomeController extends Controller
         return [
             'plan' => $account->plan?->name,
             'update_card_url' => route('app.welcome.plan.portal'),
+        ];
+    }
+
+    /**
+     * The date a Lapsed Owner's data is deleted, shown on the plan step. A
+     * never-paid signup is not Lapsed and gets no such line.
+     *
+     * @return array{date: string}|null
+     */
+    private function lapsedDeletion(Account $account): ?array
+    {
+        if (! $account->isLapsed()) {
+            return null;
+        }
+
+        if (blank($account->deletion_scheduled_at)) {
+            return null;
+        }
+
+        return [
+            'date' => $account->deletion_scheduled_at->toIso8601String(),
         ];
     }
 

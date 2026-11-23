@@ -32,9 +32,12 @@ class CustomerDetailResource extends JsonResource
             'access_state' => [
                 'has_app_access' => $account->hasAppAccess(),
                 'lapsed' => $account->isLapsed(),
+                'never_paid' => $account->isNeverPaid(),
                 'suspended' => $account->isSuspended(),
                 'suspended_at' => $account->suspended_at?->toIso8601String(),
                 'suspension_reason' => $account->suspension_reason,
+                'deletion_scheduled_at' => $account->deletion_scheduled_at?->toIso8601String(),
+                'data_purged_at' => $account->data_purged_at?->toIso8601String(),
             ],
             'plan' => $account->plan ? [
                 'id' => $account->plan->id,
@@ -71,7 +74,15 @@ class CustomerDetailResource extends JsonResource
                 'published_at' => $post->published_at,
                 'created_at' => $post->created_at,
             ])->all(),
-            'lifecycle_emails' => null,
+            'lifecycle_emails' => $account->lifecycleEmails
+                ->sortByDesc('sent_at')
+                ->values()
+                ->map(fn ($email) => [
+                    'type' => $email->type->value,
+                    'user_id' => $email->user_id,
+                    'sent_at' => $email->sent_at?->toIso8601String(),
+                ])
+                ->all(),
         ];
     }
 }

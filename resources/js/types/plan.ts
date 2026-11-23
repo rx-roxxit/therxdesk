@@ -43,6 +43,10 @@ export interface WelcomePlanRetry {
     update_card_url: string;
 }
 
+export interface WelcomePlanLapsedDeletion {
+    date: string;
+}
+
 export const deniedPlanIdsFor = (
     plans: PlanOption[],
     workspaceCount: number,
