@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Enums\Post\Status as PostStatus;
 use App\Enums\SocialAccount\Platform;
 use App\Mcp\Servers\TryPostServer;
 use App\Mcp\Tools\Post\CreatePostTool;
+use App\Mcp\Tools\Post\PublishPostTool;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Support\Availability\Availability;
@@ -128,4 +130,21 @@ test('switching the network back on accepts the scheduled post on web, REST and 
     ])->assertOk();
 
     expect(Post::query()->where('status', 'scheduled')->count())->toBe(3);
+});
+
+test('publishing a stored post is refused while the network is unavailable', function () {
+    availabilityParitySwitch(false);
+
+    $post = Post::factory()->forAccount($this->account)->draft()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $this->actingAs($this->user)
+        ->put(route('app.posts.schedule.update', $post), ['action' => 'publish_now'])
+        ->assertSessionHasErrors(['social_account_id' => availabilityParityMessage()]);
+
+    TryPostServer::actingAs($this->user)->tool(PublishPostTool::class, ['post_id' => $post->id])
+        ->assertHasErrors([availabilityParityMessage()]);
+
+    expect($post->fresh()->status)->toBe(PostStatus::Draft);
 });
