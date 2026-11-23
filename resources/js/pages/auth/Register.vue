@@ -8,6 +8,7 @@ import LegalLinks from '@/components/auth/LegalLinks.vue';
 import PasswordRequirements from '@/components/auth/PasswordRequirements.vue';
 import type { PasswordRequirement } from '@/components/auth/PasswordRequirements.vue';
 import SocialLogin from '@/components/auth/SocialLogin.vue';
+import TurnstileWidget from '@/components/auth/TurnstileWidget.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const props = defineProps<{
     signupsClosed?: boolean;
     passwordRequirements: PasswordRequirement[];
     countries?: string[] | null;
+    turnstileSiteKey?: string | null;
 }>();
 
 const countryOptions = (): string[] => {
@@ -45,14 +47,25 @@ const countryOptions = (): string[] => {
 
 const hasCountries = (): boolean => countryOptions().length > 0;
 
-const { signupLocale } = useGuestLocale();
+const { locale, signupLocale } = useGuestLocale();
 const detected = detectPreferences();
 
 const showPassword = ref(false);
 const password = ref('');
+const turnstileWidget = ref<{ reset: () => void } | null>(null);
 
 const togglePasswordVisibility = (): void => {
     showPassword.value = !showPassword.value;
+};
+
+const turnstileSiteKey = computed<string>(() => props.turnstileSiteKey ?? '');
+const hasTurnstile = computed(() => filled(turnstileSiteKey.value));
+
+/**
+ * A Turnstile token works once, so a failed submit needs a fresh widget.
+ */
+const resetTurnstile = (): void => {
+    turnstileWidget.value?.reset();
 };
 
 const page = usePage();
@@ -88,6 +101,7 @@ const hasSocial = computed(
                 :reset-on-success="['password']"
                 v-slot="{ errors, processing }"
                 class="flex flex-col gap-6"
+                @error="resetTurnstile"
             >
                 <input v-if="invite" type="hidden" name="invite" :value="invite" />
                 <input type="hidden" name="locale" :value="signupLocale" data-testid="register-locale" />
@@ -186,6 +200,15 @@ const hasSocial = computed(
                                 :requirements="passwordRequirements"
                             />
                             <InputError :message="errors.password" />
+                        </div>
+
+                        <div v-if="hasTurnstile" class="grid gap-2">
+                            <TurnstileWidget
+                                ref="turnstileWidget"
+                                :site-key="turnstileSiteKey"
+                                :language="locale"
+                            />
+                            <InputError :message="errors['cf-turnstile-response']" />
                         </div>
 
                         <Button

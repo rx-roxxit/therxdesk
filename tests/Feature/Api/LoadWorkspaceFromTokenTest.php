@@ -474,7 +474,7 @@ test('rejects an expired mcp oauth grant on the mcp endpoint', function () {
         ->assertJson(['message' => 'Token expired.']);
 });
 
-test('the api rate limit is counted per workspace, not per ip', function () {
+test('the api rate limit is counted per account, not per ip', function () {
     subscribeAccount($this->user->account);
 
     $other = createApiTestToken();

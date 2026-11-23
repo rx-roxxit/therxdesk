@@ -231,14 +231,26 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $user = $request->user();
-            $workspaceId = $user->current_workspace_id;
 
-            $key = $workspaceId !== null
-                ? "workspace:{$workspaceId}"
-                : "user:{$user->id}";
+            // MCP lets ChatGPT connect and list tools before sign-in, and
+            // those requests have no Account to charge yet.
+            if ($user === null) {
+                return Limit::none();
+            }
 
-            return Limit::perMinute(60)->by($key);
+            $accountId = $user->account_id;
+
+            if ($accountId === null) {
+                return Limit::perMinute(60)->by("user:{$user->id}");
+            }
+
+            return Limit::perMinute(60)->by("account:{$accountId}");
         });
+
+        RateLimiter::for(
+            'register',
+            fn (Request $request): Limit => Limit::perMinute(5)->by("ip:{$request->ip()}"),
+        );
 
         RateLimiter::for(
             'mcp-oauth',

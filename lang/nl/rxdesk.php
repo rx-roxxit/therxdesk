@@ -95,6 +95,9 @@ return [
     'signup' => [
         'closed' => 'Aanmelden kan nu even niet.',
     ],
+    'turnstile' => [
+        'failed' => 'Voltooi de beveiligingscontrole en probeer het opnieuw.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
