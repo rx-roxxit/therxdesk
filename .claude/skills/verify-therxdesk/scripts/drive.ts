@@ -337,6 +337,7 @@ const SELLING_JOURNEYS = [
     'gate-retry',
     'availability-off',
     'availability-retry',
+    'ai-credits',
 ];
 
 /** The test card Stripe's sandbox always accepts, unless a path needs another. */
@@ -845,6 +846,59 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             'the blocked signup is not signed in',
             signedIn === null,
             signedIn,
+        );
+    },
+
+    /** Temporary: AI credits gate and low-credits line (#67). */
+    'ai-credits': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        await page.locator(tid('@schedule-view-list')).click();
+        await page.waitForURL((url) => url.pathname === '/schedule');
+        await page.locator(tid('@posts-new-post')).waitFor();
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page.locator(tid('@composer-ai-assistant')).click();
+        await page.locator(tid('@writing-assistant-panel')).waitFor();
+        await run.step('assistant-open');
+
+        const low = page.locator(tid('@ai-credits-low'));
+
+        run.check(
+            'the low-credits line shows under the AI tools',
+            (await low.count()) === 1,
+            (await low.count()) > 0 ? await low.innerText() : null,
+        );
+
+        await page.locator(tid('@writing-assistant-mode-generate')).click();
+        await page
+            .locator(tid('@writing-assistant-prompt'))
+            .fill('announce our summer launch today');
+        await page.locator(tid('@writing-assistant-generate')).click();
+
+        const error = page.locator(tid('@writing-assistant-error'));
+        await error.waitFor();
+        await run.step('refused');
+
+        const message = await error.innerText();
+        run.check(
+            'the Owner refusal names the renewal date',
+            message.includes("used this month's AI credits") &&
+                message.includes('renew on'),
+            message,
+        );
+
+        const changePlan = page.locator(tid('@writing-assistant-change-plan'));
+        run.check(
+            'the Owner gets a Change plan link',
+            (await changePlan.count()) === 1,
+            (await changePlan.count()) > 0
+                ? await changePlan.innerText()
+                : null,
         );
     },
 
