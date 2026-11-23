@@ -198,10 +198,15 @@ return [
         'auto' => '此页面会自动更新 — 无需刷新。',
         'support_action' => '发送邮件给支持团队',
     ],
+    'availability' => [
+        'schedule_refused' => ':network 目前不可用。请将这条帖子保存为草稿，或等它恢复后再试一次。',
+        'banner' => ':network 目前不可用。您可以保存草稿，但该频道在恢复前不会发布。',
+    ],
     'publishing_block' => [
         'title' => '未发布的原因',
         'lapsed' => '您的订阅已结束，因此这条帖子未发布。请重新订阅后再试一次。',
         'suspended' => '您的账户已暂停，因此这条帖子未发布。请联系支持后再试一次。',
+        'unavailable' => ':network 目前不可用。等它恢复后再试一次。',
         'retry' => '重试',
         'retry_started' => '正在重试发布这条帖子。',
         'retry_failed' => '无法重试发布这条帖子。请再试一次。',

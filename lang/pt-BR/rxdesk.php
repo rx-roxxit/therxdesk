@@ -198,10 +198,15 @@ return [
         'auto' => 'Esta página atualiza automaticamente — não precisa recarregar.',
         'support_action' => 'Enviar e-mail ao suporte',
     ],
+    'availability' => [
+        'schedule_refused' => ':network não está disponível no momento. Salve esta publicação como rascunho ou tente novamente quando ele voltar.',
+        'banner' => ':network não está disponível no momento. Você pode salvar rascunhos, mas este canal não vai publicar até ele voltar.',
+    ],
     'publishing_block' => [
         'title' => 'Por que não foi publicado',
         'lapsed' => 'Sua assinatura terminou, então esta publicação não foi publicada. Assine novamente e tente outra vez.',
         'suspended' => 'Sua conta está suspensa, então esta publicação não foi publicada. Fale com o suporte e tente outra vez.',
+        'unavailable' => ':network não está disponível no momento. Tente novamente quando ele voltar.',
         'retry' => 'Tentar novamente',
         'retry_started' => 'Tentando publicar novamente.',
         'retry_failed' => 'Não foi possível tentar publicar novamente. Tente outra vez.',

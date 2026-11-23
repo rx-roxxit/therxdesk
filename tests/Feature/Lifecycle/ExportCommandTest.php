@@ -10,7 +10,6 @@ use App\Models\Workspace;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use ZipArchive;
 
 beforeEach(function () {
     config(['trypost.self_hosted' => false]);

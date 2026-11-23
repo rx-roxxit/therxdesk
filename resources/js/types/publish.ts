@@ -69,8 +69,8 @@ export interface PostCardFailure {
     failed_at?: string | null;
 }
 
-/** Why the access gate kept a post from publishing. Availability adds its own. */
-export type PublishBlockReason = 'lapsed' | 'suspended';
+/** Why the access or availability gate kept a post from publishing. */
+export type PublishBlockReason = 'lapsed' | 'suspended' | 'unavailable';
 
 export interface PostCard {
     id: string;

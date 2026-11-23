@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Enums\Account;
 
 /**
- * Why an Account may not publish or use the app. Availability (#63) adds its
- * own case and is checked in the same gate.
+ * Why a post may not publish. Availability (#63) checks a network's switch in
+ * the same gate, before the Account's own access.
  */
 enum AccessDenial: string
 {
     case Lapsed = 'lapsed';
     case Suspended = 'suspended';
+    case Unavailable = 'unavailable';
 }

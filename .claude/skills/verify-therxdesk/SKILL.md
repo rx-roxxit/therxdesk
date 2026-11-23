@@ -205,12 +205,15 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
 `selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
-`payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`
+`payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`,
+`availability-off`, `availability-retry`
 (selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
 `complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
 test clock, `media-on-r2` also needs `media.sh up`, `suspension` needs `suspension.sh up`, `gate-schedule` needs
 `complimentary.sh up` and a `suspension.sh up` right after, `gate-retry` needs `suspension.sh lift` and
-`VERIFY_BLOCKED_POST` from `gate-schedule`'s `notes.blockedPostId`). Every journey first checks the mode php-fpm
+`VERIFY_BLOCKED_POST` from `gate-schedule`'s `notes.blockedPostId`; the availability journeys switch both
+`platform:linkedin` variants off through `internal.sh` first, and `availability-retry` needs them back on and the same
+`VERIFY_BLOCKED_POST` after the scheduler blocked it). Every journey first checks the mode php-fpm
 serves and stops with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature,
 with or without a journey.
 

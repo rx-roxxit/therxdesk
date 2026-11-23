@@ -74,6 +74,7 @@ import ThreadRepliesField from '@/components/posts/editor/ThreadRepliesField.vue
 import XPollField from '@/components/posts/editor/XPollField.vue';
 import PlatformPreview from '@/components/posts/previews/PlatformPreview.vue';
 import PreviewPanelTitle from '@/components/posts/previews/PreviewPanelTitle.vue';
+import PlatformUnavailableBanner from '@/components/publish/PlatformUnavailableBanner.vue';
 import PublishEmptyIllustration from '@/components/publish/PublishEmptyIllustration.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -613,6 +614,14 @@ watch(
     { immediate: true },
 );
 const page = usePage<SharedData>();
+const unavailableSelectedNetworks = computed(() => {
+    const platforms = [
+        ...new Set(selectedAccounts.value.map((account) => account.platform)),
+    ];
+    const unavailable = page.props.unavailablePlatforms ?? [];
+
+    return platforms.filter((platform) => unavailable.includes(platform));
+});
 const trayKey = (groupKey: string | null): string =>
     groupKey !== null && customizing.value ? groupKey : '';
 const appendMedia = (
@@ -2505,6 +2514,11 @@ const onDialogOpenChange = (value: boolean): void => {
                     :class="mobileView === 'preview' ? 'max-lg:hidden' : ''"
                     data-testid="composer-editor-column"
                 >
+                    <PlatformUnavailableBanner
+                        v-if="unavailableSelectedNetworks.length"
+                        :networks="unavailableSelectedNetworks"
+                        class="mx-auto w-full max-w-[744px] shrink-0"
+                    />
                     <p
                         v-if="Object.keys(errors).length"
                         data-testid="composer-errors"

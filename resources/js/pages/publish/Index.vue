@@ -35,6 +35,7 @@ import PostChannelFilter from '@/components/posts/PostChannelFilter.vue';
 import ScheduleViewSwitch from '@/components/posts/ScheduleViewSwitch.vue';
 import DayHeading from '@/components/publish/DayHeading.vue';
 import NewPostButton from '@/components/publish/NewPostButton.vue';
+import PlatformUnavailableBanner from '@/components/publish/PlatformUnavailableBanner.vue';
 import PostListSkeleton from '@/components/publish/PostListSkeleton.vue';
 import PostTimelineCard from '@/components/publish/PostTimelineCard.vue';
 import PublishEmptyIllustration from '@/components/publish/PublishEmptyIllustration.vue';
@@ -69,6 +70,7 @@ import { afterHistorySettles, cameFromAppPage } from '@/lib/inAppHistory';
 import { stableItemsElement } from '@/lib/infiniteScroll';
 import { postAttemptAt } from '@/lib/postCard';
 import { grid, settings } from '@/routes/app/channels';
+import type { SharedData } from '@/types';
 import { PostStatus, ScheduleMode } from '@/types/post';
 import type { TimezoneOption } from '@/types/posting-schedule';
 import type {
@@ -117,9 +119,23 @@ interface CardGroup {
 const NO_TIME = 'no-time';
 
 const props = defineProps<Props>();
-const page = usePage();
+const page = usePage<SharedData>();
 const { canManageAccounts, canManageTeam, canPublishDirectly } =
     useWorkspaceAbilities();
+
+const channelUnavailableNetworks = computed(() => {
+    if (props.channel === null) {
+        return [];
+    }
+
+    const unavailable = page.props.unavailablePlatforms ?? [];
+
+    if (!unavailable.includes(props.channel.platform)) {
+        return [];
+    }
+
+    return [props.channel.platform];
+});
 
 const {
     timezone,
@@ -813,6 +829,11 @@ const submitComposition = (
             class="flex min-h-0 flex-1 flex-col overflow-hidden"
             data-testid="publish-page"
         >
+            <PlatformUnavailableBanner
+                v-if="channelUnavailableNetworks.length"
+                :networks="channelUnavailableNetworks"
+                class="mx-4 mt-2 shrink-0 md:mx-8"
+            />
             <div
                 class="mx-4 mt-2 flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border-strong md:mx-8 md:gap-4"
             >

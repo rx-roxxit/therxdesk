@@ -335,6 +335,8 @@ const SELLING_JOURNEYS = [
     'suspension',
     'gate-schedule',
     'gate-retry',
+    'availability-off',
+    'availability-retry',
 ];
 
 /** The test card Stripe's sandbox always accepts, unless a path needs another. */
@@ -2205,6 +2207,240 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             email,
         );
         await run.step('member-suspended');
+    },
+
+    /**
+     * features/availability.md
+     *
+     * LinkedIn is switched off in Availability (`internal.sh PATCH
+     * /availability/platform:linkedin --body '{"enabled":false}'`). Its Connect
+     * card is hidden, the composer warns, and a scheduled post is refused. When
+     * VERIFY_BLOCKED_POST is set, the post the scheduler blocked is checked too.
+     */
+    'availability-off': async (run) => {
+        const { page, fixture } = run;
+        const leadMinutes = Number(process.env.VERIFY_GATE_LEAD_MINUTES ?? '5');
+        const scheduledAt = new Date(Date.now() + leadMinutes * 60_000);
+        const day = scheduledAt.toISOString().slice(0, 10);
+        const time = scheduledAt.toISOString().slice(11, 16).replace(':', '');
+        const caption = `Verify availability ${new Date().toISOString()}`;
+        run.note('caption', caption);
+        run.note('scheduledAt', scheduledAt.toISOString());
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the availability journey`,
+            );
+        }
+
+        // The network's Connect card is hidden while it is switched off.
+        await page.locator(tid('@sidebar-new')).click();
+        await page.locator(tid('@sidebar-new-channel')).click();
+        await page.locator(tid('@connect-channel-dialog')).waitFor();
+        const connectCards = await page
+            .locator(tid('@connect-channel-linkedin'))
+            .count();
+        run.check(
+            'the LinkedIn connect card is hidden',
+            connectCards === 0,
+            connectCards,
+        );
+        await run.step('connect-card-hidden');
+        await page.keyboard.press('Escape');
+        await page
+            .locator(tid('@connect-channel-dialog'))
+            .waitFor({ state: 'detached' })
+            .catch(() => undefined);
+
+        // Scheduling on the connected channel is refused, with the banner.
+        await page.locator(tid('@schedule-view-list')).click();
+        await page.waitForURL((url) => url.pathname === '/schedule');
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page.locator(tid('@composer-base-content')).waitFor();
+
+        await page.locator(tid('@composer-add-account')).click();
+        await page
+            .locator(tid(`@composer-account-option-${fixture.channelId}`))
+            .click();
+        await page
+            .locator(tid(`@composer-caption-${fixture.channelId}`))
+            .fill(caption);
+        await run.step('composer-unavailable');
+
+        const banner = page.locator(tid('@platform-unavailable-banner'));
+        run.check(
+            'the composer shows the unavailable banner',
+            (await banner.count()) > 0,
+            await banner.count(),
+        );
+
+        await page.locator(tid('@composer-schedule-trigger')).click();
+        await page.locator(tid('@composer-schedule-custom')).click();
+        await page.locator(tid('@composer-schedule-picker')).waitFor();
+
+        if ((await page.locator(tid(`@composer-schedule-day-${day}`)).count()) === 0) {
+            await page.locator(tid('@composer-schedule-calendar-next')).click();
+        }
+
+        await page.locator(tid(`@composer-schedule-day-${day}`)).click();
+        await page.locator(tid('@composer-schedule-time-input')).fill(time);
+        await page.locator(tid('@composer-schedule-done')).click();
+
+        await page.locator(tid('@composer-submit')).click();
+        await page.locator(tid('@composer-errors')).waitFor();
+        const refusal = await page.locator(tid('@composer-errors')).innerText();
+        run.check(
+            'the scheduled post is refused because the network is unavailable',
+            /unavailable/i.test(refusal) && /LinkedIn/i.test(refusal),
+            refusal,
+        );
+        await run.step('schedule-refused');
+
+        const created = await cardIdByText(page, caption);
+        run.check('no post was created', created === null, created);
+
+        const blockedPost = process.env.VERIFY_BLOCKED_POST ?? '';
+
+        if (blockedPost === '') {
+            return;
+        }
+
+        // The scheduler's blocked post names the network and offers Try again.
+        await page.goto(`${run.baseUrl}/schedule?tab=sent`);
+        await page
+            .locator(tid(`@post-card-${blockedPost}`))
+            .waitFor({ timeout: 30_000 });
+        const observed = await readBlockReason(page, blockedPost);
+        const reason = observed.reason ?? '';
+        run.check(
+            'the blocked post says the network is unavailable',
+            observed.opened && /unavailable/i.test(reason) && /LinkedIn/i.test(reason),
+            observed,
+        );
+        await page.locator(tid(`@post-status-${blockedPost}`)).click();
+        await page.locator(tid(`@post-failure-${blockedPost}`)).waitFor();
+        const retryInPopover = page
+            .locator(tid(`@post-failure-${blockedPost}`))
+            .locator(tid(`@post-retry-${blockedPost}`));
+        run.check(
+            'the blocked post offers Try again',
+            (await retryInPopover.count()) > 0,
+            await retryInPopover.count(),
+        );
+        await run.step('blocked-post');
+    },
+
+    /**
+     * features/availability.md
+     *
+     * The network is switched back on and the post the scheduler blocked is
+     * retried from the failure popover, the way `gate-retry` does for a
+     * Suspension. Pass `gate-schedule`'s result.json notes.blockedPostId in
+     * VERIFY_BLOCKED_POST.
+     */
+    'availability-retry': async (run) => {
+        const { page } = run;
+        const postId = process.env.VERIFY_BLOCKED_POST ?? '';
+
+        if (postId === '') {
+            throw new Error(
+                'VERIFY_BLOCKED_POST is empty: pass gate-schedule result.json notes.blockedPostId',
+            );
+        }
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the availability journey`,
+            );
+        }
+
+        await page.goto(`${run.baseUrl}/schedule?tab=sent`);
+        await page
+            .locator(tid(`@post-card-${postId}`))
+            .waitFor({ timeout: 30_000 });
+        await page.waitForLoadState('networkidle');
+
+        await page.locator(tid(`@post-status-${postId}`)).click();
+        await page.locator(tid(`@post-failure-${postId}`)).waitFor();
+        await run.step('blocked-post');
+
+        const reason = await page
+            .locator(tid(`@post-failure-reason-${postId}`))
+            .innerText();
+        run.check(
+            'the failure popover says the network is unavailable',
+            /unavailable/i.test(reason) && /LinkedIn/i.test(reason),
+            reason,
+        );
+
+        const retryInPopover = page
+            .locator(tid(`@post-failure-${postId}`))
+            .locator(tid(`@post-retry-${postId}`));
+
+        run.check(
+            'the blocked post offers Try again to the Owner',
+            (await retryInPopover.count()) > 0,
+            await retryInPopover.count(),
+        );
+
+        if ((await retryInPopover.count()) > 0) {
+            const retried = page.waitForResponse(
+                (response) =>
+                    response.request().method() === 'POST' &&
+                    response.url().includes(`/posts/${postId}/retry`),
+                { timeout: 30_000 },
+            );
+            await retryInPopover.first().click();
+            await retried.catch(() => undefined);
+        }
+
+        await page.waitForLoadState('networkidle');
+        await run.step('after-retry');
+
+        // A retry re-queues the post: it leaves Sent, or comes back as an
+        // ordinary network failure. Either way its unavailable block is gone.
+        let cleared = false;
+        let observed: {
+            present: boolean;
+            opened: boolean;
+            reason: string | null;
+        } = { present: true, opened: false, reason };
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            observed = await readBlockReason(page, postId);
+            const gone =
+                !observed.present ||
+                (observed.opened &&
+                    (observed.reason === null ||
+                        !/unavailable/i.test(observed.reason)));
+
+            if (gone) {
+                cleared = true;
+                break;
+            }
+
+            await page.waitForTimeout(1_000);
+        }
+
+        run.check(
+            'the unavailable block is gone after the retry',
+            cleared,
+            observed,
+        );
+        await run.step('retry-cleared');
     },
 
     /**

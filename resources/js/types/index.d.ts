@@ -125,6 +125,8 @@ export interface SharedData {
     legal: LegalLinks;
     contentTypeMediaRules?: Record<string, ContentTypeMediaRule>;
     defaultCropPresets?: CropPresetValue[];
+    /** Platform values the System admin switched off (or the server is missing credentials for). */
+    unavailablePlatforms?: string[];
     features?: Features | null;
     usage?: Usage | null;
     plans?: PlanOption[];

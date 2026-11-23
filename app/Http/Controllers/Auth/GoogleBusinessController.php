@@ -31,7 +31,7 @@ class GoogleBusinessController extends SocialController
 
     public function connect(Request $request): Response
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = $request->user()->currentWorkspace;
 

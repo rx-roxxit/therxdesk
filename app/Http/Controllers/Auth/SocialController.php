@@ -46,9 +46,13 @@ class SocialController extends Controller
         return (string) config("trypost.platforms.{$this->platform->value}.graph_api");
     }
 
-    protected function ensurePlatformEnabled(): void
+    /**
+     * A network the System admin switched off (or one the server no longer has
+     * credentials for) refuses every connect, reconnect and finish.
+     */
+    public function ensurePlatformAvailable(): void
     {
-        if (! $this->platform->isEnabled()) {
+        if (! $this->platform->isAvailable()) {
             abort(SymfonyResponse::HTTP_FORBIDDEN, 'This platform is currently unavailable.');
         }
     }
@@ -95,6 +99,8 @@ class SocialController extends Controller
      */
     public function confirm(Request $request): Response
     {
+        $this->ensurePlatformAvailable();
+
         $pending = $this->pendingForThisNetwork();
         $workspace = $pending ? Workspace::find($pending->workspaceId()) : null;
 
@@ -128,7 +134,7 @@ class SocialController extends Controller
             return redirect()->route('app.social.connect.show', $this->platform);
         }
 
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = Workspace::find($pending->workspaceId());
 

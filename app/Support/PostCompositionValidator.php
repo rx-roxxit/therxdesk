@@ -15,6 +15,7 @@ use App\Models\Workspace;
 use App\Rules\ContentFitsPlatformLimits;
 use App\Rules\ContentTypeCompatibleWithMedia;
 use App\Rules\PostContentFitsMaxLength;
+use App\Support\Availability\PlatformAvailability;
 use App\Support\Media\CoverImage;
 use App\Support\Social\XPoll;
 use Illuminate\Support\Facades\Validator;
@@ -221,6 +222,11 @@ class PostCompositionValidator
 
                 if ($composition['status'] === 'draft') {
                     continue;
+                }
+
+                $availabilityViolation = PlatformAvailability::violation($account);
+                if ($availabilityViolation !== null) {
+                    $validator->errors()->add("{$key}.social_account_id", $availabilityViolation);
                 }
 
                 $contentValidator = Validator::make(

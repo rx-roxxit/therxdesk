@@ -228,7 +228,7 @@ return [
 
         'social-publishing' => [
             'connection' => 'redis',
-            'queue' => Platform::enabledQueues(),
+            'queue' => Platform::allQueues(),
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'minProcesses' => 1,

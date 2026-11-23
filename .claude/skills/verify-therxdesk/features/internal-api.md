@@ -38,6 +38,15 @@ prints them. `selling.sh down` removes the file.
 - `POST /internal/v1/accounts/{uuid}/complimentary/end` (admin): an optional `ends_at`, defaulting to 30 days ahead;
   an earlier date is allowed, at most `2037-12-31`. When the date passes the Account is Lapsed. An Account that never
   had a Complimentary Plan answers 422.
+- `GET /internal/v1/availability` (admin): `{ "switches": [...] }`, one row per network except X, in the
+  `Platform` enum order. A row is `key` (`platform:<value>`), `kind` (`platform`), `value`, `label`, `installed`,
+  `switched_on` and `effective`; a missing row counts as switched on, and a network is effective only while it is
+  installed (env switch and credentials) and switched on.
+- `PATCH /internal/v1/availability/{key}` (admin): `{ "enabled": bool }`, answers the row object. An unknown key is
+  `404`; switching on a network the server has not installed answers `422`. Every PATCH records
+  `availability.enable` or `availability.disable` (even when the value did not change), with `target_type`
+  `availability_switches`, `target_id` the row's id and `before` / `after` holding `{ "enabled": bool }`. The site
+  token answers `404`.
 - `GET /internal/v1/audit-log` (admin): paginated, newest first. A row has `id`, `actor`, `action`, `target_type`
   (the table), `target_id`, `before`, `after` and `created_at`. Every internal write and every CLI write records
   one (the CLI actor is `cli`); a password or secret key is never stored.
@@ -117,6 +126,9 @@ $V/internal.sh POST /plans/<uuid>/archive --token admin
 $V/internal.sh POST /plans/<uuid>/quota-cut-dry-run --token admin --body '{"quota_bytes":536870912}'
 $V/internal.sh GET /catalog-settings --token admin
 $V/internal.sh PATCH /catalog-settings --token admin --body '{"trial_days":14}'
+$V/internal.sh GET /availability --token admin
+$V/internal.sh PATCH /availability/platform:linkedin --token admin --body '{"enabled":false}'
+$V/internal.sh PATCH /availability/platform:linkedin --token admin --body '{"enabled":true}'
 $V/internal.sh GET /offers --token admin
 $V/internal.sh POST /offers --token admin --body '{"slug":"spring-sale","name":"Spring sale","reach":"general","coupon":{"type":"percent","percent_off":20,"duration":"repeating","duration_in_months":3},"trial_days":14,"starts_at":"2026-11-22T00:00:00Z","show_banner":true}'
 $V/internal.sh PATCH /offers/<uuid> --token admin --body '{"name":"Spring sale extended","show_banner":false}'
@@ -147,6 +159,10 @@ $V/internal.sh GET /health --token admin
 - A `POST /offers` returns 201 and `/audit-log` has `offer.create` with the admin email; the same request reuses the
   coupon with the same slug, and a `PATCH` with `coupon`, `plan_ids` or `reach` answers 422.
 - `--token site` on any of the write endpoints answers 404.
+- `GET /availability` lists 14 switches (no X) with `installed`, `switched_on` and `effective`; a PATCH off answers
+  the row with `switched_on: false` and `effective: false`, and `/audit-log` shows `availability.disable` with the
+  admin email. Enabling a network the server has no credentials for answers 422, and an unknown `platform:…` key
+  answers 404.
 - `GET /health` with the admin token answers 200 with `queue`, `backup`, `restore_drill`, `disk` and `nightwatch`;
   with the site token it answers 404.
 - `POST /operator` returns 201 and `/audit-log` has `operator.create` with the admin email; a `PATCH` records

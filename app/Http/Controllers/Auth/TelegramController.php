@@ -23,7 +23,7 @@ class TelegramController extends SocialController
      */
     public function connect(Request $request): JsonResponse
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = $request->user()->currentWorkspace;
         abort_if($workspace === null, SymfonyResponse::HTTP_CONFLICT, 'No active workspace.');

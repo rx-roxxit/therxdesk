@@ -198,10 +198,15 @@ return [
         'auto' => 'Diese Seite aktualisiert sich automatisch — kein Neuladen nötig.',
         'support_action' => 'Support per E-Mail',
     ],
+    'availability' => [
+        'schedule_refused' => ':network ist gerade nicht verfügbar. Speichere diesen Beitrag als Entwurf oder versuche es erneut, sobald es wieder da ist.',
+        'banner' => ':network ist gerade nicht verfügbar. Du kannst Entwürfe speichern, aber dieser Kanal veröffentlicht erst wieder, wenn es zurück ist.',
+    ],
     'publishing_block' => [
         'title' => 'Warum er nicht veröffentlicht wurde',
         'lapsed' => 'Dein Abo ist ausgelaufen, deshalb wurde dieser Beitrag nicht veröffentlicht. Schließe das Abo erneut ab und versuche es dann noch einmal.',
         'suspended' => 'Dein Konto ist gesperrt, deshalb wurde dieser Beitrag nicht veröffentlicht. Wende dich an den Support und versuche es dann noch einmal.',
+        'unavailable' => ':network ist gerade nicht verfügbar. Versuche es erneut, sobald es wieder da ist.',
         'retry' => 'Erneut versuchen',
         'retry_started' => 'Der Beitrag wird erneut veröffentlicht.',
         'retry_failed' => 'Der Beitrag konnte nicht erneut veröffentlicht werden. Versuche es noch einmal.',

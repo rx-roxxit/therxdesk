@@ -25,7 +25,7 @@ class BlueskyController extends SocialController
 
     public function connect(Request $request): InertiaResponse
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = $request->user()->currentWorkspace;
 
@@ -41,7 +41,7 @@ class BlueskyController extends SocialController
 
     public function store(Request $request): RedirectResponse
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $request->validate([
             'identifier' => 'required|string',
