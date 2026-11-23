@@ -22,6 +22,12 @@ services:
             RXDESK_BACKUP_HEARTBEAT_URL: http://heartbeat:8080/backup-hb
             # Dev-only signing secret so the webhook can be exercised locally.
             NIGHTWATCH_WEBHOOK_SECRET: verify-nightwatch-secret
+            # Dev-only fake LinkedIn app credentials. Availability treats a
+            # network as installed only when its credentials are filled, and
+            # the fixture channel (plus the availability journey) needs
+            # LinkedIn installed so its switch can be flipped. Never real.
+            LINKEDIN_CLIENT_ID: verify-linkedin-client-id
+            LINKEDIN_CLIENT_SECRET: verify-linkedin-client-secret
         env_file:
             - path: ${HOME}/.cache/verify-therxdesk/state/stripe-webhook.env
               required: true
