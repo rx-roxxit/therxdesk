@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Você usou os créditos de IA deste mês. Peça ao dono do espaço de trabalho para mudar de plano.',
         'low' => 'Restam apenas :remaining de :total créditos de IA este mês.',
         'change_plan' => 'Mudar plano',
+        'label' => 'Créditos de IA',
+        'usage_line' => ':used de :total usados · renova em :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Saldo da conta',
+        'usage' => [
+            'title' => 'Uso',
+        ],
+        'status' => [
+            'trial_monthly' => 'Teste até :date, depois :price por mês',
+            'trial_yearly' => 'Teste até :date, depois :price por ano',
+            'renews_monthly' => 'Renova em :date · :price por mês',
+            'renews_yearly' => 'Renova em :date · :price por ano',
+            'cancelling' => 'Termina em :date',
+        ],
+        'confirm' => [
+            'title' => 'Mudar para :plan?',
+            'charge_today' => 'A diferença proporcional será cobrada hoje.',
+            'credit_balance' => 'O tempo não usado vai para o saldo da sua conta.',
+            'no_charge_trial' => 'Você não será cobrado durante o teste.',
+            'offer_kept' => 'Seu desconto :name continua.',
+            'offer_dropped' => 'Você perde seu desconto :name.',
+            'quota_pause' => 'Novos envios serão pausados até você ficar abaixo de :limit.',
+            'ai_pause' => 'A IA ficará indisponível até :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Armazenamento',
+        'usage' => ':used de :limit usados',
     ],
     'cover' => [
         'mode_label' => 'Cover',

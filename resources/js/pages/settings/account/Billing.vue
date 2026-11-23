@@ -12,6 +12,7 @@ import {
     IconDownload,
     IconFileText,
     IconSparkles,
+    IconWallet,
 } from '@tabler/icons-vue';
 import { computed, ref } from 'vue';
 
@@ -24,9 +25,11 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import {
     Table,
     TableBody,
@@ -40,13 +43,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import date from '@/date';
 import SettingsLayout from '@/layouts/SettingsLayout.vue';
 import { cardBrand } from '@/lib/cardBrands';
+import { formatNumber } from '@/lib/utils';
 import {
     changePlan as changePlanRoute,
     checkout as checkoutRoute,
     index,
     portal,
 } from '@/routes/app/billing';
-import type { AuthPlan, SharedData } from '@/types';
+import type { AiCredits, AuthPlan, SharedData, StorageSummary } from '@/types';
 import type {
     ComplimentaryPlan,
     Invoice,
@@ -54,16 +58,23 @@ import type {
     Subscription,
     SubscriptionDiscount,
 } from '@/types/billing';
-import type { ChangePlanOffer } from '@/types/offer';
+import type { ChangePlanOffer, OfferPriceSlot } from '@/types/offer';
 import {
     DEFAULT_BILLING_INTERVAL,
     deniedPlanIdsFor,
+    planChangeDirection,
     type BillingInterval,
+    type PlanChangeDirection,
     type PlanOption,
 } from '@/types/plan';
 
 interface ScrollInvoices {
     data: Invoice[];
+}
+
+interface StatusLine {
+    key: string;
+    params: Record<string, string>;
 }
 
 type BillingTab = 'plan' | 'invoices';
@@ -91,6 +102,8 @@ const props = defineProps<{
     invoices: ScrollInvoices;
     paymentMethods: PaymentMethod[];
     discount: SubscriptionDiscount | null;
+    accountBalance: string | null;
+    renewsAt: string | null;
     changePlanOffer: ChangePlanOffer | null;
     complimentary: ComplimentaryPlan | null;
 }>();
@@ -147,6 +160,10 @@ const discountKey = computed((): string => {
 
 const page = usePage<SharedData>();
 const plans = computed((): PlanOption[] => page.props.plans ?? []);
+const storage = computed(
+    (): StorageSummary | null => page.props.storage ?? null,
+);
+const credits = computed((): AiCredits | null => page.props.aiCredits ?? null);
 const authPlan = computed((): AuthPlan | null => page.props.auth.plan);
 const currentInterval = computed(
     (): BillingInterval => authPlan.value?.interval ?? DEFAULT_BILLING_INTERVAL,
@@ -182,6 +199,8 @@ const deniedPlanIds = computed((): string[] =>
 
 const selectedInterval = ref<BillingInterval>(currentInterval.value);
 const isPlanDialogOpen = ref(false);
+const isConfirmDialogOpen = ref(false);
+const pendingPlanId = ref<string | null>(null);
 
 const currentPrice = computed((): string | null => {
     if (!props.plan) {
@@ -205,6 +224,93 @@ const priceSuffixKey = computed((): string =>
         ? 'billing.plans.per_year'
         : 'billing.plans.per_month',
 );
+
+/**
+ * The strip under the current plan: one line from the Account's state, and
+ * nothing when the state has no line (an active Plan whose renewal we cannot
+ * read from Stripe).
+ */
+const statusStrip = computed((): StatusLine | null => {
+    if (subscriptionStatus.value === 'trial') {
+        if (props.trialEndsAt === null || currentPrice.value === null) {
+            return null;
+        }
+
+        return {
+            key:
+                currentInterval.value === 'yearly'
+                    ? 'rxdesk.billing.status.trial_yearly'
+                    : 'rxdesk.billing.status.trial_monthly',
+            params: {
+                date: date.formatDateTime(props.trialEndsAt),
+                price: currentPrice.value,
+            },
+        };
+    }
+
+    if (subscriptionStatus.value === 'active') {
+        if (props.renewsAt === null || currentPrice.value === null) {
+            return null;
+        }
+
+        return {
+            key:
+                currentInterval.value === 'yearly'
+                    ? 'rxdesk.billing.status.renews_yearly'
+                    : 'rxdesk.billing.status.renews_monthly',
+            params: {
+                date: date.formatDate(props.renewsAt),
+                price: currentPrice.value,
+            },
+        };
+    }
+
+    if (subscriptionStatus.value === 'cancelling') {
+        const endsAt = props.subscription?.ends_at ?? null;
+
+        if (endsAt === null) {
+            return null;
+        }
+
+        return {
+            key: 'rxdesk.billing.status.cancelling',
+            params: { date: date.formatDate(endsAt) },
+        };
+    }
+
+    if (subscriptionStatus.value === 'past_due') {
+        return { key: 'billing.past_due_notice.description', params: {} };
+    }
+
+    return null;
+});
+
+const storageLine = ($t: Translate): string => {
+    const value = storage.value;
+
+    if (value === null) {
+        return '';
+    }
+
+    return $t('rxdesk.storage_bar.usage', {
+        used: value.used_label,
+        limit: value.limit_label,
+    });
+};
+
+const aiLine = ($t: Translate): string => {
+    const value = credits.value;
+
+    if (value === null) {
+        return '';
+    }
+
+    return $t('rxdesk.ai_credits.usage_line', {
+        used: formatNumber(value.used),
+        total: formatNumber(value.total),
+        date: date.formatDate(value.renews_at),
+    });
+};
 
 const billingTab = (value: unknown): BillingTab =>
     billingTabs.value.find((tab) => tab === value) ?? 'plan';
@@ -240,26 +346,199 @@ const openPlanDialog = (): void => {
     isPlanDialogOpen.value = true;
 };
 
-const closePlanDialog = (): void => {
-    isPlanDialogOpen.value = false;
-};
-
 const checkoutForm = useForm({});
 
 const subscribe = (): void => {
     checkoutForm.post(checkoutRoute.url());
 };
 
+const pendingPlan = computed((): PlanOption | null => {
+    if (pendingPlanId.value === null) {
+        return null;
+    }
+
+    return plans.value.find((plan) => plan.id === pendingPlanId.value) ?? null;
+});
+
+const pendingPlanName = computed((): string => {
+    const plan = pendingPlan.value;
+
+    if (plan === null) {
+        return '';
+    }
+
+    return plan.name;
+});
+
+const offerSlot = (
+    plan: PlanOption,
+    interval: BillingInterval,
+): OfferPriceSlot | null => {
+    if (props.changePlanOffer === null) {
+        return null;
+    }
+
+    const row = props.changePlanOffer.plans[plan.id];
+
+    if (row === undefined) {
+        return null;
+    }
+
+    return row[interval];
+};
+
+const pendingDirection = computed((): PlanChangeDirection => {
+    const plan = pendingPlan.value;
+
+    if (plan === null) {
+        return 'same';
+    }
+
+    return planChangeDirection(
+        props.plan,
+        currentInterval.value,
+        plan,
+        selectedInterval.value,
+    );
+});
+
+const pendingPrice = computed((): string | null => {
+    const plan = pendingPlan.value;
+
+    if (plan === null) {
+        return null;
+    }
+
+    const slot = offerSlot(plan, selectedInterval.value);
+
+    if (slot !== null) {
+        if (selectedInterval.value === 'yearly') {
+            return slot.discounted;
+        }
+
+        return slot.discounted_per_month;
+    }
+
+    if (selectedInterval.value === 'yearly') {
+        return plan.yearly_price;
+    }
+
+    return plan.monthly_price;
+});
+
+const pendingPriceSuffixKey = computed((): string =>
+    selectedInterval.value === 'yearly'
+        ? 'billing.plans.per_year'
+        : 'billing.plans.per_month',
+);
+
+const pendingTimingKey = computed((): string | null => {
+    if (props.onTrial) {
+        return 'rxdesk.billing.confirm.no_charge_trial';
+    }
+
+    if (pendingDirection.value === 'upgrade') {
+        return 'rxdesk.billing.confirm.charge_today';
+    }
+
+    if (pendingDirection.value === 'downgrade') {
+        return 'rxdesk.billing.confirm.credit_balance';
+    }
+
+    return null;
+});
+
+const pendingOffer = computed((): StatusLine | null => {
+    if (props.changePlanOffer === null) {
+        return null;
+    }
+
+    const plan = pendingPlan.value;
+
+    if (plan === null) {
+        return null;
+    }
+
+    const slot = offerSlot(plan, selectedInterval.value);
+    const kept = slot !== null;
+
+    return {
+        key: kept
+            ? 'rxdesk.billing.confirm.offer_kept'
+            : 'rxdesk.billing.confirm.offer_dropped',
+        params: { name: props.changePlanOffer.name },
+    };
+});
+
+const pendingQuotaWarning = computed((): { limit: string } | null => {
+    const plan = pendingPlan.value;
+    const usage = storage.value;
+
+    if (plan === null || usage === null) {
+        return null;
+    }
+
+    if (plan.quota_bytes === null || plan.quota_label === null) {
+        return null;
+    }
+
+    if (usage.used <= plan.quota_bytes) {
+        return null;
+    }
+
+    return { limit: plan.quota_label };
+});
+
+const pendingAiWarning = computed((): { date: string } | null => {
+    const plan = pendingPlan.value;
+    const usage = credits.value;
+
+    if (plan === null || usage === null) {
+        return null;
+    }
+
+    if (plan.ai_credits_per_month === null) {
+        return null;
+    }
+
+    if (usage.used <= plan.ai_credits_per_month) {
+        return null;
+    }
+
+    return { date: date.formatDate(usage.renews_at) };
+});
+
 const selectPlan = (planId: string): void => {
     if (planForm.processing) {
         return;
     }
 
-    planForm.plan_id = planId;
+    pendingPlanId.value = planId;
+    isPlanDialogOpen.value = false;
+    isConfirmDialogOpen.value = true;
+};
+
+const cancelConfirm = (): void => {
+    isConfirmDialogOpen.value = false;
+    pendingPlanId.value = null;
+    isPlanDialogOpen.value = true;
+};
+
+const confirmPlan = (): void => {
+    const plan = pendingPlan.value;
+
+    if (plan === null || planForm.processing) {
+        return;
+    }
+
+    planForm.plan_id = plan.id;
     planForm.interval = selectedInterval.value;
     planForm.post(changePlanRoute.url(), {
         preserveScroll: true,
-        onSuccess: closePlanDialog,
+        onSuccess: () => {
+            isConfirmDialogOpen.value = false;
+            isPlanDialogOpen.value = false;
+        },
     });
 };
 </script>
@@ -340,6 +619,20 @@ const selectPlan = (planId: string): void => {
                                         </span>
                                     </p>
                                     <p
+                                        v-if="accountBalance"
+                                        class="flex items-center gap-1.5 text-sm text-muted-foreground"
+                                        data-testid="billing-account-balance"
+                                    >
+                                        <IconWallet class="size-4 shrink-0" />
+                                        {{
+                                            $t('rxdesk.billing.account_balance')
+                                        }}
+                                        <span
+                                            class="font-emphasis text-foreground tabular-nums"
+                                            >{{ accountBalance }}</span
+                                        >
+                                    </p>
+                                    <p
                                         v-if="discount"
                                         class="flex items-center gap-1.5 text-sm text-muted-foreground"
                                         data-testid="billing-current-plan-discount"
@@ -398,42 +691,34 @@ const selectPlan = (planId: string): void => {
                                 {{ $t('rxdesk.complimentary.no_end') }}
                             </p>
                         </div>
-                        <p
-                            v-if="subscriptionStatus === 'trial' && trialEndsAt"
-                            class="flex items-center gap-1.5 border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground sm:px-6"
-                            data-testid="billing-current-plan-status"
+                        <div
+                            v-if="statusStrip"
+                            class="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground sm:px-6"
+                            data-testid="billing-status-strip"
                         >
-                            <IconSparkles
-                                class="size-4 shrink-0 text-primary-text"
-                                data-testid="billing-current-plan-trial-icon"
-                            />
-                            {{
-                                $t('billing.current_plan.trial_until', {
-                                    date: date.formatDateTime(trialEndsAt),
-                                })
-                            }}
-                        </p>
-                        <p
-                            v-else-if="
-                                subscriptionStatus === 'cancelling' &&
-                                subscription?.ends_at
-                            "
-                            class="border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground sm:px-6"
-                            data-testid="billing-current-plan-status"
-                        >
-                            {{
-                                $t('billing.current_plan.cancelled', {
-                                    date: date.formatDate(subscription.ends_at),
-                                })
-                            }}
-                        </p>
-                        <p
-                            v-else-if="subscriptionStatus === 'past_due'"
-                            class="border-t border-border bg-muted/40 px-5 py-3 text-sm text-muted-foreground sm:px-6"
-                            data-testid="billing-current-plan-status"
-                        >
-                            {{ $t('billing.past_due_notice.description') }}
-                        </p>
+                            <p
+                                class="flex items-center gap-1.5"
+                                data-testid="billing-current-plan-status"
+                            >
+                                <IconSparkles
+                                    v-if="subscriptionStatus === 'trial'"
+                                    class="size-4 shrink-0 text-primary-text"
+                                    data-testid="billing-current-plan-trial-icon"
+                                />
+                                {{ $t(statusStrip.key, statusStrip.params) }}
+                            </p>
+                            <Button
+                                v-if="subscriptionStatus === 'past_due'"
+                                as="a"
+                                :href="portal.url()"
+                                variant="destructive"
+                                size="sm"
+                                class="shrink-0"
+                                data-testid="billing-update-payment"
+                            >
+                                {{ $t('billing.past_due_notice.cta') }}
+                            </Button>
+                        </div>
                     </div>
 
                     <Dialog
@@ -464,7 +749,149 @@ const selectPlan = (planId: string): void => {
                             />
                         </DialogContent>
                     </Dialog>
+
+                    <Dialog
+                        v-if="showsChangePlan"
+                        v-model:open="isConfirmDialogOpen"
+                    >
+                        <DialogContent
+                            class="sm:max-w-md"
+                            data-testid="billing-confirm-dialog"
+                        >
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {{
+                                        $t('rxdesk.billing.confirm.title', {
+                                            plan: pendingPlanName,
+                                        })
+                                    }}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {{ $t('billing.plans.description') }}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div class="flex flex-col gap-3 text-sm">
+                                <p
+                                    v-if="pendingPrice"
+                                    class="flex items-baseline gap-1 text-foreground tabular-nums"
+                                    data-testid="billing-confirm-price"
+                                >
+                                    <span
+                                        class="text-2xl leading-9 font-emphasis tracking-tight [word-spacing:-0.15em]"
+                                        >{{ pendingPrice }}</span
+                                    >
+                                    <span class="text-sm text-muted-foreground">
+                                        {{ $t(pendingPriceSuffixKey) }}
+                                    </span>
+                                </p>
+                                <p
+                                    v-if="pendingTimingKey"
+                                    class="text-muted-foreground"
+                                    data-testid="billing-confirm-timing"
+                                >
+                                    {{ $t(pendingTimingKey) }}
+                                </p>
+                                <p
+                                    v-if="pendingOffer"
+                                    class="text-muted-foreground"
+                                    data-testid="billing-confirm-offer"
+                                >
+                                    {{
+                                        $t(
+                                            pendingOffer.key,
+                                            pendingOffer.params,
+                                        )
+                                    }}
+                                </p>
+                                <p
+                                    v-if="pendingQuotaWarning"
+                                    class="rounded-lg bg-warning/10 px-3 py-2 text-foreground"
+                                    data-testid="billing-confirm-quota"
+                                >
+                                    {{
+                                        $t(
+                                            'rxdesk.billing.confirm.quota_pause',
+                                            pendingQuotaWarning,
+                                        )
+                                    }}
+                                </p>
+                                <p
+                                    v-if="pendingAiWarning"
+                                    class="rounded-lg bg-warning/10 px-3 py-2 text-foreground"
+                                    data-testid="billing-confirm-ai"
+                                >
+                                    {{
+                                        $t(
+                                            'rxdesk.billing.confirm.ai_pause',
+                                            pendingAiWarning,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    data-testid="billing-confirm-cancel"
+                                    @click="cancelConfirm"
+                                >
+                                    {{ $t('common.cancel') }}
+                                </Button>
+                                <Button
+                                    :loading="planForm.processing"
+                                    data-testid="billing-confirm-change"
+                                    @click="confirmPlan"
+                                >
+                                    {{ $t('billing.current_plan.change') }}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </SettingsSection>
+
+                <div id="usage" class="scroll-mt-24">
+                    <SettingsSection :title="$t('rxdesk.billing.usage.title')">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div
+                                v-if="storage"
+                                class="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+                                data-testid="billing-usage-storage"
+                            >
+                                <span
+                                    class="text-sm font-emphasis text-foreground"
+                                    >{{ $t('rxdesk.storage_bar.label') }}</span
+                                >
+                                <span
+                                    class="text-sm text-muted-foreground"
+                                    data-testid="billing-usage-storage-line"
+                                    >{{ storageLine($t) }}</span
+                                >
+                                <Progress
+                                    :model-value="storage.percent"
+                                    class="h-1.5"
+                                />
+                            </div>
+                            <div
+                                v-if="credits"
+                                class="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+                                data-testid="billing-usage-ai"
+                            >
+                                <span
+                                    class="text-sm font-emphasis text-foreground"
+                                    >{{ $t('rxdesk.ai_credits.label') }}</span
+                                >
+                                <span
+                                    class="text-sm text-muted-foreground"
+                                    data-testid="billing-usage-ai-line"
+                                    >{{ aiLine($t) }}</span
+                                >
+                                <Progress
+                                    :model-value="credits.percent"
+                                    class="h-1.5"
+                                />
+                            </div>
+                        </div>
+                    </SettingsSection>
+                </div>
 
                 <SettingsSection
                     v-if="showsSubscriptionSection"

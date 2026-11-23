@@ -6,7 +6,9 @@ namespace App\Http\Controllers\App;
 
 use App\Actions\Billing\ChangePlan;
 use App\Actions\Billing\ListAccountCards;
+use App\Actions\Billing\ShowAccountBalance;
 use App\Actions\Billing\ShowSubscriptionDiscount;
+use App\Actions\Billing\ShowSubscriptionRenewal;
 use App\Enums\Billing\CheckoutOrigin;
 use App\Enums\Billing\Interval;
 use App\Http\Requests\App\Billing\ChangePlanRequest;
@@ -85,6 +87,8 @@ class BillingController extends Controller
             ))->matchOn('data.id'),
             'paymentMethods' => fn (): array => ListAccountCards::execute($account, $subscription),
             'discount' => $discount,
+            'accountBalance' => fn (): ?string => ShowAccountBalance::execute($account),
+            'renewsAt' => fn (): ?string => ShowSubscriptionRenewal::execute($account, $subscription),
             'changePlanOffer' => fn (): ?array => $this->changePlanOffer($account, $discount()),
         ]);
     }

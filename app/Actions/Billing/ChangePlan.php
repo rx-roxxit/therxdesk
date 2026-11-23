@@ -67,7 +67,7 @@ class ChangePlan
 
         try {
             if ($subscription->stripe_price !== $priceId) {
-                $subscription->swap($priceId, $keepsDiscount ? [] : ['discounts' => '']);
+                $subscription->swap($priceId, $this->swapOptions($account, $keepsDiscount));
             }
         } catch (IncompletePayment $exception) {
             return redirect()->route('cashier.payment', [
@@ -86,5 +86,31 @@ class ChangePlan
 
         return redirect()->route('app.billing.index')
             ->with('flash.success', __('billing.flash.plan_changed', ['plan' => $plan->name]));
+    }
+
+    /**
+     * Every paid Plan change settles at once (`always_invoice`): an upgrade
+     * charges the prorated difference now, and a downgrade leaves the unused
+     * time as an Account balance, never a cash refund. A Trial is never
+     * charged, so it only records the new price. Coverage decides the
+     * discount, which is dropped when the Offer no longer covers the Plan.
+     *
+     * @return array<string, string>
+     */
+    private function swapOptions(Account $account, bool $keepsDiscount): array
+    {
+        $options = [];
+
+        if (! $keepsDiscount) {
+            $options['discounts'] = '';
+        }
+
+        if ($account->isOnTrial()) {
+            return $options;
+        }
+
+        $options['proration_behavior'] = 'always_invoice';
+
+        return $options;
     }
 }

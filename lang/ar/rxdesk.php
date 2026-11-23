@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'لقد استخدمت رصيد الذكاء الاصطناعي لهذا الشهر. اطلب من مالك مساحة العمل تغيير الخطة.',
         'low' => 'لم يتبقَّ هذا الشهر سوى :remaining من :total من رصيد الذكاء الاصطناعي.',
         'change_plan' => 'تغيير الخطة',
+        'label' => 'رصيد AI',
+        'usage_line' => ':used من :total مستخدم · يتجدد في :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'رصيد الحساب',
+        'usage' => [
+            'title' => 'الاستخدام',
+        ],
+        'status' => [
+            'trial_monthly' => 'تجربة مجانية حتى :date، ثم :price شهريًا',
+            'trial_yearly' => 'تجربة مجانية حتى :date، ثم :price سنويًا',
+            'renews_monthly' => 'يتجدد في :date · :price شهريًا',
+            'renews_yearly' => 'يتجدد في :date · :price سنويًا',
+            'cancelling' => 'يُلغى في :date',
+        ],
+        'confirm' => [
+            'title' => 'التبديل إلى :plan؟',
+            'charge_today' => 'سيُخصم منك الفرق التناسبي اليوم.',
+            'credit_balance' => 'سيُضاف الوقت غير المستخدم إلى رصيد حسابك.',
+            'no_charge_trial' => 'لن يُخصم منك أي مبلغ خلال فترة التجربة.',
+            'offer_kept' => 'يبقى خصم :name.',
+            'offer_dropped' => 'ستفقد خصم :name.',
+            'quota_pause' => 'ستتوقف عمليات الرفع الجديدة حتى يصبح استخدامك أقل من :limit.',
+            'ai_pause' => 'سيكون الذكاء الاصطناعي غير متاح حتى :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'التخزين',
+        'usage' => ':used من :limit مستخدم',
     ],
     'cover' => [
         'mode_label' => 'Cover',

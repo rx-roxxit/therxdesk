@@ -20,6 +20,7 @@ import { computed, ref } from 'vue';
 
 import PreferencesController from '@/actions/App/Http/Controllers/App/Settings/PreferencesController';
 import { updateLanguage } from '@/actions/App/Http/Controllers/App/Settings/ProfileController';
+import AiCreditsBar from '@/components/AiCreditsBar.vue';
 import StorageBar from '@/components/StorageBar.vue';
 import { Avatar } from '@/components/ui/avatar';
 import { buttonVariants } from '@/components/ui/button';
@@ -69,9 +70,7 @@ const page = usePage();
 const { canManageBilling, canManageTeam, canManageWorkspace } =
     useWorkspaceAbilities();
 const selfHosted = computed(() => Boolean(page.props.selfHosted));
-const showBilling = computed(
-    () => canManageBilling.value && !selfHosted.value,
-);
+const showBilling = computed(() => canManageBilling.value && !selfHosted.value);
 const showChannels = computed(() => canManageWorkspace.value);
 const planName = computed(() =>
     showBilling.value ? (page.props.auth.plan?.name ?? null) : null,
@@ -98,8 +97,7 @@ const themes = [
 const currentTheme = ref<Theme>(props.user.theme);
 const currentThemeOption = computed(
     () =>
-        themes.find((theme) => theme.value === currentTheme.value) ??
-        themes[2],
+        themes.find((theme) => theme.value === currentTheme.value) ?? themes[2],
 );
 
 const switchTheme = (theme: Theme): void => {
@@ -192,6 +190,7 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
             </Link>
         </DropdownMenuItem>
         <StorageBar />
+        <AiCreditsBar v-if="showBilling" />
     </div>
 
     <DropdownMenuSeparator />
@@ -211,7 +210,9 @@ const sourceCodeUrl = 'https://github.com/rx-roxxit/therxdesk';
                     class="size-4 shrink-0 rounded-sm"
                     fallback-class="text-[8px] bg-primary-subtle text-primary-text font-bold"
                 />
-                <span class="min-w-0 truncate">{{ currentWorkspace?.name }}</span>
+                <span class="min-w-0 truncate">{{
+                    currentWorkspace?.name
+                }}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
                 <DropdownMenuSubContent class="w-64">

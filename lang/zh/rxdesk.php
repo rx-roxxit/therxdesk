@@ -16,6 +16,8 @@ return [
         'exhausted_member' => '你已用完本月的 AI 积分，请工作区所有者更换套餐。',
         'low' => '本月 AI 积分仅剩 :remaining / :total。',
         'change_plan' => '更改套餐',
+        'label' => 'AI 额度',
+        'usage_line' => '已用 :used / :total · :date 重置',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => '账户余额',
+        'usage' => [
+            'title' => '用量',
+        ],
+        'status' => [
+            'trial_monthly' => '试用至 :date，之后每月 :price',
+            'trial_yearly' => '试用至 :date，之后每年 :price',
+            'renews_monthly' => ':date 续费 · 每月 :price',
+            'renews_yearly' => ':date 续费 · 每年 :price',
+            'cancelling' => ':date 结束',
+        ],
+        'confirm' => [
+            'title' => '改为 :plan？',
+            'charge_today' => '今天将按比例收取差价。',
+            'credit_balance' => '未使用的时间将转入账户余额。',
+            'no_charge_trial' => '试用期间不会收费。',
+            'offer_kept' => ':name 折扣继续有效。',
+            'offer_dropped' => '你将失去 :name 折扣。',
+            'quota_pause' => '新上传将暂停，直到用量低于 :limit。',
+            'ai_pause' => 'AI 将在 :date 前不可用。',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => '存储空间',
+        'usage' => '已用 :used / :limit',
     ],
     'cover' => [
         'mode_label' => 'Cover',

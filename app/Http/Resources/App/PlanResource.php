@@ -7,8 +7,10 @@ namespace App\Http\Resources\App;
 use App\Enums\Billing\Interval;
 use App\Models\Plan;
 use App\Support\Billing\OfferCopy;
+use App\Support\ByteSize;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Number;
 
 /**
  * @mixin Plan
@@ -27,6 +29,8 @@ class PlanResource extends JsonResource
             'workspace_limit' => $this->workspace_limit,
             'quota_bytes' => $this->quota_bytes,
             'ai_credits_per_month' => $this->ai_credits_per_month,
+            'quota_label' => filled($this->quota_bytes) ? ByteSize::format((int) $this->quota_bytes) : null,
+            'ai_credits_label' => filled($this->ai_credits_per_month) ? Number::format((int) $this->ai_credits_per_month) : null,
             'sort' => $this->sort,
             'monthly_amount' => $this->priceFor(Interval::Monthly)?->amount,
             'yearly_amount' => $this->priceFor(Interval::Yearly)?->amount,

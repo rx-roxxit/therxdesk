@@ -16,6 +16,8 @@ return [
         'exhausted_member' => 'Χρησιμοποιήσατε τις μονάδες AI αυτού του μήνα. Ζητήστε από τον κάτοχο του λογαριασμού να αλλάξει πλάνο.',
         'low' => 'Απομένουν μόνο :remaining από :total μονάδες AI αυτόν τον μήνα.',
         'change_plan' => 'Αλλαγή πλάνου',
+        'label' => 'Μονάδες AI',
+        'usage_line' => ':used από :total σε χρήση · ανανεώνεται :date',
     ],
     'help' => [
         'source_code' => 'Source code',
@@ -102,9 +104,32 @@ return [
             'quota_member' => "The workspace owner's storage is full, so this file can't be added. Ask them to free some space, then try again.",
         ],
     ],
+    'billing' => [
+        'account_balance' => 'Υπόλοιπο λογαριασμού',
+        'usage' => [
+            'title' => 'Χρήση',
+        ],
+        'status' => [
+            'trial_monthly' => 'Δοκιμή έως :date, μετά :price τον μήνα',
+            'trial_yearly' => 'Δοκιμή έως :date, μετά :price τον χρόνο',
+            'renews_monthly' => 'Ανανεώνεται :date · :price τον μήνα',
+            'renews_yearly' => 'Ανανεώνεται :date · :price τον χρόνο',
+            'cancelling' => 'Λήγει :date',
+        ],
+        'confirm' => [
+            'title' => 'Αλλαγή σε :plan;',
+            'charge_today' => 'Η αναλογική διαφορά θα χρεωθεί σήμερα.',
+            'credit_balance' => 'Ο χρόνος που δεν χρησιμοποιήθηκε περνά στο υπόλοιπο του λογαριασμού σου.',
+            'no_charge_trial' => 'Δεν θα χρεωθείς κατά τη δοκιμή.',
+            'offer_kept' => 'Η έκπτωση :name παραμένει.',
+            'offer_dropped' => 'Χάνεις την έκπτωση :name.',
+            'quota_pause' => 'Οι νέες μεταφορές θα σταματήσουν μέχρι να είσαι κάτω από :limit.',
+            'ai_pause' => 'Το AI δεν θα είναι διαθέσιμο έως :date.',
+        ],
+    ],
     'storage_bar' => [
-        'label' => 'Storage',
-        'usage' => ':used of :limit used',
+        'label' => 'Αποθήκευση',
+        'usage' => ':used από :limit σε χρήση',
     ],
     'cover' => [
         'mode_label' => 'Cover',
