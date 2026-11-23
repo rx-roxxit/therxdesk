@@ -7,12 +7,26 @@ invoices, and manages the subscription on Stripe's Customer Portal.
 
 - Entry: account menu (`@sidebar-workspace-menu`) → `@sidebar-menu-billing` ("Plans and billing"), or Settings →
   `@settings-nav-billing`. Owner only (any non-owner, a member or a non-owner admin, gets 403); selling mode only.
-- Plan tab: current plan (`@billing-current-plan-name`, `-price`, `-badge`, `-status` for a trial, cancel or past
-  due, `-discount`), "Change plan" (`@billing-change-plan`), "Subscribe" (`@billing-subscribe`, a generic trial).
+- Plan tab: current plan (`@billing-current-plan-name`, `-price`, `-badge`, `-discount`), the Account balance in
+  credit (`@billing-account-balance`, only when Stripe holds a credit), "Change plan" (`@billing-change-plan`),
+  "Subscribe" (`@billing-subscribe`, a generic trial).
+- Status strip (`@billing-status-strip`, line `@billing-current-plan-status`) renders from the Account's state:
+  "Trial until <date>, then $X a month" (`@billing-current-plan-trial-icon`), "Renews on <date> · $X a month",
+  "Cancels on <date>", or "Payment past due…" with `@billing-update-payment`. The renewal date comes from Stripe's
+  current period (`renewsAt`), so an active Plan shows no strip when there is no Stripe customer to read.
+- Usage (`@billing-usage`, anchor `#usage`): Storage used of Quota (`@billing-usage-storage-line`) and AI credits
+  used of total with their renewal date in the Owner's zone (`@billing-usage-ai-line`).
 - Plan dialog (`@billing-plan-dialog`, `PlanPicker`): Monthly / Yearly (`@plan-interval-<interval>`,
   `@plan-save-two-months`), a card per Plan (`@plan-card-<slug>`, `@plan-price-<slug>`, `@plan-select-<slug>`).
-  Choosing a Plan swaps the subscription's price at once (proration charged to the card); without a subscription
-  it opens Checkout.
+  Choosing a Plan opens the confirmation dialog instead of posting.
+- Confirmation dialog (`@billing-confirm-dialog`): the new price (`@billing-confirm-price`), when it is charged
+  (`@billing-confirm-timing`: the prorated difference today, the Account balance after a downgrade, or nothing during
+  a Trial), whether the Offer stays (`@billing-confirm-offer`), an upload pause over the new Quota
+  (`@billing-confirm-quota`) and an AI pause when this month's use exceeds the new credits (`@billing-confirm-ai`),
+  each only when it applies. Cancel (`@billing-confirm-cancel`) goes back to the picker; Change plan
+  (`@billing-confirm-change`) swaps the subscription's price and toasts. Every paid change settles at once
+  (`always_invoice`): an upgrade charges the prorated difference, a downgrade leaves it as Account balance; a Trial is
+  never charged.
 - A Complimentary Account (ADR 0006, `features/complimentary.md`) keeps the Plan name but hides the price, Change
   plan, Subscribe, payment methods, Manage on Stripe, the plan dialog and the Invoices tab; a strip says the Plan was
   given by The RX Desk with its end date. Checkout, Change plan, Subscribe and the portal answer with the toast
@@ -33,13 +47,20 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 
 - Journey: `$V/drive.sh billing`, right after `welcome-checkout` on the same fixture (it needs the Mini monthly
   subscription that journey makes; do not run `fixture.sh up` in between).
+- Downgrade journey: `$V/drive.sh billing-downgrade`, on a paid Standard subscription past its Trial. End the
+  fixture's Trial first (`$V/stripe.sh subscriptions update <sub> --trial-end now`), or run it after
+  `stripe-clock.sh advance` past the Trial. The confirmation says the unused time becomes Account balance, and the
+  current-plan card shows the credit after the change (`@billing-account-balance`).
 - Checks: Mini, `$11.90`, Free trial (after `welcome-checkout` the first checkout is on the Catalog trial; the
   journey also accepts Active for a subscription past its trial, and for a repeat card that skipped the Trial); the
-  `4242` card listed; the dialog's Yearly shows `$9.92` a month; choosing Standard (`@plan-select-standard`) makes it
-  the current plan at `$17.90`; "Manage on Stripe" opens `billing.stripe.com` on the Standard subscription at
-  `$17.90 per month`.
+  `4242` card listed; Usage lists Storage and AI credits; the status strip says the Trial end or the renewal; the
+  dialog's Yearly shows `$9.92` a month; choosing Standard opens the confirmation with `$17.90` and when it is
+  charged; confirming makes it the current plan at `$17.90`; "Manage on Stripe" opens `billing.stripe.com` on the
+  Standard subscription at `$17.90 per month`.
+- Account menu: the Owner sees `@sidebar-menu-storage` and `@sidebar-menu-ai-credits` (the AI credits bar links to
+  Billing `#usage`); a Member sees neither.
 - Side effect: the same `db.sh` query as `welcome-checkout` shows `standard | trialing | <the Standard monthly
-  Price id in plan_prices>` right after the run (the swap keeps the trial); a repeat card shows `active` instead.
+Price id in plan_prices>` right after the run (the swap keeps the trial); a repeat card shows `active` instead.
 
 ## Gotchas
 
@@ -57,5 +78,6 @@ In selling mode, with a subscribed Owner: open the account menu, choose "Plans a
 - The fixture Owner's country is `TH`, so the plan actions work. To see the refusal, set `users.country` to an EU/UK
   code (or `accounts.blocked_country_at`) on the fixture Owner and press "Change plan": the page stays and the toast
   shows the notice.
-- Not driven yet: the Invoices tab, Subscribe on a generic trial, a downgrade, a yearly swap (the discount is kept
-  only when its Offer covers yearly, and dropped otherwise).
+- Not driven yet: the Invoices tab, Subscribe on a generic trial, a yearly swap (the discount is kept only when its
+  Offer covers yearly, and dropped otherwise). The confirmation dialog's copy per state is covered by
+  `tests/Browser/BillingPageTest.php`; the downgrade's Account balance is `billing-downgrade`.
