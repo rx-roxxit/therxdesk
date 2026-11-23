@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Sends the Thai purchase document a checkout billed to Thailand gets. It is
@@ -62,6 +63,13 @@ class SendThaiPurchaseDocument implements ShouldQueue
             return;
         }
 
-        Mail::to($owner)->send(new ThaiPurchaseDocumentMail($document));
+        try {
+            Mail::to($owner)->send(new ThaiPurchaseDocumentMail($document));
+        } catch (Throwable $exception) {
+            // Release the claim so a retry still sends the document.
+            Cache::forget($claimKey);
+
+            throw $exception;
+        }
     }
 }
