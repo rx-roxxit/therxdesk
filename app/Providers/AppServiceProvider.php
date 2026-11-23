@@ -21,6 +21,7 @@ use App\Models\CoverOutcome;
 use App\Models\Idea;
 use App\Models\IdeaStage;
 use App\Models\Invite;
+use App\Models\LifecycleEmail;
 use App\Models\Media;
 use App\Models\MediaSourceConnection;
 use App\Models\NightwatchIssue;
@@ -160,6 +161,7 @@ class AppServiceProvider extends ServiceProvider
             'idea' => Idea::class,
             'ideaStage' => IdeaStage::class,
             'invite' => Invite::class,
+            'lifecycleEmail' => LifecycleEmail::class,
             'media' => Media::class,
             'mediaSourceConnection' => MediaSourceConnection::class,
             'nightwatchIssue' => NightwatchIssue::class,
