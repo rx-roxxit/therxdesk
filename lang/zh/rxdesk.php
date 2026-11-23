@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => '您的购买凭证',
+            'description' => '请保留此文件。',
+            'continue' => '继续',
+        ],
         'account_balance' => '账户余额',
         'usage' => [
             'title' => '用量',

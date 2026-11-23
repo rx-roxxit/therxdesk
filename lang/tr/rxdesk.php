@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'Satın alma belgeniz',
+            'description' => 'Bu belgeyi saklayın.',
+            'continue' => 'Devam',
+        ],
         'account_balance' => 'Hesap bakiyesi',
         'usage' => [
             'title' => 'Kullanım',

@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => '購入書類',
+            'description' => 'この書類は保管してください。',
+            'continue' => '続ける',
+        ],
         'account_balance' => 'アカウント残高',
         'usage' => [
             'title' => '使用状況',

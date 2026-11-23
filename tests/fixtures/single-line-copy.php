@@ -272,6 +272,7 @@ return [
     'settings.profile.tabs.sessions' => 9,
     'rxdesk.welcome_plan.start_trial' => 32,
     'rxdesk.welcome_plan.subscribe' => 11,
+    'rxdesk.billing.purchase_document.continue' => 10,
     'rxdesk.welcome_plan.payment_retry.update_card' => 22,
     'rxdesk.welcome_plan.verify_email.resend' => 24,
     'rxdesk.welcome_plan.verify_email.close' => 14,

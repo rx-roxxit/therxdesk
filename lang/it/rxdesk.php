@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'Il tuo documento di acquisto',
+            'description' => 'Conserva questo documento.',
+            'continue' => 'Continua',
+        ],
         'account_balance' => 'Saldo dell’account',
         'usage' => [
             'title' => 'Utilizzo',
