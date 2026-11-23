@@ -6,6 +6,7 @@ use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
 use App\Http\Controllers\Internal\AuditLogController;
+use App\Http\Controllers\Internal\AvailabilityController;
 use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\ComplimentaryPlanController;
 use App\Http\Controllers\Internal\HealthController;
@@ -85,6 +86,12 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::patch('catalog-settings', [CatalogSettingController::class, 'update'])
         ->name('internal.catalog-settings.update');
+
+    Route::get('availability', [AvailabilityController::class, 'index'])
+        ->name('internal.availability.index');
+
+    Route::patch('availability/{key}', [AvailabilityController::class, 'update'])
+        ->name('internal.availability.update');
 
     Route::get('offers', [OfferController::class, 'index'])
         ->name('internal.offers.index');
