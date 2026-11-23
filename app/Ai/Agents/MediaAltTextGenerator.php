@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Ai\Agents;
 
 use App\Enums\User\Locale;
-use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Promptable;
 
-#[Temperature(0.2)]
 class MediaAltTextGenerator implements Agent
 {
     use Promptable;

@@ -7,11 +7,9 @@ namespace App\Ai\Agents;
 use App\Enums\Ai\PostAssistantMode;
 use App\Enums\SocialAccount\Platform;
 use App\Enums\User\Locale;
-use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Promptable;
 
-#[Temperature(0.7)]
 class PostWritingAssistant implements Agent
 {
     use Promptable;

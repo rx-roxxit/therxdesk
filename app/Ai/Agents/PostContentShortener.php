@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Ai\Agents;
 
-use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Promptable;
 
-#[Temperature(0.2)]
 class PostContentShortener implements Agent
 {
     use Promptable;
