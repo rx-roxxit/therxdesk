@@ -106,7 +106,10 @@ event-id cache is still best-effort; a delivery after it expires is now safe.
 with `lockForUpdate()` inside a transaction and leave a
 `CancellationType::Admin` row alone, whatever the handler loaded earlier. The
 model's `WebhookWrite` decides from the stored `subType`, not the value read
-before `AdminCancel`, and models both a cancellation and a resume.
+before `AdminCancel`, and models both a cancellation and a resume. The admin
+writer is now `RefundAndCancel` (the admin app's Thai refund): it cancels the
+Subscription at once and records `Admin`, so the model's `AdminCancel` cancels
+the status too. The refund and its seven-day window are not modelled.
 
 ### 5. A $0 invoice proves no payment (`zero-coupon-first-payment`)
 
@@ -189,7 +192,7 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **906b3e98**. Confirmed against these files and functions:
+Sync commit: **38a31287**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
@@ -204,8 +207,8 @@ Sync commit: **906b3e98**. Confirmed against these files and functions:
 | `endRepeatCardTrial()` — `TrialEndFailed` on a failed call, non-2xx and a redelivery | `EndTrialOk` / `EndTrialFails`; `EndTrialRetries` in the fixed model |
 | `handleSubscriptionCreated()` on a subscription born `active` — no first payment | `HandleCreatedActive`; `SubscriptionBornActiveZeroCoupon` |
 | `StripeInvoiceListener::handle()` — `status = paid` and `amount_paid > 0` | `InvoicePaid(amount)` |
-| `StripeCheckoutSessionListener::handle()` — records `accounts.blocked_country*`, then cancels the subscription | `BlockedCheckoutCancel` / `BlockedCheckoutCancelFails` |
-| `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept | `AdminSticky`, `WebhookRead` / `WebhookWrite` |
+| `StripeCheckoutSessionListener::handle()` — records `accounts.blocked_country*`, then cancels the subscription. It also records the checkout facts (`accounts.billing_country` / `billing_name` / `checkout_completed_at` / `checkout_session_id`) and queues the Thai purchase-document email for every completed subscription checkout; those are not access or trial facts, so they are not modelled, and the block is still written before the cancel | `BlockedCheckoutCancel` / `BlockedCheckoutCancelFails` |
+| `Subscription::recordCancellation()` / `clearCancellation()` — re-read under a lock, `Admin` kept; `RefundAndCancel` is the admin writer (cancel + `Admin`) | `AdminSticky`, `AdminCancel`, `WebhookRead` / `WebhookWrite` |
 | `Account::canStartTrial()`, `hasHadTrial()`, `hasPendingFirstCharge()` | `CanStartTrial`, `HasAppAccess` |
 | `Account::currentOffer(withTrial: false)` — a billing checkout takes a coupon Offer (even with trial days, which `canStartTrial()` then suppresses) but never a trial-only one | not a Trial-grant rule; `CanStartTrial` still decides |
 | `Account::hasAppAccess()` — a Suspension ends access first, a blocked checkout ends it, a paid past-due keeps it unless suspended | `HasAppAccess`, `BlockedNoAccess`, `SuspendedNoAccess` |
@@ -215,12 +218,18 @@ Sync commit: **906b3e98**. Confirmed against these files and functions:
 | `Account::isLapsed()` — no Subscription and no generic trial, and the Account paid before or was ever given a Complimentary Plan | `Lapsed` |
 | `Account::canStartTrial()` — false for good once a Complimentary Plan was given | `CanStartTrial`'s `comp[a] = FALSE` |
 | `ComplimentaryPlans::give()` / `end()` — the Account's own columns plus an audit row; give refuses a Subscription or a blocked country, end defaults 30 days ahead | `GiveComplimentary` / `EndComplimentary` (the refusal is the action's precondition) |
-| `ChangePlan::execute()` — a Complimentary Account is refused before a swap or Checkout | `OpenCheckout` disabled while `comp` |
+| `ChangePlan::execute()` — a Complimentary Account is refused before a swap or Checkout; the `always_invoice` proration of a paid Plan change is not a Trial rule | `OpenCheckout` disabled while `comp` |
+| `Account::hasReviewAccess()` — `accounts.review_access` unlocks switched-off networks only; it never changes `hasAppAccess()`. `ai_credits_reset_at` is AI metering. Neither is an access/trial fact | not modelled |
 | `2026_11_23_000000_add_complimentary_plan_to_accounts_table.php` — `accounts.complimentary_since` / `complimentary_until` | the facts `GiveComplimentary` / `EndComplimentary` write |
 | `2026_11_23_020000_add_suspension_to_accounts_table.php` — `accounts.suspended_at` / `suspension_reason` | the facts `SuspendAccount` / `LiftSuspension` write |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
 | `2026_11_22_130000_add_trial_accounts.php` — `trial_accounts.account_id` primary key | the atomic Account `claim` |
 | `2026_11_22_140000_add_country_to_users_and_blocked_country_to_accounts.php` — `users.country`, `accounts.blocked_country*` | the facts `BlockedCheckoutCancel` writes |
+
+The checkout-fact columns (`2026_11_23_100000_add_checkout_facts_to_accounts_table.php`,
+`2026_11_23_110000_add_checkout_session_id_to_accounts_table.php`) carry the
+billing facts the purchase document and the admin refund read; they are not
+access or trial facts, so they are not modelled.
 
 Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Listeners/StripeInvoiceListener.php`,
@@ -256,9 +265,10 @@ Covered files: `app/Listeners/StripeEventListener.php`,
   and the model assumes a fingerprint is present.
 - The trial-end API call has two outcomes: it succeeds, or it fails, keeps the
   skip facts and is retried by Stripe's redelivery.
-- The admin writer exists and writes the cancellation type directly, as an
-  external app through the internal API (assumed to block on the row lock, as a
-  plain `UPDATE` does).
+- The admin writer is `RefundAndCancel`, an in-repo action the admin app calls:
+  it cancels the Subscription at once and records `Admin` through
+  `Subscription::recordCancellation()`, which blocks on the row lock. The refund
+  call and the seven-day window are not modelled.
 - A 100% coupon with no Trial yields a subscription created `active` with a $0
   first invoice.
 - Access is read from one subscription, as `Account::subscription()` does; the
@@ -280,9 +290,10 @@ legacy generic trial (`accounts.trial_ends_at`) still grants access, which
 
 Not covered: fingerprint retrieval failures, an Offer's `trial_days` and
 coverage beyond the gate above, plan and Offer writes, PostHog, dunning
-schedules, deletion/re-signup, tax, currency and price logic, and the
+schedules, deletion/re-signup, tax, currency and price logic, the
 Complimentary date arithmetic (the 30-day default and the 2037 ceiling) with
-its screens.
+its screens, the checkout facts and the Thai purchase-document email, the admin
+refund and its window, `review_access`, AI credits, and plan-change proration.
 
 ## Add a check
 

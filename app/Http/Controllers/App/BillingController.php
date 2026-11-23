@@ -19,6 +19,7 @@ use App\Models\Plan;
 use App\Support\Billing\BillingPortal;
 use App\Support\Billing\OfferCopy;
 use App\Support\Billing\OfferPlanPrices;
+use App\Support\Billing\ThaiPurchaseDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,16 +41,40 @@ class BillingController extends Controller
 
         $account = $request->user()->accountOrFail();
         $returnsToBilling = $request->query('from') === CheckoutOrigin::Billing->value;
+        $checkoutSettled = $this->checkoutSettled($account, $request->query('session_id'));
 
         if ($account->hasPendingFirstCharge()) {
             return redirect()->route('app.welcome.plan');
         }
 
+        $purchaseDocument = null;
+
+        if ($checkoutSettled) {
+            $purchaseDocument = ThaiPurchaseDocument::for($account);
+        }
+
         return Inertia::render('billing/Processing', [
             'ready' => $returnsToBilling ? $account->planMatchesSubscription() : $account->hasAppAccess(),
+            'checkoutSettled' => $checkoutSettled,
             'returnsToBilling' => $returnsToBilling,
             'countryBlocked' => filled($account->blocked_country_at),
+            'purchaseDocument' => $purchaseDocument,
         ]);
+    }
+
+    /**
+     * Whether this visit's Checkout has recorded its billing facts. Stripe
+     * returns the Checkout Session id on the success URL (`?session_id=`), so
+     * an older checkout's facts on the account never count as complete. A
+     * visit without a session (a manual page load) has no checkout to wait for.
+     */
+    private function checkoutSettled(Account $account, mixed $sessionId): bool
+    {
+        if (! is_string($sessionId) || blank($sessionId)) {
+            return true;
+        }
+
+        return $account->checkout_session_id === $sessionId;
     }
 
     public function index(Request $request): Response|RedirectResponse

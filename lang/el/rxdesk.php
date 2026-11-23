@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'Το αποδεικτικό αγοράς σας',
+            'description' => 'Φυλάξτε αυτό το έγγραφο.',
+            'continue' => 'Συνέχεια',
+        ],
         'account_balance' => 'Υπόλοιπο λογαριασμού',
         'usage' => [
             'title' => 'Χρήση',

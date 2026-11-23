@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Jobs\Billing\SendThaiPurchaseDocument;
 use App\Models\Account;
 use App\Support\Billing\BlockedCountries;
+use App\Support\Billing\StripeValue;
+use App\Support\Billing\ThaiPurchaseDocument;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -22,6 +25,10 @@ use Throwable;
  * and nothing is charged; a repeat card's charge is not refunded here, only
  * recorded as a fact. The register form already refuses a blocked country;
  * this guards a false or changed billing address at Stripe.
+ *
+ * The same event records the checkout facts the refund action reads (billing
+ * country, billing name, purchase date) for every selling-mode checkout, and
+ * mails the Thai purchase document when the billing country is Thailand.
  */
 class StripeCheckoutSessionListener
 {
@@ -49,12 +56,6 @@ class StripeCheckoutSessionListener
         }
 
         try {
-            $country = data_get($event->payload, 'data.object.customer_details.address.country');
-
-            if (! BlockedCountries::isBlocked(is_string($country) ? $country : null)) {
-                return;
-            }
-
             $stripeCustomerId = data_get($event->payload, 'data.object.customer');
 
             if (! is_string($stripeCustomerId) || blank($stripeCustomerId)) {
@@ -65,6 +66,15 @@ class StripeCheckoutSessionListener
             $account = Cashier::findBillable($stripeCustomerId);
 
             if (! $account) {
+                return;
+            }
+
+            $this->recordCheckoutFacts($account, $event->payload);
+            $this->sendThaiPurchaseDocument($account, $event->payload);
+
+            $country = data_get($event->payload, 'data.object.customer_details.address.country');
+
+            if (! BlockedCountries::isBlocked(is_string($country) ? $country : null)) {
                 return;
             }
 
@@ -85,6 +95,66 @@ class StripeCheckoutSessionListener
 
             throw $e;
         }
+    }
+
+    /**
+     * The facts the Thai purchase document and the refund action read, and the
+     * Checkout Session they belong to so Processing waits for this checkout
+     * rather than an older one's. A newer checkout replaces an older one; an
+     * older or repeated delivery never overwrites facts it does not postdate.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordCheckoutFacts(Account $account, array $payload): void
+    {
+        $completedAt = StripeValue::timestamp(data_get($payload, 'created')) ?? now();
+
+        if (filled($account->checkout_completed_at) && $account->checkout_completed_at->greaterThan($completedAt)) {
+            return;
+        }
+
+        $country = data_get($payload, 'data.object.customer_details.address.country');
+        $name = data_get($payload, 'data.object.customer_details.name');
+        $sessionId = data_get($payload, 'data.object.id');
+
+        $attributes = ['checkout_completed_at' => $completedAt];
+
+        if (is_string($sessionId) && filled($sessionId)) {
+            $attributes['checkout_session_id'] = $sessionId;
+        }
+
+        if (is_string($country) && filled($country)) {
+            $attributes['billing_country'] = Str::upper(trim($country));
+        }
+
+        if (is_string($name) && filled($name)) {
+            $attributes['billing_name'] = $name;
+        }
+
+        $account->forceFill($attributes)->save();
+    }
+
+    /**
+     * Queues the order-confirmation email a Thai checkout gets. It is sent a
+     * few seconds later so the subscription webhook has settled the Plan, its
+     * price and the Trial's dates; the job claims the Session so it sends once.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function sendThaiPurchaseDocument(Account $account, array $payload): void
+    {
+        if ($account->billing_country !== ThaiPurchaseDocument::COUNTRY) {
+            return;
+        }
+
+        $sessionId = data_get($payload, 'data.object.id');
+
+        if (! is_string($sessionId) || blank($sessionId)) {
+            return;
+        }
+
+        SendThaiPurchaseDocument::dispatch($account->id, $sessionId)
+            ->delay(now()->addSeconds(20));
     }
 
     private function recordBlock(Account $account, string $country, mixed $paymentStatus): void

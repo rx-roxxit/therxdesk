@@ -15,6 +15,14 @@
 \*   SuspendAccount / LiftSuspension (#61) write accounts.suspended_at; a
 \*     Suspension outranks every other state in Account::hasAppAccess(), and
 \*     its reason is internal only. The deletion clock (#62) reads the fact.
+\*   RefundAndCancel (the admin app's Thai refund) is the admin writer: it
+\*     cancels the Subscription at once (status canceled, ends_at now) and
+\*     records CancellationType::Admin through Subscription::recordCancellation().
+\*   StripeCheckoutSessionListener also records checkout facts (billing country,
+\*     billing name, checkout date, checkout session id) and queues the Thai
+\*     purchase-document email for every completed subscription checkout. Those
+\*     are not access or trial facts, so they are not modelled; the blocked
+\*     checkout still writes the block before it cancels.
 EXTENDS Naturals, TLC
 
 Statuses == {"none", "trialing", "active", "past_due", "canceled"}
@@ -120,12 +128,18 @@ WebhookWrite(w, outcome) ==
                 ELSE IF outcome = "cancel" THEN "voluntary" ELSE "none"
   /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wasAdmin, blocked, complimentary, everComplimentary, suspended>>
 
-\* The System admin ends the subscription (admin app).
+\* The System admin refunds and cancels (RefundAndCancel, admin app): the
+\* Subscription is cancelled at once (status canceled, ends_at now), so access
+\* ends, and the cancellation is recorded as admin, which a later voluntary
+\* webhook never replaces. It needs a Subscription and a paid charge in the
+\* window; the refund and the window are not modelled.
 AdminCancel ==
+  /\ status # "none"
   /\ subType # "admin"
   /\ subType' = "admin"
   /\ wasAdmin' = TRUE
-  /\ UNCHANGED <<status, firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wrote, blocked, complimentary, everComplimentary, suspended>>
+  /\ status' = "canceled"
+  /\ UNCHANGED <<firstPaid, positiveInvoice, zeroCoupon, readDone, readVal, wrote, blocked, complimentary, everComplimentary, suspended>>
 
 \* Stripe deletes the subscription after the retries run out.
 StripeDeletes ==

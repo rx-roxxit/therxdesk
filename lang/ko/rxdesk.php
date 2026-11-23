@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => '구매 문서',
+            'description' => '이 문서는 보관하세요.',
+            'continue' => '계속',
+        ],
         'account_balance' => '계정 잔액',
         'usage' => [
             'title' => '사용량',

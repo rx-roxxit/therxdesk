@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'Je aankoopdocument',
+            'description' => 'Bewaar dit document.',
+            'continue' => 'Doorgaan',
+        ],
         'account_balance' => 'Accountsaldo',
         'usage' => [
             'title' => 'Gebruik',

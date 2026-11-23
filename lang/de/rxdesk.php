@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'Ihr Kaufbeleg',
+            'description' => 'Bewahren Sie dieses Dokument auf.',
+            'continue' => 'Weiter',
+        ],
         'account_balance' => 'Kontoguthaben',
         'usage' => [
             'title' => 'Nutzung',

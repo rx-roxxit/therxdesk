@@ -715,6 +715,49 @@ const payOnStripeCheckout = async (run: Run): Promise<void> => {
 };
 
 /**
+ * After a paid Checkout the app lands on Processing. A Thai checkout shows
+ * the fixed purchase document and waits for the buyer to continue; a checkout
+ * billed elsewhere opens the Schedule on its own. Take whichever path is on
+ * screen, so a journey never depends on the billing country.
+ */
+const leaveProcessing = async (run: Run): Promise<void> => {
+    const { page } = run;
+
+    await page.waitForURL((url) => url.pathname === '/billing/processing', {
+        timeout: 90_000,
+    });
+    await run.step('processing');
+
+    const document = page.locator(tid('@thai-purchase-document'));
+    const deadline = Date.now() + 90_000;
+
+    // The document replaces the spinner once the webhook records the Thai
+    // billing country, the same moment the Account gets access.
+    while (Date.now() < deadline && !page.url().includes('/schedule')) {
+        if ((await document.count()) > 0) {
+            break;
+        }
+        await page.waitForTimeout(500);
+    }
+
+    if ((await document.count()) > 0) {
+        const text = await document.innerText();
+        run.check(
+            'the Thai checkout shows the purchase document',
+            text.includes('เอกสารการซื้อสินค้าและบริการ'),
+            text,
+        );
+        await run.step('thai-purchase-document');
+        await page.locator(tid('@purchase-document-continue')).click();
+    }
+
+    await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
+        timeout: 90_000,
+    });
+    await page.waitForLoadState('networkidle');
+};
+
+/**
  * The journeys. Each one is a user path from the feature map
  * (features/<name>.md); add a journey here and a row in features/README.md.
  */
@@ -1304,14 +1347,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         await payOnStripeCheckout(run);
 
-        await page.waitForURL((url) => url.pathname === '/billing/processing', {
-            timeout: 90_000,
-        });
-        await run.step('processing');
-        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
-            timeout: 90_000,
-        });
-        await page.waitForLoadState('networkidle');
+        await leaveProcessing(run);
         const guestUserId = await page.evaluate(() => {
             return (
                 window.history.state?.page?.props?.auth?.user?.id ?? undefined
@@ -1524,14 +1560,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await run.step('stripe-checkout-offer');
         await payOnStripeCheckout(run);
 
-        await page.waitForURL((url) => url.pathname === '/billing/processing', {
-            timeout: 90_000,
-        });
-        await run.step('processing');
-        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
-            timeout: 90_000,
-        });
-        await page.waitForLoadState('networkidle');
+        await leaveProcessing(run);
         const guestUserId = await page.evaluate(() => {
             return (
                 window.history.state?.page?.props?.auth?.user?.id ?? undefined
@@ -1607,14 +1636,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         // Back in the app, Processing waits for the webhook to give the
         // Account access, then opens the Schedule.
-        await page.waitForURL((url) => url.pathname === '/billing/processing', {
-            timeout: 90_000,
-        });
-        await run.step('processing');
-        await page.waitForURL((url) => url.pathname.startsWith('/schedule'), {
-            timeout: 90_000,
-        });
-        await page.waitForLoadState('networkidle');
+        await leaveProcessing(run);
         await run.step('after-checkout');
 
         const props = await page.evaluate(() => {
@@ -2917,7 +2939,10 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             )
             .evaluateAll((nodes) =>
                 nodes
-                    .map((node): string => node.getAttribute('data-testid') ?? '')
+                    .map(
+                        (node): string =>
+                            node.getAttribute('data-testid') ?? '',
+                    )
                     .filter((item): boolean => item !== 'media-source-upload'),
             );
         run.check(
@@ -2938,7 +2963,9 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await help.click();
         await page.locator(tid('@sidebar-support-email')).waitFor();
 
-        const chatItem = await page.locator(tid('@sidebar-support-chat')).count();
+        const chatItem = await page
+            .locator(tid('@sidebar-support-chat'))
+            .count();
         const emailItem = await page
             .locator(tid('@sidebar-support-email'))
             .count();
@@ -3397,8 +3424,12 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         );
         run.check(
             'the empty state offers three suggested questions',
-            (await page.locator('[data-testid^="support-chat-suggestion-"]').count()) === 3,
-            await page.locator('[data-testid^="support-chat-suggestion-"]').count(),
+            (await page
+                .locator('[data-testid^="support-chat-suggestion-"]')
+                .count()) === 3,
+            await page
+                .locator('[data-testid^="support-chat-suggestion-"]')
+                .count(),
         );
 
         await page

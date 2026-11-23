@@ -173,6 +173,11 @@ return [
         ],
     ],
     'billing' => [
+        'purchase_document' => [
+            'title' => 'مستند الشراء الخاص بك',
+            'description' => 'احتفظ بهذا المستند.',
+            'continue' => 'متابعة',
+        ],
         'account_balance' => 'رصيد الحساب',
         'usage' => [
             'title' => 'الاستخدام',

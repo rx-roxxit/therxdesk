@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Internal\AccountAiCreditsController;
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
+use App\Http\Controllers\Internal\AccountRefundController;
 use App\Http\Controllers\Internal\AccountReviewAccessController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
 use App\Http\Controllers\Internal\AiBalanceController;
@@ -69,6 +70,10 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::post('accounts/{account}/delete', [AccountDeletionController::class, 'store'])
         ->whereUuid('account')
         ->name('internal.accounts.delete');
+
+    Route::post('accounts/{account}/refund-and-cancel', [AccountRefundController::class, 'store'])
+        ->whereUuid('account')
+        ->name('internal.accounts.refund-and-cancel');
 
     Route::get('audit-log', [AuditLogController::class, 'index'])
         ->name('internal.audit-log.index');

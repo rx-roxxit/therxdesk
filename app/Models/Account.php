@@ -52,6 +52,10 @@ class Account extends Model
         'blocked_country',
         'blocked_country_at',
         'blocked_country_payment_status',
+        'billing_country',
+        'billing_name',
+        'checkout_session_id',
+        'checkout_completed_at',
     ];
 
     /**
@@ -77,6 +81,7 @@ class Account extends Model
         'activated_at' => 'datetime',
         'first_paid_at' => 'datetime',
         'blocked_country_at' => 'datetime',
+        'checkout_completed_at' => 'datetime',
         'deletion_scheduled_at' => 'datetime',
         'data_purged_at' => 'datetime',
         'video_policy' => VideoPolicy::class,

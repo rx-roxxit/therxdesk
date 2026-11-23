@@ -1,0 +1,52 @@
+<x-main>
+  <table role="presentation" class="w-full bg-canvas font-sans">
+    <tr>
+      <td align="center" class="px-4">
+        <!--[if mso]>
+        <table role="presentation" width="552" align="center"><tr><td>
+        <![endif]-->
+        <table role="presentation" align="center" class="w-full max-w-[552px]">
+          <tr>
+            <td class="py-8">
+              <x-header />
+            </td>
+          </tr>
+          <tr>
+            <td align="left" class="rounded-xl border border-solid border-border bg-surface p-8 sm:p-6 text-base leading-6 text-foreground">
+              <h1 class="m-0 mb-6 font-heading text-2xl font-semibold leading-8 text-foreground">
+                @{{ $document['title'] }}
+              </h1>
+
+              <table role="presentation" class="w-full">
+                @foreach($document['rows'] as $row)
+                <tr>
+                  <td class="py-1 pe-4 align-top text-sm font-semibold text-muted-foreground" style="white-space: nowrap">
+                    @{{ $row['label'] }}
+                  </td>
+                  <td class="py-1 align-top text-sm text-foreground">
+                    @{{ $row['value'] }}
+                  </td>
+                </tr>
+                @endforeach
+              </table>
+
+              <p class="m-0 mt-6 leading-6 font-bold text-foreground">
+                @{{ $document['cancellation'] }}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" class="text-center text-muted-foreground text-xs leading-5 px-6 py-6">
+              <p class="m-0 font-semibold text-foreground">The RX Desk</p>
+              <p class="m-0 mt-2">อีเมลฉบับนี้เป็นเอกสารการซื้อสินค้าและบริการที่ออกโดยผู้ขายข้างต้น</p>
+              <p class="m-0 mt-2">&copy; @{{ date('Y') }} The RX Desk</p>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]>
+        </td></tr></table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
+</x-main>
