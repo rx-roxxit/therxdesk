@@ -13,6 +13,7 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Ai\AiCredits;
+use App\Services\Ai\AiSettings;
 use App\Services\Repurpose\CaptionAdapter;
 use Illuminate\Validation\ValidationException;
 
@@ -31,6 +32,8 @@ final class AssistPostContent
     ): string {
         $platform = $account->platform ?? $platform;
         $limit = transform($platform, fn (Platform $platform): int => ContentType::maxContentLengthFor($account, $platform, $contentType));
+
+        app(AiSettings::class)->apply(AiFeature::WritingAssistant);
 
         $response = (new PostWritingAssistant($mode, $currentContent, $user->locale, $platform, $previousContent, $limit))
             ->prompt($mode->requiresPrompt() ? trim((string) $prompt) : 'Revise the existing caption as instructed.');

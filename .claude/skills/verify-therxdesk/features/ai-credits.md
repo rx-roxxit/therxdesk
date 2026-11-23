@@ -17,9 +17,24 @@ gone.
   Workspace. A Member spends the Owner's credits.
 - **`/internal/v1`**: `PATCH /accounts/{uuid}/ai-credits` sets the monthly override (null clears it) and
   `POST .../ai-credits/reset` zeroes this month's use, both audited (`account.ai-credits.override` /
-  `.reset`).
-- **Our failure**: a provider error spends nothing and raises an URGENT admin alert; the customer sees "Couldn't
-  reach AI right now. Try again in a few minutes." The provider and model never appear in a response.
+  `.reset`). `GET /ai/settings` and `PATCH /ai/settings` own the token rate, the Trial's credits and the two model
+  slots (`ai-settings.update`); `GET /ai/models` and `POST /ai/models/test` drive the slot pickers; `GET /ai/balances`
+  and `GET /ai/ledger` read every Account's balance and the ledger. The full shapes live in `internal-api.md`.
+- **The two model slots.** `catalog_settings.text_model` and `image_model` hold the System admin's pick, else the
+  Config default (`rxdesk.ai.default_text_model` / `_image_model`). The free-text registry in
+  `config/rxdesk.php` (`rxdesk.ai.models`) is the only source of a price and of image input; a model it does not
+  price is never selectable. A changed slot is proved with one short real call before it saves.
+- **The worst-case cost table** (`App\Services\Ai\AiCostTable`) prices every active Plan's whole monthly allowance at
+  the text model's output rate, against the 10% of its discounted monthly price. It is computed live (no cache), so
+  a Plan credit change, token rate, text model or running general Offer moves it at once. A change that pushes a
+  Plan past the line stops with `requires_confirmation`.
+- **The slot applies at call time.** `AiSettings::apply()` writes the effective model into the provider's text
+  default right before each prompt (writing assistant, alt text, idea generation, the repurpose shortener), so a
+  pick takes effect on the next call. Self-hosted keeps the environment's model and never overrides it.
+- **Our failure**: a provider error spends nothing and raises an URGENT admin alert naming the applied model; the
+  customer sees "Couldn't reach AI right now. Try again in a few minutes." The provider and model never appear in a
+  customer response. A failed model *probe* is different: no credit, no ledger row, no alert, and the admin gets
+  the error.
 
 ## How to get to it (user POV)
 
@@ -43,7 +58,8 @@ override and this month's usage at zero). Sign in as the fixture Owner, open **C
 
 - Without an AI provider key, the journey stops at the gate: no model call, no ledger row. With a key configured
   (`AI_TEXT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_TEXT_MODEL`), one real call writes a ledger row and
-  moves the balance by `ceil((prompt + completion) / tokens_per_credit)`.
+  moves the balance by `ceil((prompt + completion) / tokens_per_credit)`. In selling mode a saved slot overrides
+  `ANTHROPIC_TEXT_MODEL` for the feature it serves (alt text uses the image slot).
 - The ledger rows are seeded by `ai-credits.sh` because the running app cannot make a metered call without a
   provider key; the override and reset themselves always go through `/internal/v1`.
 - The month is the calendar month in UTC for everyone; a Trial gets the Catalog's fixed `trial_ai_credits` for its

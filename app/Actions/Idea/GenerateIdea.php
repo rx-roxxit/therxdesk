@@ -9,6 +9,7 @@ use App\Enums\Ai\AiFeature;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Ai\AiCredits;
+use App\Services\Ai\AiSettings;
 use App\Support\AiPromptRules;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,8 @@ class GenerateIdea
      */
     public static function execute(User $user, string $business, string $audience, ?string $notes, Workspace $workspace): ?array
     {
+        app(AiSettings::class)->apply(AiFeature::IdeaGeneration);
+
         $response = (new IdeaGenerator($user->locale, $business, $audience, $notes))
             ->prompt('Suggest one content idea.');
 

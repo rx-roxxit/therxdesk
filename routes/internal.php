@@ -6,6 +6,10 @@ use App\Http\Controllers\Internal\AccountAiCreditsController;
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
+use App\Http\Controllers\Internal\AiBalanceController;
+use App\Http\Controllers\Internal\AiLedgerController;
+use App\Http\Controllers\Internal\AiModelController;
+use App\Http\Controllers\Internal\AiSettingController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\AvailabilityController;
 use App\Http\Controllers\Internal\CatalogSettingController;
@@ -95,6 +99,24 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::patch('catalog-settings', [CatalogSettingController::class, 'update'])
         ->name('internal.catalog-settings.update');
+
+    Route::get('ai/models', [AiModelController::class, 'index'])
+        ->name('internal.ai.models.index');
+
+    Route::post('ai/models/test', [AiModelController::class, 'test'])
+        ->name('internal.ai.models.test');
+
+    Route::get('ai/settings', [AiSettingController::class, 'show'])
+        ->name('internal.ai.settings.show');
+
+    Route::patch('ai/settings', [AiSettingController::class, 'update'])
+        ->name('internal.ai.settings.update');
+
+    Route::get('ai/balances', [AiBalanceController::class, 'index'])
+        ->name('internal.ai.balances.index');
+
+    Route::get('ai/ledger', [AiLedgerController::class, 'index'])
+        ->name('internal.ai.ledger.index');
 
     Route::get('availability', [AvailabilityController::class, 'index'])
         ->name('internal.availability.index');

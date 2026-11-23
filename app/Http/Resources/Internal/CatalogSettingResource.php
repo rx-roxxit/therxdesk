@@ -13,8 +13,6 @@ class CatalogSettingResource extends JsonResource
     {
         return [
             'trial_days' => $this->trial_days,
-            'tokens_per_credit' => $this->tokens_per_credit,
-            'trial_ai_credits' => $this->trial_ai_credits,
             'updated_at' => $this->updated_at,
         ];
     }

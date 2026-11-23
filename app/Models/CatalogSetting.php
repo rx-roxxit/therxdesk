@@ -21,14 +21,17 @@ class CatalogSetting extends Model
     public const int SINGLETON_ID = 1;
 
     /**
-     * The values an install starts with.
+     * The values an install starts with. A null model means the Config
+     * default for that slot applies.
      *
-     * @var array{trial_days: int, tokens_per_credit: int, trial_ai_credits: int}
+     * @var array{trial_days: int, tokens_per_credit: int, trial_ai_credits: int, text_model: string|null, image_model: string|null}
      */
     public const array DEFAULTS = [
         'trial_days' => 7,
         'tokens_per_credit' => 150,
         'trial_ai_credits' => 1000,
+        'text_model' => null,
+        'image_model' => null,
     ];
 
     /**
@@ -42,6 +45,8 @@ class CatalogSetting extends Model
         'trial_days',
         'tokens_per_credit',
         'trial_ai_credits',
+        'text_model',
+        'image_model',
         'stripe_billing_portal_configuration_id',
     ];
 

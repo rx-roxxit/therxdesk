@@ -10,6 +10,7 @@ use App\Models\Media;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Ai\AiCredits;
+use App\Services\Ai\AiSettings;
 use App\Support\PostMediaRules;
 use Laravel\Ai\Files\Image;
 
@@ -17,6 +18,8 @@ final class GenerateMediaAltText
 {
     public static function execute(User $user, Media $asset, Workspace $workspace): string
     {
+        app(AiSettings::class)->apply(AiFeature::AltText);
+
         $response = (new MediaAltTextGenerator($user->locale))->prompt(
             'Write the alt text for this image.',
             attachments: [Image::fromStorage($asset->path)],

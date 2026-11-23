@@ -7,6 +7,7 @@ use App\Enums\User\Locale;
 use App\Models\Idea;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\Ai\AiCredits;
 use App\Support\AiPromptRules;
 use Illuminate\Auth\Access\Response as AuthResponse;
 use Illuminate\Http\Client\ConnectionException;
@@ -54,7 +55,14 @@ test('returns one generated idea without storing it', function () {
         ->assertExactJson([
             'title' => 'Behind the kiln',
             'body' => 'Show the firing process.',
-            'ai_credits' => ['remaining' => 1000, 'total' => 1000, 'low' => false],
+            'ai_credits' => [
+                'used' => 0,
+                'remaining' => 1000,
+                'total' => 1000,
+                'low' => false,
+                'percent' => 0,
+                'renews_at' => app(AiCredits::class)->renewsAt($this->user->account)->toIso8601String(),
+            ],
         ]);
 
     expect(Idea::count())->toBe(0);

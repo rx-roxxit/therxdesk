@@ -123,4 +123,38 @@ return [
         'webhook_secret' => env('NIGHTWATCH_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI model slots and the worst-case cost table
+    |--------------------------------------------------------------------------
+    |
+    | Two Anthropic model slots: the text model every AI feature uses, and the
+    | image model alt text needs. The registry is the source of truth for the
+    | published price and the image capability; the live provider list only
+    | says which ids exist and their display names. Prices are USD per million
+    | tokens, from Anthropic's published first-party rates. A model missing
+    | here is never selectable, so a price is never guessed.
+    |
+    */
+
+    'ai' => [
+        'default_text_model' => env('ANTHROPIC_TEXT_MODEL', 'claude-haiku-5-5'),
+        'default_image_model' => env('ANTHROPIC_IMAGE_MODEL', env('ANTHROPIC_TEXT_MODEL', 'claude-haiku-5-5')),
+        'models' => [
+            'claude-fable-5-2' => ['input_price_per_mtok' => 8.00, 'output_price_per_mtok' => 40.00, 'accepts_image_input' => true],
+            'claude-haiku-5-5' => ['input_price_per_mtok' => 0.10, 'output_price_per_mtok' => 0.50, 'accepts_image_input' => true],
+            'claude-sonnet-5-5' => ['input_price_per_mtok' => 2.00, 'output_price_per_mtok' => 10.00, 'accepts_image_input' => true],
+            'claude-opus-5-5' => ['input_price_per_mtok' => 4.00, 'output_price_per_mtok' => 20.00, 'accepts_image_input' => true],
+            'claude-fable-5-1' => ['input_price_per_mtok' => 10.00, 'output_price_per_mtok' => 50.00, 'accepts_image_input' => true],
+            'claude-opus-5' => ['input_price_per_mtok' => 5.00, 'output_price_per_mtok' => 25.00, 'accepts_image_input' => true],
+            'claude-sonnet-5' => ['input_price_per_mtok' => 2.00, 'output_price_per_mtok' => 10.00, 'accepts_image_input' => true],
+            'claude-fable-5' => ['input_price_per_mtok' => 10.00, 'output_price_per_mtok' => 50.00, 'accepts_image_input' => true],
+            'claude-opus-4-8' => ['input_price_per_mtok' => 5.00, 'output_price_per_mtok' => 25.00, 'accepts_image_input' => true],
+            'claude-opus-4-7' => ['input_price_per_mtok' => 5.00, 'output_price_per_mtok' => 25.00, 'accepts_image_input' => true],
+            'claude-sonnet-4-6' => ['input_price_per_mtok' => 3.00, 'output_price_per_mtok' => 15.00, 'accepts_image_input' => true],
+            'claude-opus-4-6' => ['input_price_per_mtok' => 5.00, 'output_price_per_mtok' => 25.00, 'accepts_image_input' => true],
+            'claude-haiku-4-5-20251001' => ['input_price_per_mtok' => 1.00, 'output_price_per_mtok' => 5.00, 'accepts_image_input' => true],
+        ],
+    ],
+
 ];

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Ai\AiCredits;
 use App\Services\Ai\AiProviderFailure;
+use App\Services\Ai\AiSettings;
 use App\Services\Social\ContentSanitizer;
 use App\Support\Hashtags;
 use Illuminate\Support\Facades\Gate;
@@ -79,6 +80,8 @@ class CaptionAdapter
 
     private function ask(Workspace $workspace, User $user, string $caption, Platform $platform, int $limit): string
     {
+        app(AiSettings::class)->apply(AiFeature::CaptionShortener);
+
         $result = (new PostContentShortener(
             platformLabel: $platform->label(),
             limit: $limit,
