@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Media\Type as MediaType;
 use App\Enums\SocialAccount\Platform;
 use App\Enums\TikTok\PrivacyLevel;
+use App\Support\Availability\Availability;
 
 test('platform has correct labels', function () {
     expect(Platform::LinkedIn->label())->toBe('LinkedIn');
@@ -437,4 +438,55 @@ test('youtube publish config exposes only the fixed categories and the default',
         ->and($config['categoryOptions'])->toHaveCount(15)
         ->and($config['categoryOptions'][0])->toBe(['value' => '2', 'labelKey' => 'posts.form.youtube.categories.autos_and_vehicles'])
         ->and($config['defaultCategoryId'])->toBe('22');
+});
+
+test('a platform is installed when its env switch is on and every credential is filled', function () {
+    expect(Platform::LinkedIn->isInstalled())->toBeTrue();
+
+    config(['services.linkedin.client_secret' => null]);
+
+    expect(Platform::LinkedIn->isInstalled())->toBeFalse()
+        ->and(Platform::LinkedIn->isAvailable())->toBeFalse();
+
+    config(['trypost.platforms.linkedin.enabled' => false]);
+
+    expect(Platform::LinkedIn->isInstalled())->toBeFalse();
+});
+
+test('a platform without app credentials is installed when its env switch is on', function () {
+    expect(Platform::Bluesky->credentialKeys())->toBe([])
+        ->and(Platform::Mastodon->credentialKeys())->toBe([])
+        ->and(Platform::Bluesky->isInstalled())->toBeTrue();
+});
+
+test('a missing switch row counts as on, and a disabled one makes the network unavailable', function () {
+    expect(Platform::LinkedIn->isAvailable())->toBeTrue();
+
+    app(Availability::class)->set(Platform::LinkedIn->availabilityKey(), false);
+
+    expect(Platform::LinkedIn->isAvailable())->toBeFalse();
+
+    app(Availability::class)->set(Platform::LinkedIn->availabilityKey(), true);
+
+    expect(Platform::LinkedIn->isAvailable())->toBeTrue();
+});
+
+test('X has no availability switch and ignores its row', function () {
+    expect(Platform::X->hasAvailabilitySwitch())->toBeFalse()
+        ->and(Platform::LinkedIn->hasAvailabilitySwitch())->toBeTrue()
+        ->and(Platform::X->availabilityKey())->toBe('platform:x');
+
+    app(Availability::class)->set(Platform::X->availabilityKey(), false);
+
+    expect(Platform::X->isAvailable())->toBe(Platform::X->isInstalled());
+});
+
+test('the connectable card follows availability, keeping the LinkedIn and Instagram variants together', function () {
+    expect(collect(Platform::connectableOptions())->pluck('value')->all())->toContain('linkedin');
+
+    app(Availability::class)->set(Platform::LinkedIn->availabilityKey(), false);
+    app(Availability::class)->set(Platform::LinkedInPage->availabilityKey(), false);
+
+    expect(collect(Platform::connectableOptions())->pluck('value')->all())->not->toContain('linkedin')
+        ->and(Platform::LinkedIn->isConnectable())->toBeFalse();
 });
