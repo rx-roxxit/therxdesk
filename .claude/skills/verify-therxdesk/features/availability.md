@@ -96,8 +96,8 @@ $V/fixture.sh down
 
 - `internal.sh GET /availability --token admin` lists 14 switches, no X, each `installed` / `switched_on` / `effective`;
   the LinkedIn row flips with the PATCH.
-- `internal.sh GET /audit-log --token admin` holds one `availability.disable` and one `availability.enable` with
-  actor `verify-admin@example.com`, and `before` / `after` holding `{ "enabled": true|false }`.
+- `internal.sh GET /audit-log --token admin` holds an `availability.disable` and an `availability.enable` for each
+  switch, with actor `verify-admin@example.com`, and `before` / `after` holding `{ "enabled": true|false }`.
 - `api.sh POST /posts` answers `HTTP 422` with the refusal naming LinkedIn while the switch is off, and `HTTP 201` once
   it is back on.
 - `db.sh` shows the due post `failed | failed | unavailable`, then `publish_block_reason` null after the retry.
@@ -109,8 +109,8 @@ $V/fixture.sh down
 - **Switch off within the scheduled lead** (8 minutes by default in the commands above) or the live scheduler publishes
   the post before the switch lands. If the window is missed, switch back on, run `gate-schedule` again and switch off.
 - **The fixture is LinkedIn.** The connect card and `/connect/linkedin` stay available while *either* variant is on,
-  so the journey switches off `platform:linkedin` and `platform:linkedin-page`. The Profile switch alone is what refuses
-  a LinkedIn post; the Page switch is what hides the card.
+  so the host sequence switches off both `platform:linkedin` and `platform:linkedin-page`. The Profile switch alone is
+  what refuses a LinkedIn post; the Page switch is what hides the card.
 - **The retry's network call is expected to fail.** The fixture channel carries a fake LinkedIn token; proof is
   `publish_block_reason` null after the retry, not a published post.
 - **Restore both switches.** Leave `platform:linkedin` and `platform:linkedin-page` enabled
