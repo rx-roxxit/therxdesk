@@ -61,6 +61,19 @@ final class BusinessReport
             $conversion[(string) $days] = $this->trialConversion($start, $today);
         }
 
+        // The spec's churn rate: the churned Accounts this calendar month over
+        // the paying Accounts at the month's start. Kept beside the rolling
+        // windows, whose rate is a window rate rather than a monthly one.
+        $monthStart = $today->startOfMonth();
+
+        $churn = ['monthly' => $this->churn(
+            $today,
+            $monthStart,
+            $this->baselines($monthStart),
+            $this->snapshotsByAccount($monthStart, $today),
+            $live,
+        )] + $churn;
+
         return [
             'generated_at' => $at->toIso8601String(),
             'today' => $today->toDateString(),

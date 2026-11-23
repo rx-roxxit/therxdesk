@@ -117,7 +117,7 @@ test('the payload carries the current figures, the three windows and every secti
         'support_chat',
     ])
         ->and(array_keys($payload['waterfall']))->toBe([30, 90, 365])
-        ->and(array_keys($payload['churn']))->toBe([30, 90, 365])
+        ->and(array_keys($payload['churn']))->toBe(['monthly', 30, 90, 365])
         ->and(array_keys($payload['trial_conversion']))->toBe([30, 90, 365])
         ->and($payload['current']['mrr_cents'])->toBe(0)
         ->and($payload['current']['paying_accounts'])->toBe(0);
@@ -229,6 +229,42 @@ test('churn excludes trials, complimentary plans and suspension, and counts type
         ->and($churn['rate'])->toBe(0.75)
         ->and($churn['types'])->toEqual(['voluntary' => 1, 'payment_failed' => 1, 'admin' => 1])
         ->and($churn['reasons'])->toEqual(['too_expensive' => 1, 'not_useful' => 1]);
+});
+
+test('the monthly churn rate is the month\'s churned Accounts over the paying Accounts at its start', function () {
+    $plan = endpointPlan('endpoint-monthly-rate');
+
+    // Freeze mid-month so the month's start and today are distinct days,
+    // whatever day the suite runs on.
+    $this->travelTo(now('UTC')->startOfMonth()->addDays(14)->setTime(12, 0));
+
+    $monthStart = now('UTC')->startOfMonth()->toDateString();
+    $today = now('UTC')->toDateString();
+
+    $paying = collect(range(1, 8))->map(function () use ($plan, $monthStart): Account {
+        $account = endpointAccount($plan);
+        endpointSnapshot($account, $monthStart, 1000, BusinessStatus::Paying);
+
+        return $account;
+    });
+
+    foreach ($paying->take(2) as $account) {
+        endpointSnapshot($account, $today, 0, BusinessStatus::Lapsed, CancellationType::Voluntary);
+    }
+
+    $churn = endpointPayload()['churn'];
+
+    expect($churn['monthly'])
+        ->toMatchArray([
+            'start' => $monthStart,
+            'end' => $today,
+            'accounts' => 2,
+            'mrr_cents' => 2000,
+            'paying_at_start' => 8,
+            'rate' => 0.25,
+        ])
+        ->and($churn['90']['rate'])->toBeNull()
+        ->and($churn['365']['rate'])->toBeNull();
 });
 
 test('trial conversion counts converted, pending retries and repeat cards apart', function () {
