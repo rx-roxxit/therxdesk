@@ -20,12 +20,18 @@ class SocialConnectionController extends Controller
 {
     public function show(Request $request, Platform $platform): Response
     {
-        return $this->network($platform)->confirm($request);
+        $network = $this->network($platform);
+        $network->ensurePlatformAvailable();
+
+        return $network->confirm($request);
     }
 
     public function store(FinishSocialConnectionRequest $request, Platform $platform): RedirectResponse
     {
-        return $this->network($platform)->finish($request);
+        $network = $this->network($platform);
+        $network->ensurePlatformAvailable();
+
+        return $network->finish($request);
     }
 
     private function network(Platform $platform): SocialController

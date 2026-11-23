@@ -12,9 +12,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The in-app "Try again" for a post the access gate blocked. It does not check
- * access itself: PublishPost runs the gate again, so a retry while the Account
- * is still Lapsed or Suspended blocks again instead of publishing.
+ * The in-app "Try again" for a post the publishing gate blocked. It does not
+ * check the gate itself: PublishPost runs it again, so a retry while the
+ * network is still off, or the Account is still Lapsed or Suspended, blocks
+ * again instead of publishing.
  */
 class RetryBlockedPost
 {

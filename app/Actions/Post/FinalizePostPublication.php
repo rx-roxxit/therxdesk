@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Post;
 
+use App\Enums\Account\AccessDenial;
 use App\Enums\Notification\Type;
 use App\Enums\Post\Status as PostStatus;
 use App\Jobs\PostHog\TrackPostFailed;
@@ -88,6 +89,12 @@ class FinalizePostPublication
      */
     private function notify(Post $post, bool $successful): void
     {
+        // A network switched off in Availability fails the post visibly but
+        // sends no email; the Owner retries it once it is back.
+        if ($post->publish_block_reason === AccessDenial::Unavailable) {
+            return;
+        }
+
         $post->workspace->members()->get()
             ->each(fn (User $member) => SendNotification::dispatch(
                 user: $member,

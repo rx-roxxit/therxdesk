@@ -26,9 +26,9 @@ class LinkedInController extends SocialController
     /**
      * The LinkedIn card stands for both the personal profile and company-page
      * capabilities, each independently toggleable so self-hosters can run with
-     * just one. The connect flow is available while either is enabled.
+     * just one. The connect flow is available while either is available.
      */
-    protected function ensurePlatformEnabled(): void
+    public function ensurePlatformAvailable(): void
     {
         if (! $this->personEnabled() && ! $this->organizationEnabled()) {
             abort(Response::HTTP_FORBIDDEN, 'This platform is currently unavailable.');
@@ -37,7 +37,7 @@ class LinkedInController extends SocialController
 
     public function connect(Request $request): Response
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = $request->user()->currentWorkspace;
 
@@ -112,7 +112,7 @@ class LinkedInController extends SocialController
      */
     protected function accountValues(array $identity, ?SocialAccount $reconnect): array
     {
-        if (! SocialPlatform::from((string) data_get($identity, 'platform'))->isEnabled()) {
+        if (! SocialPlatform::from((string) data_get($identity, 'platform'))->isAvailable()) {
             throw new RuntimeException('This LinkedIn capability is no longer available.');
         }
 
@@ -201,12 +201,12 @@ class LinkedInController extends SocialController
 
     private function personEnabled(): bool
     {
-        return SocialPlatform::LinkedIn->isEnabled();
+        return SocialPlatform::LinkedIn->isAvailable();
     }
 
     private function organizationEnabled(): bool
     {
-        return SocialPlatform::LinkedInPage->isEnabled();
+        return SocialPlatform::LinkedInPage->isAvailable();
     }
 
     /**

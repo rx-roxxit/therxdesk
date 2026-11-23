@@ -30,7 +30,7 @@ class MastodonController extends SocialController
      */
     public function connect(Request $request): InertiaResponse
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $workspace = $request->user()->currentWorkspace;
 
@@ -49,7 +49,7 @@ class MastodonController extends SocialController
      */
     public function authorizeInstance(Request $request, SafeHttpFetcher $fetcher): Response
     {
-        $this->ensurePlatformEnabled();
+        $this->ensurePlatformAvailable();
 
         $request->validate([
             'instance' => 'required|url',

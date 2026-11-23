@@ -7,6 +7,7 @@ namespace App\Enums\SocialAccount;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\TikTok\PrivacyLevel;
 use App\Enums\YouTube\Category;
+use App\Support\Availability\Availability;
 use App\Support\Hashtags;
 use App\Support\Social\XPoll;
 use Illuminate\Support\Str;
@@ -512,24 +513,81 @@ enum Platform: string
     }
 
     /**
+     * The app credentials this platform needs before it can be connected at all.
+     * Bluesky signs in per account with an app password and Mastodon registers
+     * an app per instance, so neither has an app credential.
+     *
+     * @return list<string>
+     */
+    public function credentialKeys(): array
+    {
+        return match ($this) {
+            self::LinkedIn, self::LinkedInPage => ['services.linkedin.client_id', 'services.linkedin.client_secret'],
+            self::X => ['services.x.client_id', 'services.x.client_secret'],
+            self::TikTok => ['services.tiktok.client_id', 'services.tiktok.client_secret'],
+            self::YouTube => ['services.google.client_id', 'services.google.client_secret'],
+            self::Facebook, self::InstagramFacebook => ['services.facebook.client_id', 'services.facebook.client_secret'],
+            self::Instagram => ['services.instagram.client_id', 'services.instagram.client_secret'],
+            self::Threads => ['services.threads.client_id', 'services.threads.client_secret'],
+            self::Pinterest => ['services.pinterest.client_id', 'services.pinterest.client_secret'],
+            self::GoogleBusiness => ['services.google-business.client_id', 'services.google-business.client_secret'],
+            self::Telegram => ['trypost.platforms.telegram.bot_token', 'trypost.platforms.telegram.bot_username'],
+            self::Discord => ['services.discord.client_id', 'services.discord.client_secret', 'trypost.platforms.discord.bot_token'],
+            self::Bluesky, self::Mastodon => [],
+        };
+    }
+
+    /** Whether the env switch is on and every app credential is filled. */
+    public function isInstalled(): bool
+    {
+        return $this->isEnabled() && collect($this->credentialKeys())
+            ->every(fn (string $key): bool => filled(config($key)));
+    }
+
+    /** X is the one network without an Availability switch (out of v3.0.0). */
+    public function hasAvailabilitySwitch(): bool
+    {
+        return $this !== self::X;
+    }
+
+    public function availabilityKey(): string
+    {
+        return "platform:{$this->value}";
+    }
+
+    /** Installed and, when it has a switch, switched on. A missing row counts as on. */
+    public function isAvailable(): bool
+    {
+        if (! $this->isInstalled()) {
+            return false;
+        }
+
+        if (! $this->hasAvailabilitySwitch()) {
+            return true;
+        }
+
+        return app(Availability::class)->isOn($this->availabilityKey());
+    }
+
+    /**
      * Whether this platform gets its own "Connect" card in the accounts grid.
      * LinkedIn company pages and Instagram-via-Facebook are reached through the
      * unified network card (identity picker / method dialog), never a standalone
      * card. That card stands for the whole network, so it shows whenever any
-     * variant capability is enabled (self-hosters may run with only one).
+     * variant is available (self-hosters may run with only one).
      */
     public function isConnectable(): bool
     {
         return match ($this) {
             self::LinkedInPage, self::InstagramFacebook => false,
-            self::LinkedIn => self::LinkedIn->isEnabled() || self::LinkedInPage->isEnabled(),
-            self::Instagram => self::Instagram->isEnabled() || self::InstagramFacebook->isEnabled(),
-            default => $this->isEnabled(),
+            self::LinkedIn => self::LinkedIn->isAvailable() || self::LinkedInPage->isAvailable(),
+            self::Instagram => self::Instagram->isAvailable() || self::InstagramFacebook->isAvailable(),
+            default => $this->isAvailable(),
         };
     }
 
     /**
-     * OAuth entry points for the Instagram connect dialog. Only enabled methods
+     * OAuth entry points for the Instagram connect dialog. Only available methods
      * are returned so self-hosters who disable one variant do not see that option.
      *
      * @return list<string>
@@ -537,8 +595,8 @@ enum Platform: string
     public static function instagramConnectMethods(): array
     {
         return array_values(array_filter([
-            self::Instagram->isEnabled() ? self::Instagram->value : null,
-            self::InstagramFacebook->isEnabled() ? self::InstagramFacebook->value : null,
+            self::Instagram->isAvailable() ? self::Instagram->value : null,
+            self::InstagramFacebook->isAvailable() ? self::InstagramFacebook->value : null,
         ]));
     }
 

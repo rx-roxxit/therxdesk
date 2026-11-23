@@ -8,6 +8,7 @@ use App\Enums\Post\QueuePosition;
 use App\Enums\Post\Status as PostStatus;
 use App\Models\Post;
 use App\Rules\ContentTypeCompatibleWithMedia;
+use App\Support\Availability\PlatformAvailability;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -129,6 +130,8 @@ class PostStatusRules
         if (! $post->hasChannel()) {
             throw ValidationException::withMessages(['social_account_id' => __('posts.errors.choose_channel')]);
         }
+
+        PlatformAvailability::assertPublishable($post);
 
         PostPlatformMetaRules::assertStoredPostPublishable($post);
         ContentTypeCompatibleWithMedia::assertStoredPostCompatible($post);

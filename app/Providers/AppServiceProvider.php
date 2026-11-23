@@ -13,6 +13,7 @@ use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
 use App\Models\AuditLog;
+use App\Models\AvailabilitySwitch;
 use App\Models\BackupRun;
 use App\Models\CatalogSetting;
 use App\Models\ChangelogEntry;
@@ -63,6 +64,7 @@ use App\Socialite\DiscordProvider;
 use App\Socialite\InstagramProvider;
 use App\Socialite\LinkedInPageExtendSocialite;
 use App\Support\Auth\PasswordRequirements;
+use App\Support\Availability\Availability;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -101,6 +103,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DiskSpace::class, LocalDiskSpace::class);
         $this->app->bind(HostMetrics::class, ProcHostMetrics::class);
         $this->app->bind(QueueMetrics::class, HorizonQueueMetrics::class);
+        $this->app->scoped(Availability::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
@@ -154,6 +157,7 @@ class AppServiceProvider extends ServiceProvider
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,
             'analyticsSyncState' => AnalyticsSyncState::class,
             'auditLog' => AuditLog::class,
+            'availabilitySwitch' => AvailabilitySwitch::class,
             'backupRun' => BackupRun::class,
             'catalogSetting' => CatalogSetting::class,
             'changelogEntry' => ChangelogEntry::class,
