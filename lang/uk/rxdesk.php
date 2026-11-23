@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'Зараз не вдається зв’язатися зі ШІ. Спробуйте за кілька хвилин.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Ви використали кредити ШІ цього місяця. Вони оновляться :date.',
+        'exhausted_member' => 'Ви використали кредити ШІ цього місяця. Попросіть власника акаунта змінити план.',
+        'low' => 'Цього місяця залишилося :remaining із :total кредитів ШІ.',
+        'change_plan' => 'Змінити план',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Довге очікування в черзі',
             'capacity_disk_free' => 'Мало вільного місця на диску',
             'disk_guard' => 'Місце на диску майже вичерпано',
+            'ai_provider_failure' => 'Збій ШІ-провайдера',
             'nightwatch_burst' => 'Сплеск нових проблем',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'Найдовше очікування в черзі — :minutes хв, що перевищує поріг :threshold_minutes хв.',
             'capacity_disk_free' => 'Вільно :free на диску, що менше за поріг :threshold.',
             'disk_guard' => 'Вільно :free на диску — близько до порогу захисту диска :threshold. Завантаження скоро зупиняться.',
+            'ai_provider_failure' => 'Модель :model завершилася помилкою: :error',
             'nightwatch_burst' => 'За останню годину в Nightwatch з\'явилося проблем: :count.',
         ],
         'resolved_body' => 'Це попередження знято. Його буде надіслано знову, якщо умова повториться.',

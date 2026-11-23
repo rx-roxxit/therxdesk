@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Services\Repurpose;
 
 use App\Ai\Agents\PostContentShortener;
+use App\Enums\Ai\AiFeature;
 use App\Enums\SocialAccount\Platform;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\Ai\AiCredits;
+use App\Services\Ai\AiProviderFailure;
 use App\Services\Social\ContentSanitizer;
 use App\Support\Hashtags;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CaptionAdapter
 {
@@ -50,25 +54,44 @@ class CaptionAdapter
 
     private function shorten(Workspace $workspace, ?User $user, string $caption, Platform $platform, int $limit): ?string
     {
-        if ($user === null || Gate::forUser($user)->denies('useAi', $workspace->account)) {
+        if ($user === null) {
+            return null;
+        }
+
+        if (Gate::forUser($user)->denies('useAi', $workspace->account)) {
             return null;
         }
 
         $key = "{$limit}:".md5($caption);
 
         $shortened = $this->shortened[$key] ??= rescue(
-            fn (): string => $this->ask($caption, $platform, $limit),
+            fn (): string => $this->ask($workspace, $user, $caption, $platform, $limit),
+            rescue: function (Throwable $exception): ?string {
+                app(AiProviderFailure::class)->report($exception, AiFeature::CaptionShortener);
+
+                return null;
+            },
+            report: false,
         );
 
         return filled($shortened) && $this->fits($shortened, $platform, $limit) ? $shortened : null;
     }
 
-    private function ask(string $caption, Platform $platform, int $limit): string
+    private function ask(Workspace $workspace, User $user, string $caption, Platform $platform, int $limit): string
     {
         $result = (new PostContentShortener(
             platformLabel: $platform->label(),
             limit: $limit,
         ))->prompt($caption);
+
+        app(AiCredits::class)->charge(
+            $workspace->account,
+            $user,
+            $workspace,
+            AiFeature::CaptionShortener,
+            $result->usage,
+            $result->meta->model,
+        );
 
         return trim((string) $result->text);
     }

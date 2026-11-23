@@ -6,7 +6,10 @@ namespace App\Http\Controllers\App;
 
 use App\Actions\Ai\GenerateMediaAltText;
 use App\Actions\Media\ResolveWorkspaceMedia;
+use App\Enums\Ai\AiFeature;
 use App\Http\Requests\App\Ai\GenerateMediaAltTextRequest;
+use App\Services\Ai\AiCredits;
+use App\Services\Ai\AiProviderFailure;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
@@ -28,15 +31,20 @@ class MediaAltTextController extends Controller
 
         $gate = Gate::inspect('useAi', $workspace->account);
         if ($gate->denied()) {
-            return response()->json(['message' => $gate->message()], Response::HTTP_PAYMENT_REQUIRED);
+            return response()->json(['message' => $gate->message(), 'code' => $gate->code()], Response::HTTP_PAYMENT_REQUIRED);
         }
 
         try {
-            $altText = GenerateMediaAltText::execute($request->user(), $asset);
-        } catch (AiException|RequestException|ConnectionException) {
-            return response()->json(['message' => __('posts.composer.media_editor.alt_generate_error')], Response::HTTP_BAD_GATEWAY);
+            $altText = GenerateMediaAltText::execute($request->user(), $asset, $workspace);
+        } catch (AiException|RequestException|ConnectionException $exception) {
+            app(AiProviderFailure::class)->report($exception, AiFeature::AltText);
+
+            return response()->json(['message' => __('rxdesk.ai.unavailable')], Response::HTTP_BAD_GATEWAY);
         }
 
-        return response()->json(['alt_text' => $altText]);
+        return response()->json([
+            'alt_text' => $altText,
+            'ai_credits' => app(AiCredits::class)->payload($workspace->account),
+        ]);
     }
 }

@@ -117,6 +117,13 @@ export interface StorageSummary {
     percent: number;
 }
 
+/** The Account's monthly AI credit balance (`HandleInertiaRequests` and every AI response). */
+export interface AiCredits {
+    remaining: number;
+    total: number;
+    low: boolean;
+}
+
 export interface SharedData {
     name: string;
     auth: Auth;
@@ -134,6 +141,7 @@ export interface SharedData {
     referralSources?: string[] | null;
     mcpPrompt?: { mcp_url: string } | null;
     storage?: StorageSummary | null;
+    aiCredits?: AiCredits | null;
     changelog?: SharedChangelog | null;
     changelogEntries?: ScrollChangelogEntries;
     mediaUploadLimits?: MediaUploadLimits | null;

@@ -24,6 +24,7 @@ use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\Ai\AiCredits;
 use App\Services\Storage\AccountStorage;
 use App\Support\ByteSize;
 use App\Support\HeicConverter;
@@ -74,6 +75,7 @@ class HandleInertiaRequests extends Middleware
                     : null,
             'mcpPrompt' => fn (): ?array => $this->mcpPrompt($user),
             'storage' => fn (): ?array => $this->storage($user),
+            'aiCredits' => fn (): ?array => $account ? app(AiCredits::class)->payload($account) : null,
             'usage' => fn (): ?array => $account && ! $isSelfHosted ? $account->usage() : null,
             'features' => fn (): ?array => $account && ! $isSelfHosted ? $account->featureLimits() : null,
             ...($user ? BuildChangelogProps::execute($user) : []),

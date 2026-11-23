@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Internal\AccountAiCreditsController;
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
@@ -43,6 +44,14 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::post('accounts/{account}/suspension/lift', [AccountSuspensionController::class, 'lift'])
         ->whereUuid('account')
         ->name('internal.accounts.suspension.lift');
+
+    Route::patch('accounts/{account}/ai-credits', [AccountAiCreditsController::class, 'update'])
+        ->whereUuid('account')
+        ->name('internal.accounts.ai-credits.update');
+
+    Route::post('accounts/{account}/ai-credits/reset', [AccountAiCreditsController::class, 'reset'])
+        ->whereUuid('account')
+        ->name('internal.accounts.ai-credits.reset');
 
     Route::post('accounts/{account}/delete', [AccountDeletionController::class, 'store'])
         ->whereUuid('account')

@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'L’IA est injoignable pour le moment. Réessayez dans quelques minutes.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Vous avez utilisé vos crédits IA du mois. Ils seront renouvelés le :date.',
+        'exhausted_member' => 'Vous avez utilisé les crédits IA du mois. Demandez au propriétaire du compte de changer d’offre.',
+        'low' => 'Il ne reste que :remaining crédits IA sur :total ce mois-ci.',
+        'change_plan' => 'Changer d’offre',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Attente longue dans la file',
             'capacity_disk_free' => 'Peu d\'espace disque libre',
             'disk_guard' => 'Espace disque presque épuisé',
+            'ai_provider_failure' => 'Échec du fournisseur d’IA',
             'nightwatch_burst' => 'Pic de nouveaux problèmes',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'L\'attente la plus longue dans la file est de :minutes minutes, au-dessus du seuil d\'alerte de :threshold_minutes minutes.',
             'capacity_disk_free' => 'L\'espace disque libre est de :free, sous le seuil d\'alerte de :threshold.',
             'disk_guard' => 'L\'espace disque libre est de :free, proche du seuil de protection du disque de :threshold. Les envois vont bientôt s\'arrêter.',
+            'ai_provider_failure' => 'Le modèle :model a échoué : :error',
             'nightwatch_burst' => ':count problèmes ont été ouverts dans Nightwatch au cours de la dernière heure.',
         ],
         'resolved_body' => 'Cette alerte est résolue. Elle sera renvoyée si la condition réapparaît.',

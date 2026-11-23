@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => "Couldn't reach AI right now. Try again in a few minutes.",
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => "You've used this month's AI credits. They renew on :date.",
+        'exhausted_member' => "You've used this month's AI credits. Ask the workspace owner to change plan.",
+        'low' => 'Only :remaining of :total AI credits left this month.',
+        'change_plan' => 'Change plan',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Long queue wait',
             'capacity_disk_free' => 'Low free disk space',
             'disk_guard' => 'Disk space nearly exhausted',
+            'ai_provider_failure' => 'AI provider failure',
             'nightwatch_burst' => 'Burst of new issues',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'The longest queue wait is :minutes minutes, over the alert level of :threshold_minutes minutes.',
             'capacity_disk_free' => 'Free disk space is :free, under the alert level of :threshold.',
             'disk_guard' => 'Free disk space is :free, near the Disk guard threshold of :threshold. Uploads will stop soon.',
+            'ai_provider_failure' => 'The :model model failed: :error',
             'nightwatch_burst' => ':count issues opened in Nightwatch within the last hour.',
         ],
         'resolved_body' => 'This alert cleared. It will be raised again if the condition returns.',

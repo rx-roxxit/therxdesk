@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Actions\Ai;
 
 use App\Ai\Agents\PostWritingAssistant;
+use App\Enums\Ai\AiFeature;
 use App\Enums\Ai\PostAssistantMode;
 use App\Enums\PostPlatform\ContentType;
 use App\Enums\SocialAccount\Platform;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\Ai\AiCredits;
 use App\Services\Repurpose\CaptionAdapter;
 use Illuminate\Validation\ValidationException;
 
@@ -32,6 +34,15 @@ final class AssistPostContent
 
         $response = (new PostWritingAssistant($mode, $currentContent, $user->locale, $platform, $previousContent, $limit))
             ->prompt($mode->requiresPrompt() ? trim((string) $prompt) : 'Revise the existing caption as instructed.');
+
+        app(AiCredits::class)->charge(
+            $workspace->account,
+            $user,
+            $workspace,
+            AiFeature::WritingAssistant,
+            $response->usage,
+            $response->meta->model,
+        );
 
         $text = trim((string) $response);
 

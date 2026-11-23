@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'Şu anda yapay zekâya ulaşılamıyor. Birkaç dakika sonra tekrar deneyin.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Bu ayki AI kredilerinizi kullandınız. :date tarihinde yenilenecek.',
+        'exhausted_member' => 'Bu ayki AI kredilerinizi kullandınız. Hesap sahibinden planı değiştirmesini isteyin.',
+        'low' => 'Bu ay :total AI kredisinden yalnızca :remaining kaldı.',
+        'change_plan' => 'Planı değiştir',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Uzun kuyruk beklemesi',
             'capacity_disk_free' => 'Az boş disk alanı',
             'disk_guard' => 'Disk alanı neredeyse tükendi',
+            'ai_provider_failure' => 'AI sağlayıcı hatası',
             'nightwatch_burst' => 'Yeni sorunlarda artış',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'Kuyruktaki en uzun bekleme :minutes dakika, :threshold_minutes dakika uyarı eşiğinin üzerinde.',
             'capacity_disk_free' => 'Boş disk alanı :free, :threshold uyarı eşiğinin altında.',
             'disk_guard' => 'Boş disk alanı :free, :threshold disk koruma eşiğine yakın. Yüklemeler yakında duracak.',
+            'ai_provider_failure' => ':model modeli başarısız oldu: :error',
             'nightwatch_burst' => 'Son bir saatte Nightwatch\'ta :count sorun açıldı.',
         ],
         'resolved_body' => 'Bu uyarı kapandı. Koşul tekrarlarsa yeniden gönderilecek.',

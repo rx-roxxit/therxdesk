@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => '暂时无法使用 AI，请几分钟后再试一次。',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => '你已用完本月的 AI 积分，将于 :date 续期。',
+        'exhausted_member' => '你已用完本月的 AI 积分，请工作区所有者更换套餐。',
+        'low' => '本月 AI 积分仅剩 :remaining / :total。',
+        'change_plan' => '更改套餐',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => '队列等待时间长',
             'capacity_disk_free' => '磁盘可用空间不足',
             'disk_guard' => '磁盘空间即将耗尽',
+            'ai_provider_failure' => 'AI 服务商故障',
             'nightwatch_burst' => '新问题激增',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => '队列最长等待时间为 :minutes 分钟，超过 :threshold_minutes 分钟的告警阈值。',
             'capacity_disk_free' => '磁盘可用空间为 :free，低于 :threshold 的告警阈值。',
             'disk_guard' => '磁盘可用空间为 :free，接近 :threshold 的磁盘保护阈值。上传即将停止。',
+            'ai_provider_failure' => ':model 模型失败：:error',
             'nightwatch_burst' => '过去一小时内 Nightwatch 新增了 :count 个问题。',
         ],
         'resolved_body' => '此告警已解除。如果该情况再次出现，会再次通知。',

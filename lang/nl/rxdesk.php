@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'AI is nu even niet bereikbaar. Probeer het over een paar minuten nog eens.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Je AI-credits van deze maand zijn op. Ze worden op :date vernieuwd.',
+        'exhausted_member' => 'Je AI-credits van deze maand zijn op. Vraag de accounteigenaar om van plan te wisselen.',
+        'low' => 'Deze maand zijn er nog maar :remaining van :total AI-credits over.',
+        'change_plan' => 'Plan wijzigen',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Lange wachttijd in de wachtrij',
             'capacity_disk_free' => 'Weinig vrije schijfruimte',
             'disk_guard' => 'Schijfruimte bijna uitgeput',
+            'ai_provider_failure' => 'Storing bij AI-aanbieder',
             'nightwatch_burst' => 'Golf van nieuwe problemen',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'De langste wachttijd in de wachtrij is :minutes minuten, boven de waarschuwingsdrempel van :threshold_minutes minuten.',
             'capacity_disk_free' => 'De vrije schijfruimte is :free, onder de waarschuwingsdrempel van :threshold.',
             'disk_guard' => 'De vrije schijfruimte is :free, dicht bij de schijfbewakingdrempel van :threshold. Uploads stoppen binnenkort.',
+            'ai_provider_failure' => 'Het :model-model is mislukt: :error',
             'nightwatch_burst' => 'In het laatste uur zijn :count problemen in Nightwatch geopend.',
         ],
         'resolved_body' => 'Deze melding is opgelost. Hij komt terug als de situatie zich opnieuw voordoet.',

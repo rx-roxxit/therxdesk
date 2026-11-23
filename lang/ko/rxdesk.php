@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => '지금은 AI에 연결할 수 없습니다. 몇 분 후에 다시 시도하세요.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => '이번 달 AI 크레딧을 모두 사용했습니다. :date에 갱신됩니다.',
+        'exhausted_member' => '이번 달 AI 크레딧을 모두 사용했습니다. 워크스페이스 소유자에게 요금제 변경을 요청하세요.',
+        'low' => '이번 달 AI 크레딧이 :total 중 :remaining만 남았습니다.',
+        'change_plan' => '요금제 변경',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => '대기열 대기 시간 김',
             'capacity_disk_free' => '디스크 여유 공간 부족',
             'disk_guard' => '디스크 공간 거의 소진',
+            'ai_provider_failure' => 'AI 제공자 오류',
             'nightwatch_burst' => '새 문제 급증',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => '대기열의 최대 대기 시간이 :minutes분으로, 경고 기준인 :threshold_minutes분을 넘었습니다.',
             'capacity_disk_free' => '디스크 여유 공간이 :free로, 경고 기준인 :threshold보다 적습니다.',
             'disk_guard' => '디스크 여유 공간이 :free로, 디스크 보호 기준인 :threshold에 가깝습니다. 곧 업로드가 중단됩니다.',
+            'ai_provider_failure' => ':model 모델 실패: :error',
             'nightwatch_burst' => '지난 한 시간 동안 Nightwatch에서 :count개의 문제가 열렸습니다.',
         ],
         'resolved_body' => '이 경고는 해제되었습니다. 같은 상황이 다시 발생하면 다시 알려드립니다.',

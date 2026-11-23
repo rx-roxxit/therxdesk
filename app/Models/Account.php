@@ -80,6 +80,7 @@ class Account extends Model
         'data_purged_at' => 'datetime',
         'video_policy' => VideoPolicy::class,
         'ai_credits_per_month' => 'integer',
+        'ai_credits_reset_at' => 'datetime',
     ];
 
     public function owner(): BelongsTo

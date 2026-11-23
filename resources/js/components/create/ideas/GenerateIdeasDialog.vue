@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
+import { Link, useHttp } from '@inertiajs/vue3';
 import { IconLoader2, IconRefresh, IconSparkles, IconX } from '@tabler/icons-vue';
 import { trans } from 'laravel-vue-i18n';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
+import AiCreditsNote from '@/components/ai/AiCreditsNote.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,9 +17,17 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { extractErrorMessage } from '@/lib/httpError';
+import {
+    AI_CREDITS_EXHAUSTED_OWNER,
+    useAiCredits,
+} from '@/composables/useAiCredits';
+import { extractErrorCode, extractErrorMessage } from '@/lib/httpError';
+import { index as billingIndex } from '@/routes/app/billing';
 import { generate } from '@/routes/app/create/ideas';
+import type { AiCredits } from '@/types';
 import type { IdeaDraft } from '@/types/idea';
+
+type GeneratedIdea = IdeaDraft & { ai_credits: AiCredits | null };
 
 const emit = defineEmits<{
     use: [idea: IdeaDraft];
@@ -26,8 +35,16 @@ const emit = defineEmits<{
 
 const open = ref(false);
 const error = ref('');
+const errorCode = ref<string | null>(null);
 const idea = ref<IdeaDraft | null>(null);
 let requestId = 0;
+
+const { apply } = useAiCredits();
+
+/** Only the Account Owner can change the plan, so only their refusal carries the link. */
+const showsChangePlan = computed(
+    (): boolean => errorCode.value === AI_CREDITS_EXHAUSTED_OWNER,
+);
 
 const http = useHttp<
     { business: string; audience: string; notes: string },
@@ -47,6 +64,7 @@ watch(open, (isOpen) => {
     }
 
     error.value = '';
+    errorCode.value = null;
     idea.value = null;
     http.business = '';
     http.audience = '';
@@ -75,11 +93,14 @@ const submit = async (): Promise<void> => {
     }
 
     error.value = '';
+    errorCode.value = null;
     http.cancel();
     const currentRequest = ++requestId;
 
     try {
-        const result = await http.post(generate.url());
+        const result = (await http.post(generate.url())) as
+            | GeneratedIdea
+            | undefined;
 
         if (currentRequest !== requestId) {
             return;
@@ -93,6 +114,7 @@ const submit = async (): Promise<void> => {
             return;
         }
 
+        apply(result.ai_credits);
         idea.value = result;
     } catch (exception) {
         if (currentRequest !== requestId) {
@@ -102,6 +124,7 @@ const submit = async (): Promise<void> => {
         error.value =
             extractErrorMessage(exception) ??
             trans('create.ideas.errors.generate_failed');
+        errorCode.value = extractErrorCode(exception);
     }
 };
 
@@ -180,14 +203,24 @@ const useIdea = (): void => {
                         </p>
                     </div>
 
-                    <p
+                    <div
                         v-if="error"
                         role="alert"
-                        class="text-sm text-destructive"
+                        class="space-y-1 text-sm text-destructive"
                         data-testid="ideas-generate-error"
                     >
-                        {{ error }}
-                    </p>
+                        <p>{{ error }}</p>
+                        <Link
+                            v-if="showsChangePlan"
+                            :href="billingIndex.url()"
+                            class="font-medium underline underline-offset-2"
+                            data-testid="ideas-generate-change-plan"
+                        >
+                            {{ $t('rxdesk.ai_credits.change_plan') }}
+                        </Link>
+                    </div>
+
+                    <AiCreditsNote />
 
                     <p class="text-xs text-muted-foreground">
                         {{ $t('posts.composer.assistant_disclaimer') }}
@@ -296,14 +329,24 @@ const useIdea = (): void => {
                         />
                     </div>
 
-                    <p
+                    <div
                         v-if="error"
                         role="alert"
-                        class="text-sm text-destructive"
+                        class="space-y-1 text-sm text-destructive"
                         data-testid="ideas-generate-error"
                     >
-                        {{ error }}
-                    </p>
+                        <p>{{ error }}</p>
+                        <Link
+                            v-if="showsChangePlan"
+                            :href="billingIndex.url()"
+                            class="font-medium underline underline-offset-2"
+                            data-testid="ideas-generate-change-plan"
+                        >
+                            {{ $t('rxdesk.ai_credits.change_plan') }}
+                        </Link>
+                    </div>
+
+                    <AiCreditsNote />
 
                     <p class="text-xs text-muted-foreground">
                         {{ $t('posts.composer.assistant_disclaimer') }}
