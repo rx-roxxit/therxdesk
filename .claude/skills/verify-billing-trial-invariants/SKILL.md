@@ -192,7 +192,7 @@ billing that follows is reported separately (#67) and not covered here.
 
 ## Coverage record
 
-Sync commit: **38a31287**. Confirmed against these files and functions:
+Sync commit: **60700f40**. Confirmed against these files and functions:
 
 | Code | Model action / variable |
 | --- | --- |
@@ -220,6 +220,8 @@ Sync commit: **38a31287**. Confirmed against these files and functions:
 | `ComplimentaryPlans::give()` / `end()` — the Account's own columns plus an audit row; give refuses a Subscription or a blocked country, end defaults 30 days ahead | `GiveComplimentary` / `EndComplimentary` (the refusal is the action's precondition) |
 | `ChangePlan::execute()` — a Complimentary Account is refused before a swap or Checkout; the `always_invoice` proration of a paid Plan change is not a Trial rule | `OpenCheckout` disabled while `comp` |
 | `Account::hasReviewAccess()` — `accounts.review_access` unlocks switched-off networks only; it never changes `hasAppAccess()`. `ai_credits_reset_at` is AI metering. Neither is an access/trial fact | not modelled |
+| `Account::scopeWithBillingFootprint()` — the Business figures' Account scope (billable Subscription, generic trial, Complimentary Plan or Suspension); narrows which Accounts are described, changes no Account's access or Trial | not modelled (a read scope) |
+| `StripeEventListener::subscriptionFor()` — copies the checkout's `trypost_offer_id` onto `subscriptions.offer_id` for the Business figures; a fact-only write, no trial/payment/access effect | not modelled (a fact write) |
 | `2026_11_23_000000_add_complimentary_plan_to_accounts_table.php` — `accounts.complimentary_since` / `complimentary_until` | the facts `GiveComplimentary` / `EndComplimentary` write |
 | `2026_11_23_020000_add_suspension_to_accounts_table.php` — `accounts.suspended_at` / `suspension_reason` | the facts `SuspendAccount` / `LiftSuspension` write |
 | `2026_11_22_120000_add_billing_facts.php` — `trial_cards.fingerprint` primary key | the atomic card `claim` |
@@ -230,6 +232,23 @@ The checkout-fact columns (`2026_11_23_100000_add_checkout_facts_to_accounts_tab
 `2026_11_23_110000_add_checkout_session_id_to_accounts_table.php`) carry the
 billing facts the purchase document and the admin refund read; they are not
 access or trial facts, so they are not modelled.
+
+Two changes since the previous sync commit (38a31287) are fact-only writes the
+Business figures read, and neither changes a modelled trial, payment or access
+rule, so `specs/*.tla` is unchanged for them:
+
+- `StripeEventListener::subscriptionFor()` copies the checkout's Offer id
+  (`trypost_offer_id`) from the Stripe subscription metadata onto
+  `subscriptions.offer_id` (when it is a UUID; an older payload keeps the stored
+  value). The Business figures read it from our database instead of Stripe. It
+  sits beside the status and price copies in the same method and touches no
+  `trial_*`, `first_paid_at`, cancellation or access column.
+- `Account::scopeWithBillingFootprint()` narrows which Accounts the Business
+  resolver describes (a billable Subscription, a generic trial, a Complimentary
+  Plan ever given, or a Suspension; an abandoned checkout alone is not one). It
+  is a read scope used only by `BusinessStateResolver` and one test; it changes
+  no Account's access or Trial, so `hasAppAccess()`, `canStartTrial()` and the
+  model's actions are as before.
 
 Covered files: `app/Listeners/StripeEventListener.php`,
 `app/Listeners/StripeInvoiceListener.php`,
