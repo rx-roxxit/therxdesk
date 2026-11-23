@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
+import { useHttp, usePage } from '@inertiajs/vue3';
 import {
     IconArrowUp,
+    IconCopy,
+    IconMail,
     IconPlus,
     IconThumbDown,
     IconThumbUp,
@@ -13,9 +15,10 @@ import {
     index as loadConversation,
     store as storeConversation,
 } from '@/actions/App/Http/Controllers/App/SupportConversationController';
+import { store as sendHandoff } from '@/actions/App/Http/Controllers/App/SupportHandoffController';
 import {
-    feedback as sendFeedback,
     retry as retryMessage,
+    feedback as sendFeedback,
     store as storeMessage,
 } from '@/actions/App/Http/Controllers/App/SupportMessageController';
 import { Button } from '@/components/ui/button';
@@ -28,9 +31,11 @@ import {
 } from '@/components/ui/sheet';
 import { useSupportChat } from '@/composables/useSupportChat';
 import date from '@/date';
+import { filled } from '@/lib/helpers';
 import type {
     SupportChatErrorBody,
     SupportChatFeedback,
+    SupportChatHandoff,
     SupportChatLimits,
     SupportChatMessage,
     SupportChatPayload,
@@ -39,24 +44,28 @@ import type {
 
 const { isOpen, close } = useSupportChat();
 
+const page = usePage();
+
 const MESSAGE_MAX_CHARACTERS = 2000;
-const SUGGESTIONS = [
-    'connect_channel',
-    'schedule_post',
-    'trial',
-] as const;
+const SUGGESTIONS = ['connect_channel', 'schedule_post', 'trial'] as const;
 
 const loadHttp = useHttp<Record<string, never>, SupportChatPayload>({});
 const conversationHttp = useHttp<Record<string, never>, SupportChatPayload>({});
-const messageHttp = useHttp<{ message: string; page: string }, SupportChatTurn>({
-    message: '',
-    page: '',
-});
+const messageHttp = useHttp<{ message: string; page: string }, SupportChatTurn>(
+    {
+        message: '',
+        page: '',
+    },
+);
 const retryHttp = useHttp<Record<string, never>, SupportChatTurn>({});
 const feedbackHttp = useHttp<
     { feedback: SupportChatFeedback | null },
     { message: SupportChatMessage }
 >({ feedback: null });
+const handoffHttp = useHttp<
+    { message: string; email: string; page: string },
+    SupportChatHandoff
+>({ message: '', email: '', page: '' });
 
 const messages = ref<SupportChatMessage[]>([]);
 const conversationId = ref<string | null>(null);
@@ -68,6 +77,14 @@ const loadFailed = ref(false);
 const genericError = ref(false);
 const minuteError = ref(false);
 const failedMessageId = ref<string | null>(null);
+const escalatedAt = ref<string | null>(null);
+const handoffOpen = ref(false);
+const handoffSending = ref(false);
+const handoffSent = ref(false);
+const handoffFailed = ref(false);
+const handoffMessage = ref('');
+const handoffEmail = ref('');
+const transcriptCopied = ref(false);
 
 const scroller = useTemplateRef<HTMLElement>('scroller');
 
@@ -91,9 +108,34 @@ const dailyResetLabel = computed((): string =>
     limits.value === null ? '' : date.formatTime(limits.value.daily.resets_at),
 );
 
-const conversationMax = computed((): number => limits.value?.conversation.max ?? 0);
+const conversationMax = computed(
+    (): number => limits.value?.conversation.max ?? 0,
+);
 
 const dailyMax = computed((): number => limits.value?.daily.max ?? 0);
+
+const userEmail = computed((): string => page.props.auth.user.email);
+
+const supportEmail = computed((): string => {
+    const email = page.props.supportEmail;
+
+    if (typeof email !== 'string') {
+        return '';
+    }
+
+    return email;
+});
+
+const handoffMailto = computed((): string => `mailto:${supportEmail.value}`);
+
+const escalated = computed((): boolean => escalatedAt.value !== null);
+
+const canSendHandoff = computed(
+    (): boolean =>
+        !handoffSending.value &&
+        filled(handoffMessage.value.trim()) &&
+        filled(handoffEmail.value.trim()),
+);
 
 const tooLong = computed(
     (): boolean => input.value.length > MESSAGE_MAX_CHARACTERS,
@@ -169,7 +211,9 @@ const load = async (): Promise<void> => {
         conversationId.value = payload.conversation?.id ?? null;
         messages.value = payload.messages;
         limits.value = payload.limits;
+        escalatedAt.value = payload.conversation?.escalated_at ?? null;
         failedMessageId.value = null;
+        handoffOpen.value = false;
     } catch {
         loadFailed.value = true;
     } finally {
@@ -186,6 +230,7 @@ const ensureConversation = async (): Promise<string> => {
     const payload = await conversationHttp.post(storeConversation.url());
     conversationId.value = payload.conversation?.id ?? null;
     limits.value = payload.limits;
+    escalatedAt.value = payload.conversation?.escalated_at ?? null;
 
     if (conversationId.value === null) {
         throw new Error('No Support chat conversation');
@@ -194,7 +239,10 @@ const ensureConversation = async (): Promise<string> => {
     return conversationId.value;
 };
 
-const failedUserMessage = (messageId: string, text: string): SupportChatMessage => ({
+const failedUserMessage = (
+    messageId: string,
+    text: string,
+): SupportChatMessage => ({
     id: messageId,
     role: 'user',
     created_at: new Date().toISOString(),
@@ -226,7 +274,11 @@ const handleSendError = (error: unknown, text: string): void => {
         return;
     }
 
-    if (refusal.code === 'unavailable' && text !== '' && refusal.message_id !== undefined) {
+    if (
+        refusal.code === 'unavailable' &&
+        text !== '' &&
+        refusal.message_id !== undefined
+    ) {
         failedMessageId.value = refusal.message_id;
         messages.value = [
             ...messages.value,
@@ -329,6 +381,75 @@ const pickFeedback = async (
     }
 };
 
+const plainText = (message: SupportChatMessage): string => {
+    if (message.role === 'user') {
+        return message.text ?? '';
+    }
+
+    const element = document.createElement('div');
+    element.innerHTML = message.html ?? '';
+
+    return element.textContent ?? '';
+};
+
+const transcriptText = (): string =>
+    messages.value
+        .map(plainText)
+        .filter((text) => filled(text))
+        .join('\n\n');
+
+const openHandoff = (): void => {
+    handoffOpen.value = true;
+    handoffSent.value = false;
+    handoffFailed.value = false;
+    transcriptCopied.value = false;
+    handoffEmail.value = userEmail.value;
+};
+
+const closeHandoff = (): void => {
+    handoffOpen.value = false;
+    handoffSent.value = false;
+    handoffFailed.value = false;
+    transcriptCopied.value = false;
+};
+
+const submitHandoff = async (): Promise<void> => {
+    if (!canSendHandoff.value) {
+        return;
+    }
+
+    handoffSending.value = true;
+    handoffFailed.value = false;
+    transcriptCopied.value = false;
+
+    try {
+        const conversation = await ensureConversation();
+
+        handoffHttp.message = handoffMessage.value.trim();
+        handoffHttp.email = handoffEmail.value.trim();
+        handoffHttp.page = window.location.pathname;
+
+        const payload = await handoffHttp.post(sendHandoff.url(conversation));
+
+        escalatedAt.value = payload.escalated_at;
+        handoffSent.value = true;
+        handoffMessage.value = '';
+    } catch {
+        handoffFailed.value = true;
+    } finally {
+        handoffSending.value = false;
+    }
+};
+
+const copyTranscript = async (): Promise<void> => {
+    try {
+        await navigator.clipboard.writeText(transcriptText());
+        transcriptCopied.value = true;
+    } catch {
+        transcriptCopied.value = false;
+    }
+};
+
 const startNewConversation = async (): Promise<void> => {
     if (sending.value) {
         return;
@@ -344,7 +465,11 @@ const startNewConversation = async (): Promise<void> => {
         conversationId.value = payload.conversation?.id ?? null;
         messages.value = payload.messages;
         limits.value = payload.limits;
+        escalatedAt.value = payload.conversation?.escalated_at ?? null;
         failedMessageId.value = null;
+        handoffOpen.value = false;
+        handoffSent.value = false;
+        handoffFailed.value = false;
         input.value = '';
     } catch {
         genericError.value = true;
@@ -381,7 +506,10 @@ watch(
         >
             <div class="flex items-start gap-2 border-b border-border p-4">
                 <div class="min-w-0 flex-1">
-                    <SheetTitle class="text-base" data-testid="support-chat-title">
+                    <SheetTitle
+                        class="text-base"
+                        data-testid="support-chat-title"
+                    >
                         {{ $t('rxdesk.support_chat.title') }}
                     </SheetTitle>
                     <SheetDescription class="text-xs">
@@ -419,21 +547,34 @@ watch(
             >
                 <div v-if="loading" class="space-y-3">
                     <div class="h-10 w-2/3 animate-pulse rounded-lg bg-muted" />
-                    <div class="ms-auto h-10 w-1/2 animate-pulse rounded-lg bg-muted" />
+                    <div
+                        class="ms-auto h-10 w-1/2 animate-pulse rounded-lg bg-muted"
+                    />
                 </div>
 
                 <div v-else-if="loadFailed" class="space-y-3 text-sm">
                     <p class="text-muted-foreground">
                         {{ $t('rxdesk.support_chat.load_failed') }}
                     </p>
-                    <Button variant="outline" size="sm" data-testid="support-chat-load-retry" @click="load">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="support-chat-load-retry"
+                        @click="load"
+                    >
                         {{ $t('rxdesk.support_chat.retry') }}
                     </Button>
                 </div>
 
-                <div v-else-if="showsEmptyState" class="space-y-3" data-testid="support-chat-empty">
+                <div
+                    v-else-if="showsEmptyState"
+                    class="space-y-3"
+                    data-testid="support-chat-empty"
+                >
                     <div class="space-y-1">
-                        <p class="font-medium">{{ $t('rxdesk.support_chat.empty_title') }}</p>
+                        <p class="font-medium">
+                            {{ $t('rxdesk.support_chat.empty_title') }}
+                        </p>
                         <p class="text-sm text-muted-foreground">
                             {{ $t('rxdesk.support_chat.empty_description') }}
                         </p>
@@ -444,12 +585,22 @@ watch(
                             :key="suggestion"
                             variant="outline"
                             size="sm"
-                            class="h-auto whitespace-normal text-start"
+                            class="h-auto text-start whitespace-normal"
                             :disabled="isLocked"
                             :data-testid="`support-chat-suggestion-${suggestion}`"
-                            @click="sendSuggestion($t(`rxdesk.support_chat.suggestions.${suggestion}`))"
+                            @click="
+                                sendSuggestion(
+                                    $t(
+                                        `rxdesk.support_chat.suggestions.${suggestion}`,
+                                    ),
+                                )
+                            "
                         >
-                            {{ $t(`rxdesk.support_chat.suggestions.${suggestion}`) }}
+                            {{
+                                $t(
+                                    `rxdesk.support_chat.suggestions.${suggestion}`,
+                                )
+                            }}
                         </Button>
                     </div>
                 </div>
@@ -470,9 +621,17 @@ watch(
                                 <button
                                     type="button"
                                     class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-                                    :class="feedbackChoice(message, 'up') ? 'text-foreground' : ''"
-                                    :aria-label="$t('rxdesk.support_chat.feedback_up')"
-                                    :aria-pressed="feedbackChoice(message, 'up')"
+                                    :class="
+                                        feedbackChoice(message, 'up')
+                                            ? 'text-foreground'
+                                            : ''
+                                    "
+                                    :aria-label="
+                                        $t('rxdesk.support_chat.feedback_up')
+                                    "
+                                    :aria-pressed="
+                                        feedbackChoice(message, 'up')
+                                    "
                                     :data-testid="`support-chat-feedback-up-${message.id}`"
                                     @click="pickFeedback(message, 'up')"
                                 >
@@ -481,9 +640,17 @@ watch(
                                 <button
                                     type="button"
                                     class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-                                    :class="feedbackChoice(message, 'down') ? 'text-foreground' : ''"
-                                    :aria-label="$t('rxdesk.support_chat.feedback_down')"
-                                    :aria-pressed="feedbackChoice(message, 'down')"
+                                    :class="
+                                        feedbackChoice(message, 'down')
+                                            ? 'text-foreground'
+                                            : ''
+                                    "
+                                    :aria-label="
+                                        $t('rxdesk.support_chat.feedback_down')
+                                    "
+                                    :aria-pressed="
+                                        feedbackChoice(message, 'down')
+                                    "
                                     :data-testid="`support-chat-feedback-down-${message.id}`"
                                     @click="pickFeedback(message, 'down')"
                                 >
@@ -492,11 +659,18 @@ watch(
                             </div>
                         </div>
 
-                        <div v-else class="ms-auto w-fit max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+                        <div
+                            v-else
+                            class="ms-auto w-fit max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                        >
                             {{ message.text }}
                         </div>
 
-                        <div v-if="isFailed(message)" class="space-y-2 text-sm" data-testid="support-chat-failed">
+                        <div
+                            v-if="isFailed(message)"
+                            class="space-y-2 text-sm"
+                            data-testid="support-chat-failed"
+                        >
                             <p class="text-muted-foreground">
                                 {{ $t('rxdesk.support_chat.unavailable') }}
                             </p>
@@ -512,53 +686,254 @@ watch(
                         </div>
                     </div>
 
-                    <div v-if="showsTyping" class="flex items-center gap-1 text-sm text-muted-foreground" data-testid="support-chat-typing">
-                        <span class="size-1.5 animate-bounce rounded-full bg-current" />
-                        <span class="size-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]" />
-                        <span class="size-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]" />
-                        <span class="sr-only">{{ $t('rxdesk.support_chat.typing') }}</span>
+                    <div
+                        v-if="showsTyping"
+                        class="flex items-center gap-1 text-sm text-muted-foreground"
+                        data-testid="support-chat-typing"
+                    >
+                        <span
+                            class="size-1.5 animate-bounce rounded-full bg-current"
+                        />
+                        <span
+                            class="size-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]"
+                        />
+                        <span
+                            class="size-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]"
+                        />
+                        <span class="sr-only">{{
+                            $t('rxdesk.support_chat.typing')
+                        }}</span>
                     </div>
                 </template>
             </div>
 
             <div class="space-y-2 border-t border-border p-3">
-                <p v-if="conversationLimitReached" class="text-xs text-muted-foreground" data-testid="support-chat-limit-conversation">
-                    {{ $t('rxdesk.support_chat.limits.conversation', { max: conversationMax }) }}
-                </p>
-                <p v-if="dailyLimitReached" class="text-xs text-muted-foreground" data-testid="support-chat-limit-daily">
-                    {{ $t('rxdesk.support_chat.limits.daily', { max: dailyMax, time: dailyResetLabel }) }}
-                </p>
-                <p v-if="minuteError" class="text-xs text-muted-foreground" data-testid="support-chat-limit-minute">
-                    {{ $t('rxdesk.support_chat.limits.minute') }}
-                </p>
-                <p v-if="tooLong" class="text-xs text-muted-foreground">
-                    {{ $t('rxdesk.support_chat.too_long') }}
-                </p>
-                <p v-if="genericError" class="text-xs text-muted-foreground" data-testid="support-chat-error">
-                    {{ $t('rxdesk.support_chat.error') }}
-                </p>
+                <template v-if="handoffOpen">
+                    <p class="text-sm font-medium">
+                        {{ $t('rxdesk.support_chat.handoff.title') }}
+                    </p>
 
-                <form class="flex items-end gap-2" @submit.prevent="submitMessage">
-                    <textarea
-                        v-model="input"
-                        rows="2"
-                        class="max-h-32 min-h-10 flex-1 resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:opacity-50"
-                        :placeholder="$t('rxdesk.support_chat.input_placeholder')"
-                        :disabled="isLocked || loading"
-                        data-testid="support-chat-input"
-                        @keydown.enter.exact.prevent="submitMessage"
-                    />
-                    <Button
-                        type="submit"
-                        size="icon"
-                        :loading="sending"
-                        :disabled="!canSend"
-                        :aria-label="$t('rxdesk.support_chat.send')"
-                        data-testid="support-chat-send"
+                    <template v-if="handoffSent">
+                        <p
+                            class="text-sm text-muted-foreground"
+                            data-testid="support-handoff-sent"
+                        >
+                            {{ $t('rxdesk.support_chat.handoff.success') }}
+                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="w-full"
+                            data-testid="support-handoff-close"
+                            @click="closeHandoff"
+                        >
+                            {{ $t('rxdesk.support_chat.handoff.back_to_chat') }}
+                        </Button>
+                    </template>
+
+                    <template v-else>
+                        <p class="text-xs text-muted-foreground">
+                            {{ $t('rxdesk.support_chat.handoff.description') }}
+                        </p>
+                        <p
+                            v-if="handoffFailed"
+                            class="text-xs text-muted-foreground"
+                            data-testid="support-handoff-error"
+                        >
+                            {{ $t('rxdesk.support_chat.handoff.failed') }}
+                        </p>
+
+                        <form class="space-y-2" @submit.prevent="submitHandoff">
+                            <label
+                                for="support-handoff-message"
+                                class="block text-xs font-medium"
+                            >
+                                {{
+                                    $t(
+                                        'rxdesk.support_chat.handoff.message_label',
+                                    )
+                                }}
+                            </label>
+                            <textarea
+                                id="support-handoff-message"
+                                v-model="handoffMessage"
+                                rows="3"
+                                class="max-h-32 min-h-16 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                                :placeholder="
+                                    $t(
+                                        'rxdesk.support_chat.handoff.message_placeholder',
+                                    )
+                                "
+                                data-testid="support-handoff-message"
+                            />
+                            <label
+                                for="support-handoff-email"
+                                class="block text-xs font-medium"
+                            >
+                                {{
+                                    $t(
+                                        'rxdesk.support_chat.handoff.email_label',
+                                    )
+                                }}
+                            </label>
+                            <input
+                                id="support-handoff-email"
+                                v-model="handoffEmail"
+                                type="text"
+                                inputmode="email"
+                                autocomplete="email"
+                                class="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                                data-testid="support-handoff-email"
+                            />
+                            <div class="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="closeHandoff"
+                                >
+                                    {{
+                                        $t('rxdesk.support_chat.handoff.cancel')
+                                    }}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    :loading="handoffSending"
+                                    :disabled="!canSendHandoff"
+                                    data-testid="support-handoff-submit"
+                                >
+                                    {{ $t('rxdesk.support_chat.handoff.send') }}
+                                </Button>
+                            </div>
+                        </form>
+
+                        <div
+                            v-if="handoffFailed"
+                            class="flex flex-wrap items-center gap-2"
+                        >
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                data-testid="support-handoff-copy"
+                                @click="copyTranscript"
+                            >
+                                <IconCopy class="size-3.5" />
+                                {{
+                                    $t(
+                                        'rxdesk.support_chat.handoff.copy_transcript',
+                                    )
+                                }}
+                            </Button>
+                            <Button variant="outline" size="sm" as-child>
+                                <a
+                                    :href="handoffMailto"
+                                    data-testid="support-handoff-mailto"
+                                >
+                                    <IconMail class="size-3.5" />
+                                    {{ $t('rxdesk.help.support_email') }}
+                                </a>
+                            </Button>
+                            <p
+                                v-if="transcriptCopied"
+                                class="text-xs text-muted-foreground"
+                                data-testid="support-handoff-copied"
+                            >
+                                {{ $t('rxdesk.support_chat.handoff.copied') }}
+                            </p>
+                        </div>
+                    </template>
+                </template>
+
+                <template v-else>
+                    <p
+                        v-if="conversationLimitReached"
+                        class="text-xs text-muted-foreground"
+                        data-testid="support-chat-limit-conversation"
                     >
-                        <IconArrowUp class="size-4" />
+                        {{
+                            $t('rxdesk.support_chat.limits.conversation', {
+                                max: conversationMax,
+                            })
+                        }}
+                    </p>
+                    <p
+                        v-if="dailyLimitReached"
+                        class="text-xs text-muted-foreground"
+                        data-testid="support-chat-limit-daily"
+                    >
+                        {{
+                            $t('rxdesk.support_chat.limits.daily', {
+                                max: dailyMax,
+                                time: dailyResetLabel,
+                            })
+                        }}
+                    </p>
+                    <p
+                        v-if="minuteError"
+                        class="text-xs text-muted-foreground"
+                        data-testid="support-chat-limit-minute"
+                    >
+                        {{ $t('rxdesk.support_chat.limits.minute') }}
+                    </p>
+                    <p v-if="tooLong" class="text-xs text-muted-foreground">
+                        {{ $t('rxdesk.support_chat.too_long') }}
+                    </p>
+                    <p
+                        v-if="genericError"
+                        class="text-xs text-muted-foreground"
+                        data-testid="support-chat-error"
+                    >
+                        {{ $t('rxdesk.support_chat.error') }}
+                    </p>
+                    <p
+                        v-if="escalated"
+                        class="text-xs text-muted-foreground"
+                        data-testid="support-chat-escalated"
+                    >
+                        {{ $t('rxdesk.support_chat.handoff.waiting') }}
+                    </p>
+
+                    <form
+                        class="flex items-end gap-2"
+                        @submit.prevent="submitMessage"
+                    >
+                        <textarea
+                            v-model="input"
+                            rows="2"
+                            class="max-h-32 min-h-10 flex-1 resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:opacity-50"
+                            :placeholder="
+                                $t('rxdesk.support_chat.input_placeholder')
+                            "
+                            :disabled="isLocked || loading"
+                            data-testid="support-chat-input"
+                            @keydown.enter.exact.prevent="submitMessage"
+                        />
+                        <Button
+                            type="submit"
+                            size="icon"
+                            :loading="sending"
+                            :disabled="!canSend"
+                            :aria-label="$t('rxdesk.support_chat.send')"
+                            data-testid="support-chat-send"
+                        >
+                            <IconArrowUp class="size-4" />
+                        </Button>
+                    </form>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="w-full"
+                        data-testid="support-handoff-open"
+                        @click="openHandoff"
+                    >
+                        <IconMail class="size-3.5" />
+                        {{ $t('rxdesk.support_chat.handoff.contact') }}
                     </Button>
-                </form>
+                </template>
             </div>
         </SheetContent>
     </Sheet>

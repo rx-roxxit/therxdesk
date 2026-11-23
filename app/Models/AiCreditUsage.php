@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Ai\AiFeature;
+use App\Observers\AiCreditUsageObserver;
 use Database\Factories\AiCreditUsageFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * One AI model call, and the credits it cost. The Account's month is the sum
  * of these rows, so a Member spends the Owner's credits.
  */
+#[ObservedBy([AiCreditUsageObserver::class])]
 class AiCreditUsage extends Model
 {
     /** @use HasFactory<AiCreditUsageFactory> */

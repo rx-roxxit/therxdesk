@@ -22,6 +22,16 @@ spends no AI credits, so it keeps working when the balance is gone. See ADR 0007
 - **Storage:** conversations and messages (with 👍/👎) live in `support_conversations` and `support_messages`. The
   last conversation reopens within 24 hours; **New conversation** starts another. A daily command prunes them after
   30 days, and both account-purge actions delete them with the Account.
+- **Hand-off:** **Contact the team** in the sheet footer opens a form (message, email prefilled with the signed-in
+  user's address). A real send emails `rxdesk.support.email` synchronously (Maizzle, English chrome, Reply-To the
+  customer, subject `[Support] <email> — <Plan>`, the message and context then the transcript), sets
+  `escalated_at`, and shows "Message sent. We reply within 2 business days." A failed send shows an error, **Copy
+  transcript** and **Email support** (mailto), and never marks the conversation.
+- **Daily counters:** `support_chat_daily_counters` has one row per UTC day for conversations started, user
+  messages, hand-offs, 👍/👎, and the tokens and list cost of `support_chat` ledger rows. It holds no Account id and
+  no content, and has no foreign key, so pruning and account deletion leave the counts in place.
+- **For the admin:** `GET /internal/v1/support/conversations` (admin token) returns the transcripts with their
+  messages, nothing older than 30 days, and `?feedback=down` keeps only conversations with a 👎 answer.
 
 ## How to get to it (user POV)
 
@@ -62,6 +72,28 @@ The journey opens the sheet on `@support-chat-limit-conversation`: "This convers
 Start a new conversation to keep going." The input is disabled and **New conversation** in the header clears it.
 The same happens at 40 messages a day, with the reset time (`@support-chat-limit-daily`); the per-minute refusal
 (`@support-chat-limit-minute`) clears by itself.
+
+## The hand-off
+
+```sh
+$V/support-chat.sh clear     # a clean conversation
+$V/support-chat.sh up
+$V/drive.sh support-handoff
+```
+
+The journey opens the sheet, sends one short question, opens **Contact the team**, checks the email is prefilled,
+sends, and checks the success copy (`@support-handoff-sent`, "We reply within 2 business days"). It then closes the
+form (`@support-chat-escalated` shows the waiting line) and checks Mailpit: the email to `support@therxdesk.com`
+has the subject `[Support] verify-agent@example.com — <Plan>`, Reply-To the fixture email, and the message and the
+question in its text. Selectors: `@support-handoff-open`, `@support-handoff-message`, `@support-handoff-email`,
+`@support-handoff-submit`, `@support-handoff-sent`, `@support-handoff-close`, `@support-chat-escalated`.
+
+Side effects to check from the host:
+
+```sh
+$V/db.sh "select escalated_at from support_conversations where user_id = '<userId>' order by created_at desc limit 1"
+$V/db.sh "select * from support_chat_daily_counters order by date desc limit 1"
+```
 
 ## Checking the rows
 

@@ -19,6 +19,7 @@ use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\OperatorController;
 use App\Http\Controllers\Internal\PlanController;
 use App\Http\Controllers\Internal\SiteController;
+use App\Http\Controllers\Internal\SupportConversationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('site', SiteController::class)
@@ -137,4 +138,7 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::post('offers/{offer}/end', [OfferController::class, 'end'])
         ->whereUuid('offer')
         ->name('internal.offers.end');
+
+    Route::get('support/conversations', [SupportConversationController::class, 'index'])
+        ->name('internal.support.conversations.index');
 });

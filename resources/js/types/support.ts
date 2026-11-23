@@ -19,6 +19,7 @@ export interface SupportConversationSummary {
     id: string;
     last_page: string | null;
     last_message_at: string | null;
+    escalated_at: string | null;
 }
 
 /** `GET /support-chat` and `POST /support-chat/conversations`. */
@@ -31,6 +32,11 @@ export interface SupportChatPayload {
 export interface SupportChatTurn {
     messages: SupportChatMessage[];
     limits: SupportChatLimits;
+}
+
+/** The 200 body after the hand-off email really went out. */
+export interface SupportChatHandoff {
+    escalated_at: string;
 }
 
 /** The 429 body: which limit stopped the message. */
@@ -48,5 +54,6 @@ export interface SupportChatFailure {
 }
 
 /** Any body the chat endpoint can send for a refused or failed message. */
-export type SupportChatErrorBody = Partial<SupportChatLimitRefusal & SupportChatFailure>;
-
+export type SupportChatErrorBody = Partial<
+    SupportChatLimitRefusal & SupportChatFailure
+>;

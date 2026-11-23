@@ -57,6 +57,24 @@ final class AiModelRegistry
         ];
     }
 
+    /**
+     * What a call's tokens cost at the registry price, in micro-USD. Null when
+     * the model is not in the registry.
+     */
+    public function listCostMicros(?string $model, int $promptTokens, int $completionTokens): ?int
+    {
+        $prices = $this->find($model);
+
+        if ($prices === null) {
+            return null;
+        }
+
+        return (int) round(
+            $promptTokens * $prices['input_price_per_mtok']
+            + $completionTokens * $prices['output_price_per_mtok'],
+        );
+    }
+
     public function isSelectable(string $slot, ?string $model): bool
     {
         if (! in_array($slot, $this->slots(), true)) {

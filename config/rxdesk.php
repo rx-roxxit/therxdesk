@@ -22,6 +22,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Support address
+    |--------------------------------------------------------------------------
+    |
+    | Where the Support chat's "Contact the team" hand-off goes. The Help
+    | menu's "Email support" reads the same address through
+    | `trypost.support.email`, so both come from the same env value.
+    |
+    */
+
+    'support' => [
+        'email' => env('RXDESK_SUPPORT_EMAIL', 'support@therxdesk.com'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage (Quota and Disk guard)
     |--------------------------------------------------------------------------
     |

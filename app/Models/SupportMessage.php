@@ -6,7 +6,9 @@ namespace App\Models;
 
 use App\Enums\Support\SupportFeedback;
 use App\Enums\Support\SupportMessageRole;
+use App\Observers\SupportMessageObserver;
 use Database\Factories\SupportMessageFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * The answer keeps the Markdown the model wrote; it is rendered and its links
  * filtered when the chat reads it.
  */
+#[ObservedBy([SupportMessageObserver::class])]
 class SupportMessage extends Model
 {
     /** @use HasFactory<SupportMessageFactory> */
