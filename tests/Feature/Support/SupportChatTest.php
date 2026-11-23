@@ -28,7 +28,6 @@ use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\TextResponse;
-use ReflectionClass;
 use Symfony\Component\HttpFoundation\Response;
 
 beforeEach(function () {

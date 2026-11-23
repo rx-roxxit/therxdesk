@@ -45,6 +45,7 @@ use App\Models\RssFeedItem;
 use App\Models\SocialAccount;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Models\SupportChatDailyCounter;
 use App\Models\SupportConversation;
 use App\Models\SupportMessage;
 use App\Models\TrialAccount;
@@ -197,6 +198,7 @@ class AppServiceProvider extends ServiceProvider
             'socialAccount' => SocialAccount::class,
             'subscription' => Subscription::class,
             'subscriptionItem' => SubscriptionItem::class,
+            'supportChatDailyCounter' => SupportChatDailyCounter::class,
             'supportConversation' => SupportConversation::class,
             'supportMessage' => SupportMessage::class,
             'trialAccount' => TrialAccount::class,

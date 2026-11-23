@@ -56,7 +56,7 @@ final class SupportBrief
         }
 
         $account = $user->account;
-        $lines = ['## Account', '- Plan: '.($account->plan?->name ?? 'none'), '- Status: '.$this->status($account)];
+        $lines = ['## Account', '- Plan: '.($account->plan?->name ?? 'none'), '- Status: '.$this->accountStatus($account)];
 
         $trialEndsAt = $account->activeTrialEndsAt();
 
@@ -72,7 +72,7 @@ final class SupportBrief
         return $lines;
     }
 
-    private function status(Account $account): string
+    public function accountStatus(Account $account): string
     {
         if ($account->isSuspended()) {
             return 'suspended';

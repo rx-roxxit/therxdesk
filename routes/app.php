@@ -58,6 +58,7 @@ use App\Http\Controllers\App\Settings\ProfileController;
 use App\Http\Controllers\App\Settings\SessionController;
 use App\Http\Controllers\App\Settings\VideoPolicyController;
 use App\Http\Controllers\App\SupportConversationController;
+use App\Http\Controllers\App\SupportHandoffController;
 use App\Http\Controllers\App\SupportMessageController;
 use App\Http\Controllers\App\TourController;
 use App\Http\Controllers\App\UnsplashController;
@@ -443,6 +444,7 @@ Route::middleware(['auth', EnsureAccountReady::class, EnsureHasWorkspace::class]
         Route::get('/', [SupportConversationController::class, 'index'])->name('conversations.index');
         Route::post('conversations', [SupportConversationController::class, 'store'])->name('conversations.store');
         Route::post('conversations/{conversation}/messages', [SupportMessageController::class, 'store'])->name('messages.store');
+        Route::post('conversations/{conversation}/handoff', [SupportHandoffController::class, 'store'])->name('handoff.store');
         Route::post('messages/{message}/retry', [SupportMessageController::class, 'retry'])->name('messages.retry');
         Route::patch('messages/{message}/feedback', [SupportMessageController::class, 'feedback'])->name('messages.feedback');
     });

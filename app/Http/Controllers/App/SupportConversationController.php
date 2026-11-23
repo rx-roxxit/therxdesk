@@ -76,6 +76,7 @@ class SupportConversationController extends Controller
                 'id' => $conversation->id,
                 'last_page' => $conversation->last_page,
                 'last_message_at' => $conversation->last_message_at?->toIso8601String(),
+                'escalated_at' => $conversation->escalated_at?->toIso8601String(),
             ],
             'messages' => $conversation === null
                 ? []

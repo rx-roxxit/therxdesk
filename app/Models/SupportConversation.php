@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\SupportConversationObserver;
 use Carbon\CarbonInterface;
 use Database\Factories\SupportConversationFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy([SupportConversationObserver::class])]
 class SupportConversation extends Model
 {
     /** @use HasFactory<SupportConversationFactory> */
@@ -35,12 +38,14 @@ class SupportConversation extends Model
         'user_id',
         'last_page',
         'last_message_at',
+        'escalated_at',
     ];
 
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'escalated_at' => 'datetime',
         ];
     }
 
@@ -76,5 +81,18 @@ class SupportConversation extends Model
             ->orWhere(fn (Builder $empty): Builder => $empty
                 ->whereNull('last_message_at')
                 ->where('created_at', '<', $before)));
+    }
+
+    /**
+     * The conversations the 30-day retention window still holds, which is
+     * exactly what the System admin may read.
+     */
+    public function scopeRetained(Builder $query, CarbonInterface $since): Builder
+    {
+        return $query->where(fn (Builder $retained): Builder => $retained
+            ->where('last_message_at', '>=', $since)
+            ->orWhere(fn (Builder $empty): Builder => $empty
+                ->whereNull('last_message_at')
+                ->where('created_at', '>=', $since)));
     }
 }

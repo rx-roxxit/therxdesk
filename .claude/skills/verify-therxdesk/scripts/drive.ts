@@ -340,6 +340,7 @@ const SELLING_JOURNEYS = [
     'availability-retry',
     'support-chat',
     'support-chat-limit',
+    'support-handoff',
     'ai-credits',
 ];
 
@@ -3107,6 +3108,141 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             !(await page.locator(tid('@support-chat-input')).isDisabled()),
             await page.locator(tid('@support-chat-input')).isDisabled(),
         );
+    },
+
+    /**
+     * features/support-chat.md
+     *
+     * "Contact the team" sends the conversation to the support address
+     * synchronously (support-chat.sh up switches the chat on): the success
+     * copy appears only after a real send, and Mailpit has the email with
+     * the subject and the customer's Reply-To.
+     */
+    'support-handoff': async (run) => {
+        const { page } = run;
+        const supportAddress = 'support@therxdesk.com';
+
+        const before = new Set(
+            (await mailsFor(supportAddress)).map((mail) => mail.ID),
+        );
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.locator(tid('@sidebar-workspace-menu')).waitFor();
+
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        const trigger = page.locator(tid('@sidebar-support-trigger'));
+        await trigger.waitFor();
+        await trigger.dispatchEvent('pointermove');
+        await trigger.click();
+        await page.locator(tid('@sidebar-support-chat')).click();
+
+        await page.locator(tid('@support-chat-sheet')).waitFor();
+        await page.locator(tid('@support-chat-empty')).waitFor();
+
+        const question = 'Where do I change my plan?';
+        await page.locator(tid('@support-chat-input')).fill(question);
+        await page.locator(tid('@support-chat-send')).click();
+        await page
+            .locator(tid('@support-chat-message-assistant'))
+            .first()
+            .waitFor({ timeout: 90_000 });
+
+        await page.locator(tid('@support-handoff-open')).click();
+        await page.locator(tid('@support-handoff-message')).waitFor();
+        await animationsSettled(page);
+        await run.step('handoff-form');
+
+        const prefilled = await page
+            .locator(tid('@support-handoff-email'))
+            .inputValue();
+
+        run.check(
+            'the form prefills the customer email',
+            prefilled === run.fixture.email,
+            prefilled,
+        );
+
+        const message = 'Please check my account. The chat could not help.';
+        await page.locator(tid('@support-handoff-message')).fill(message);
+        await page.locator(tid('@support-handoff-submit')).click();
+
+        const sent = page.locator(tid('@support-handoff-sent'));
+        await sent.waitFor({ timeout: 30_000 });
+        await animationsSettled(page);
+        await run.step('handoff-sent');
+
+        const success = await sent.innerText();
+
+        run.check(
+            'a real send shows the reply time',
+            success.includes('We reply within 2 business days'),
+            success,
+        );
+
+        await page.locator(tid('@support-handoff-close')).click();
+        await page.locator(tid('@support-chat-escalated')).waitFor();
+        await run.step('handoff-waiting');
+
+        const messageId = await (async (): Promise<string | null> => {
+            for (let attempt = 0; attempt < 30; attempt++) {
+                const message = (await mailsFor(supportAddress)).find(
+                    (candidate) => !before.has(candidate.ID),
+                );
+
+                if (message !== undefined) {
+                    return message.ID;
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+            }
+
+            return null;
+        })();
+
+        run.check(
+            'the support address received the email',
+            messageId !== null,
+            messageId,
+        );
+
+        if (messageId === null) {
+            return;
+        }
+
+        const response = await fetch(
+            `${MAILPIT_URL}/api/v1/message/${messageId}`,
+        );
+        const detail = (await response.json()) as {
+            Subject?: string;
+            ReplyTo?: Array<{ Address: string }>;
+            Text?: string;
+        };
+        const subject = detail.Subject ?? '';
+        const replyTo = detail.ReplyTo ?? [];
+        const text = detail.Text ?? '';
+
+        run.check(
+            'the subject names the customer and the plan',
+            new RegExp(
+                `^\\[Support\\] ${run.fixture.email.replace('.', '\\.')} — .+$`,
+            ).test(subject),
+            subject,
+        );
+        run.check(
+            'Reply-To is the customer email',
+            replyTo.some((address) => address.Address === run.fixture.email),
+            replyTo,
+        );
+        run.check(
+            'the email carries the message and the transcript',
+            text.includes(message) && text.includes(question),
+            text.slice(0, 400),
+        );
+
+        run.note('supportEmailId', messageId);
+        run.note('supportEmailSubject', subject);
     },
 };
 

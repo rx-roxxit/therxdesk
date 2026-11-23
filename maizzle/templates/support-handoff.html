@@ -1,0 +1,43 @@
+<x-main>
+  <x-message>
+    <x-heading>
+      @{{ __('rxdesk.support_handoff.title') }}
+    </x-heading>
+
+    <p class="m-0 leading-6 whitespace-pre-line">@{{ $customerMessage }}</p>
+
+    <x-spacer height="24px" />
+
+    <div class="email-context">
+      <p class="m-0 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.email_label') }}:</strong> @{{ $customerEmail }}
+      </p>
+      <p class="m-0 mt-1 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.account_label') }}:</strong> @{{ $accountId }}
+      </p>
+      <p class="m-0 mt-1 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.plan_label') }}:</strong> @{{ $plan }}
+      </p>
+      <p class="m-0 mt-1 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.status_label') }}:</strong> @{{ $status }}
+      </p>
+      <p class="m-0 mt-1 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.locale_label') }}:</strong> @{{ $locale }}
+      </p>
+      <p class="m-0 mt-1 text-sm leading-5">
+        <strong>@{{ __('rxdesk.support_handoff.page_label') }}:</strong> @{{ $lastPage !== null ? $lastPage : '—' }}
+      </p>
+    </div>
+
+    <x-spacer height="24px" />
+
+    <p class="m-0 font-semibold leading-6">@{{ __('rxdesk.support_handoff.transcript') }}</p>
+
+    @foreach($transcript as $entry)
+      <div class="mt-4">
+        <p class="m-0 text-sm font-semibold leading-5 text-foreground">@{{ $entry['role'] }}</p>
+        <p class="m-0 leading-6 whitespace-pre-line">@{{ $entry['content'] }}</p>
+      </div>
+    @endforeach
+  </x-message>
+</x-main>

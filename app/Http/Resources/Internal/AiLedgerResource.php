@@ -56,15 +56,10 @@ class AiLedgerResource extends JsonResource
 
     private function listCostMicros(): ?int
     {
-        $prices = app(AiModelRegistry::class)->find($this->model);
-
-        if ($prices === null) {
-            return null;
-        }
-
-        return (int) round(
-            $this->prompt_tokens * $prices['input_price_per_mtok']
-            + $this->completion_tokens * $prices['output_price_per_mtok'],
+        return app(AiModelRegistry::class)->listCostMicros(
+            $this->model,
+            $this->prompt_tokens,
+            $this->completion_tokens,
         );
     }
 }
