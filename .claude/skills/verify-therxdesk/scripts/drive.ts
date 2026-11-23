@@ -2342,7 +2342,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
      *
      * The network is switched back on and the post the scheduler blocked is
      * retried from the failure popover, the way `gate-retry` does for a
-     * Suspension. Pass the id from `availability-off` result.json in
+     * Suspension. Pass `gate-schedule`'s result.json notes.blockedPostId in
      * VERIFY_BLOCKED_POST.
      */
     'availability-retry': async (run) => {
@@ -2351,7 +2351,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         if (postId === '') {
             throw new Error(
-                'VERIFY_BLOCKED_POST is empty: pass availability-off result.json notes.blockedPostId',
+                'VERIFY_BLOCKED_POST is empty: pass gate-schedule result.json notes.blockedPostId',
             );
         }
 
