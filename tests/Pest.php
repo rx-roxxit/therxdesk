@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Availability\ServiceSwitch;
 use App\Enums\Billing\Interval;
 use App\Enums\SocialAccount\Platform;
 use App\Jobs\Analytics\BootstrapAccountAnalytics;
@@ -14,6 +15,7 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Http\HostResolver;
+use App\Support\Availability\Availability;
 use App\Support\Social\PendingConnection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpClientRequest;
@@ -60,7 +62,11 @@ pest()->extend(BrowserTestCase::class)
     ->beforeEach(function (): void {
         fakePwnedPasswords();
         FakeDiskSpace::bindRoomy();
-        config(['trypost.tours.enabled' => false]);
+        config([
+            'trypost.tours.enabled' => false,
+            'ai.default' => 'anthropic',
+            'ai.providers.anthropic.key' => 'test-key',
+        ]);
     })
     ->in('Browser');
 
@@ -384,6 +390,15 @@ function socialConnectFailure(): ?string
 function fakePublicDns(string $address = '93.184.216.34'): void
 {
     test()->mock(HostResolver::class)->shouldReceive('addresses')->andReturn([$address]);
+}
+
+/**
+ * Open new signups, which start off by default. A selling-mode test that
+ * registers without an Invite calls this first.
+ */
+function enableSignups(): void
+{
+    app(Availability::class)->set(ServiceSwitch::NewSignups->value, true);
 }
 
 /**

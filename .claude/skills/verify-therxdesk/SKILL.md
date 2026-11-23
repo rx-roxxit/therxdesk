@@ -206,7 +206,7 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
 `selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
 `payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`,
-`availability-off`, `availability-retry`
+`availability-off`, `availability-retry`, `services-off`
 (selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
 `complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
 test clock, `media-on-r2` also needs `media.sh up`, `suspension` needs `suspension.sh up`, `gate-schedule` needs

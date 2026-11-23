@@ -8,8 +8,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * One Availability switch the System admin flips: a network (`platform:<value>`
- * today, services and new signups later). A missing row means on.
+ * One Availability switch the System admin flips: a network
+ * (`platform:<value>`), a service (`service:<name>`) or new signups
+ * (`new_signups`). A missing row means on, except Support chat and new
+ * signups, which start off.
  */
 class AvailabilitySwitch extends Model
 {

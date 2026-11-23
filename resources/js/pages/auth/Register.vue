@@ -30,6 +30,7 @@ import { store } from '@/routes/register';
 const props = defineProps<{
     email?: string | null;
     invite?: string | null;
+    signupsClosed?: boolean;
     passwordRequirements: PasswordRequirement[];
     countries?: string[] | null;
 }>();
@@ -69,6 +70,15 @@ const hasSocial = computed(
         <Head :title="$t('auth.register.page_title')" />
 
         <div class="flex flex-col gap-6">
+            <p
+                v-if="signupsClosed"
+                class="text-sm text-muted-foreground"
+                data-testid="register-closed"
+            >
+                {{ $t('rxdesk.signup.closed') }}
+            </p>
+
+            <template v-else>
             <div v-if="hasSocial" class="flex flex-col gap-2">
                 <SocialLogin mode="signup" hide-divider :invite="invite" />
             </div>
@@ -190,6 +200,7 @@ const hasSocial = computed(
                         </Button>
                     </div>
             </Form>
+            </template>
 
             <p class="text-center text-sm text-muted-foreground">
                 {{ $t('auth.register.has_account') }}

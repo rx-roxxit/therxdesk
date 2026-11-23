@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Internal;
 
 use App\Actions\Audit\RecordAuditEntry;
+use App\Enums\Availability\ServiceSwitch;
 use App\Enums\SocialAccount\Platform;
 use App\Http\Middleware\Internal\AuthenticateInternalApi;
 use App\Http\Requests\Internal\UpdateAvailabilityRequest;
@@ -14,8 +15,9 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The System admin's Availability switches: every network but X, with its
- * installed and effective state, and the flip that is audited on every call.
+ * The System admin's Availability switches: every network but X, then the
+ * services and the signup door, each with its installed, switched and
+ * effective state. A flip is audited on every call.
  */
 class AvailabilityController
 {
@@ -24,42 +26,41 @@ class AvailabilityController
     public function index(): JsonResponse
     {
         return response()->json([
-            'switches' => array_map(
-                fn (Platform $platform): array => $this->row($platform),
-                $this->switchablePlatforms(),
-            ),
+            'switches' => [
+                ...array_map(fn (Platform $platform): array => $this->platformRow($platform), $this->switchablePlatforms()),
+                ...array_map(fn (ServiceSwitch $service): array => $this->serviceRow($service), ServiceSwitch::cases()),
+            ],
         ]);
     }
 
     public function update(UpdateAvailabilityRequest $request, string $key): JsonResponse
     {
-        $platform = collect($this->switchablePlatforms())
-            ->first(fn (Platform $platform): bool => $platform->availabilityKey() === $key);
-
-        if ($platform === null) {
-            abort(Response::HTTP_NOT_FOUND);
-        }
-
         $enabled = $request->boolean('enabled');
+        $platform = $this->platform($key);
 
-        if ($enabled && ! $platform->isInstalled()) {
-            throw ValidationException::withMessages([
-                'enabled' => 'This network is not installed on the server.',
-            ]);
+        if ($platform !== null) {
+            if ($enabled && ! $platform->isInstalled()) {
+                $this->refuse('This network is not installed on the server.');
+            }
+
+            $this->record($request, $platform->availabilityKey(), $this->availability->isOn($platform->availabilityKey()), $enabled);
+
+            return response()->json($this->platformRow($platform));
         }
 
-        $before = ['enabled' => $this->availability->isOn($platform->availabilityKey())];
-        $switch = $this->availability->set($platform->availabilityKey(), $enabled);
+        $service = ServiceSwitch::tryFrom($key);
 
-        RecordAuditEntry::execute(
-            AuthenticateInternalApi::actor($request),
-            $enabled ? 'availability.enable' : 'availability.disable',
-            $switch,
-            $before,
-            ['enabled' => $enabled],
-        );
+        if ($service !== null) {
+            if ($enabled && ! $service->isInstalled()) {
+                $this->refuse("{$service->label()} is not installed on the server.");
+            }
 
-        return response()->json($this->row($platform));
+            $this->record($request, $service->value, $service->switchedOn(), $enabled);
+
+            return response()->json($this->serviceRow($service));
+        }
+
+        abort(Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -73,10 +74,34 @@ class AvailabilityController
         ));
     }
 
+    private function platform(string $key): ?Platform
+    {
+        return collect($this->switchablePlatforms())
+            ->first(fn (Platform $platform): bool => $platform->availabilityKey() === $key);
+    }
+
+    private function refuse(string $message): never
+    {
+        throw ValidationException::withMessages(['enabled' => $message]);
+    }
+
+    private function record(UpdateAvailabilityRequest $request, string $key, bool $before, bool $enabled): void
+    {
+        $switch = $this->availability->set($key, $enabled);
+
+        RecordAuditEntry::execute(
+            AuthenticateInternalApi::actor($request),
+            $enabled ? 'availability.enable' : 'availability.disable',
+            $switch,
+            ['enabled' => $before],
+            ['enabled' => $enabled],
+        );
+    }
+
     /**
      * @return array<string, mixed>
      */
-    private function row(Platform $platform): array
+    private function platformRow(Platform $platform): array
     {
         return [
             'key' => $platform->availabilityKey(),
@@ -86,6 +111,22 @@ class AvailabilityController
             'installed' => $platform->isInstalled(),
             'switched_on' => $this->availability->isOn($platform->availabilityKey()),
             'effective' => $platform->isAvailable(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serviceRow(ServiceSwitch $service): array
+    {
+        return [
+            'key' => $service->value,
+            'kind' => $service->kind(),
+            'value' => $service->item(),
+            'label' => $service->label(),
+            'installed' => $service->isInstalled(),
+            'switched_on' => $service->switchedOn(),
+            'effective' => $service->effective(),
         ];
     }
 }

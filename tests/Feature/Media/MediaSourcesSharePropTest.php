@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Enums\Availability\ServiceSwitch;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\UnsplashService;
+use App\Support\Availability\Availability;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -51,6 +53,21 @@ test('the prop lists only enabled sources in menu order', function () {
             ->missing('mediaSources.menu.1.config.client_id')
         );
 });
+
+test('a picker the System admin switched off leaves the composer menu', function (ServiceSwitch $service, string $source) {
+    mediaSourcesEnableAll();
+    app(Availability::class)->set($service->value, false);
+
+    $response = $this->actingAs($this->user)->get(route('app.workspace.channels'));
+    $menu = $response->viewData('page')['props']['mediaSources']['menu'];
+
+    expect(array_column($menu, 'source'))->toHaveCount(3)->not->toContain($source);
+})->with([
+    'drive picker' => [ServiceSwitch::DrivePicker, 'google_drive'],
+    'canva' => [ServiceSwitch::Canva, 'canva'],
+    'google photos' => [ServiceSwitch::GooglePhotos, 'google_photos'],
+    'unsplash' => [ServiceSwitch::Unsplash, 'unsplash'],
+]);
 
 test('the prop is absent for a guest', function () {
     mediaSourcesEnableAll();

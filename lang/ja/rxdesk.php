@@ -92,6 +92,9 @@ return [
         'no_end' => '終了日なし',
         'checkout_blocked' => 'このプランは The RX Desk から提供されているため、購読するには The RX Desk にお問い合わせください。',
     ],
+    'signup' => [
+        'closed' => '新規登録は現在受け付けていません。',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => '現在、Drive へのバックアップは利用できません。別の動画ポリシーを選ぶか、しばらくしてからもう一度お試しください。',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

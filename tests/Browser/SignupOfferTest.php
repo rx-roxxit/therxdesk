@@ -8,6 +8,7 @@ use App\Models\User;
 
 beforeEach(function () {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
     $this->offer = Offer::factory()->create(['slug' => 'black-friday-2026']);
 });
 

@@ -5,7 +5,10 @@ declare(strict_types=1);
 use Illuminate\Validation\Rules\Password;
 use Inertia\Testing\AssertableInertia;
 
-beforeEach(fn () => config()->set('trypost.self_hosted', false));
+beforeEach(function (): void {
+    config()->set('trypost.self_hosted', false);
+    enableSignups();
+});
 
 test('the register page lists every password requirement', function (string $environment) {
     app()->detectEnvironment(fn (): string => $environment);

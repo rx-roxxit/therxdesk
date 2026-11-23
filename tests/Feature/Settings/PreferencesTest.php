@@ -98,6 +98,7 @@ test('invalid preference values are rejected', function (string $field, string $
 
 test('a new account reads the clock of its language', function (string $locale, string $email, TimeFormat $expected) {
     config()->set('trypost.self_hosted', false);
+    enableSignups();
 
     $this->post(route('register.store'), [
         'name' => 'Ana',

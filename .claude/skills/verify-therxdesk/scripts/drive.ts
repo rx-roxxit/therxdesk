@@ -338,6 +338,7 @@ const SELLING_JOURNEYS = [
     'gate-retry',
     'availability-off',
     'availability-retry',
+    'services-off',
     'support-chat',
     'support-chat-limit',
     'support-handoff',
@@ -2632,6 +2633,172 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             observed,
         );
         await run.step('retry-cleared');
+    },
+
+    /**
+     * features/availability.md
+     *
+     * The service switches are off (the host sequence flips `service:ai`,
+     * `service:support_chat` on, and the media, Drive backup and signup
+     * switches off, through internal.sh). AI buttons are hidden, the composer
+     * media menu has only Upload, Drive backup is no longer offered while the
+     * fixture has a connected Drive, and `/register` is closed while an invite
+     * link still opens the form. Pass a valid Invite id in VERIFY_INVITE_ID.
+     */
+    'services-off': async (run) => {
+        const { page, fixture } = run;
+        const inviteId = process.env.VERIFY_INVITE_ID ?? '';
+
+        if (inviteId === '') {
+            throw new Error(
+                'VERIFY_INVITE_ID is empty: create an Invite for the fixture account first',
+            );
+        }
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the services journey`,
+            );
+        }
+
+        // AI off: the composer has no assistant button.
+        await page.goto(`${run.baseUrl}/schedule`);
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page.locator(tid('@composer-add-account')).waitFor();
+
+        const channelCaption = page.locator(
+            tid(`@composer-caption-${fixture.channelId}`),
+        );
+
+        if ((await channelCaption.count()) === 0) {
+            await page.locator(tid('@composer-add-account')).click();
+            await page
+                .locator(tid(`@composer-account-option-${fixture.channelId}`))
+                .click();
+        }
+
+        await channelCaption.waitFor();
+
+        const assistant = await page
+            .locator(tid('@composer-ai-assistant'))
+            .count();
+        run.check(
+            'AI is off, so the composer has no assistant button',
+            assistant === 0,
+            assistant,
+        );
+
+        // The pickers are switched off: only Upload is left in the media menu.
+        const menuPrefix = `composer-${fixture.channelId}`;
+        await page.locator(tid(`@${menuPrefix}-media-source-menu`)).click();
+        await page.locator(tid(`@${menuPrefix}-media-source-list`)).waitFor();
+
+        const pickers = await page
+            .locator(
+                `${tid(`@${menuPrefix}-media-source-list`)} [data-testid^="media-source-"]`,
+            )
+            .evaluateAll((nodes) =>
+                nodes
+                    .map((node): string => node.getAttribute('data-testid') ?? '')
+                    .filter((item): boolean => item !== 'media-source-upload'),
+            );
+        run.check(
+            'the composer media menu has no pickers while their switches are off',
+            pickers.length === 0,
+            pickers,
+        );
+        await run.step('composer-pickers-hidden');
+
+        // A full navigation leaves the composer without its unsaved guard.
+        await page.goto(`${run.baseUrl}/schedule`);
+
+        // Support chat is on but AI is off, so the Help menu has no chat item.
+        await page.locator(tid('@sidebar-workspace-menu')).click();
+        await page.locator(tid('@logout-button')).waitFor();
+        const help = page.locator(tid('@sidebar-support-trigger'));
+        await help.dispatchEvent('pointermove');
+        await help.click();
+        await page.locator(tid('@sidebar-support-email')).waitFor();
+
+        const chatItem = await page.locator(tid('@sidebar-support-chat')).count();
+        const emailItem = await page
+            .locator(tid('@sidebar-support-email'))
+            .count();
+        run.check(
+            'AI off takes the Support chat out of the Help menu',
+            chatItem === 0,
+            chatItem,
+        );
+        run.check(
+            'the Help menu still offers Email support',
+            emailItem === 1,
+            emailItem,
+        );
+        await run.step('help-menu-email-only');
+
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Escape');
+
+        // Drive backup is off while the fixture Drive is connected.
+        await page.goto(`${run.baseUrl}/settings/preferences`);
+        await page.locator(tid('@preferences-page')).waitFor();
+
+        const driveStatus = (
+            await page.locator(tid('@preferences-drive-status')).innerText()
+        ).trim();
+        run.check(
+            'the fixture Google Drive is connected, so the missing Backup is the switch',
+            driveStatus === 'Connected',
+            driveStatus,
+        );
+
+        await page.locator(tid('@preferences-video-policy-trigger')).click();
+        await page
+            .locator(tid('@preferences-video-policy-option-keep'))
+            .waitFor();
+        const backupOption = await page
+            .locator(tid('@preferences-video-policy-option-backup'))
+            .count();
+        run.check(
+            'Drive backup is off, so the Video policy no longer offers Backup',
+            backupOption === 0,
+            backupOption,
+        );
+        await run.step('drive-backup-not-offered');
+
+        // New signups are closed; an Invite still opens the form.
+        await page.context().clearCookies();
+        await page.goto(`${run.baseUrl}/register`);
+        await page.locator(tid('@register-closed')).waitFor();
+
+        const closedNotice = (
+            await page.locator(tid('@register-closed')).innerText()
+        ).trim();
+        const registerForm = await page.locator(tid('@register-name')).count();
+        run.check(
+            'new signups off shows the closed notice instead of the form',
+            closedNotice !== '' && registerForm === 0,
+            { closedNotice, registerForm },
+        );
+        await run.step('signups-closed');
+
+        await page.goto(`${run.baseUrl}/register?invite=${inviteId}`);
+        await page.locator(tid('@register-name')).waitFor();
+
+        const stillClosed = await page.locator(tid('@register-closed')).count();
+        run.check(
+            'an invite link still opens the registration form',
+            stillClosed === 0,
+            stillClosed,
+        );
+        await run.step('invite-form-open');
     },
 
     /**

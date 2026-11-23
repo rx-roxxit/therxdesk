@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Enums\Media;
 
+use App\Enums\Availability\ServiceSwitch;
+
 /**
  * Origin of a media attachment on a post. `null`/absent means "uploaded by
  * the user". The picker sources are the ones offered in the composer's media
- * menu; each is exposed only when its flag is on and its keys are set.
+ * menu; each is exposed only when its keys are set and its Availability
+ * switch is on.
  * `GoogleDriveBackup` is reserved for the Owner's Video policy backup: an
  * offline sign-in kept apart from the picker, never offered in the composer.
  */
@@ -26,7 +29,11 @@ enum Source: string
         return [self::Canva, self::GoogleDrive, self::GooglePhotos, self::Unsplash];
     }
 
-    public function isEnabled(): bool
+    /**
+     * Whether the server has the credentials the source needs. The switch
+     * only decides whether an installed source is offered.
+     */
+    public function isInstalled(): bool
     {
         return match ($this) {
             self::Unsplash => filled(config('services.unsplash.access_key')),
@@ -43,6 +50,38 @@ enum Source: string
                 && filled(config('services.google_media.client_secret'))
                 && filled(config('services.google_media.backup_redirect')),
             self::Ai => false,
+        };
+    }
+
+    public function isEnabled(): bool
+    {
+        if (! $this->isInstalled()) {
+            return false;
+        }
+
+        // The backup connection is not a picker: its service switch gates the
+        // Video policy and the job, never the sign-in that keeps Retry working.
+        if ($this === self::GoogleDriveBackup) {
+            return true;
+        }
+
+        $switch = $this->serviceSwitch();
+
+        if ($switch === null) {
+            return false;
+        }
+
+        return $switch->switchedOn();
+    }
+
+    public function serviceSwitch(): ?ServiceSwitch
+    {
+        return match ($this) {
+            self::Unsplash => ServiceSwitch::Unsplash,
+            self::GoogleDrive => ServiceSwitch::DrivePicker,
+            self::GooglePhotos => ServiceSwitch::GooglePhotos,
+            self::Canva => ServiceSwitch::Canva,
+            self::GoogleDriveBackup, self::Ai => null,
         };
     }
 

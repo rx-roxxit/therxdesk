@@ -149,6 +149,8 @@ export interface SharedData {
     changelogEntries?: ScrollChangelogEntries;
     mediaUploadLimits?: MediaUploadLimits | null;
     toursEnabled?: boolean;
+    /** True while the AI provider is installed and the System admin has AI switched on. */
+    aiEnabled?: boolean;
     /** True while the System admin has Support chat switched on (selling mode). */
     supportChat?: boolean;
     /** The support address the Help menu and the chat link to. */

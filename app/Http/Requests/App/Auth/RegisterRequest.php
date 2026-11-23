@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\App\Auth;
 
+use App\Enums\Availability\ServiceSwitch;
 use App\Enums\User\Locale;
 use App\Enums\User\TimeFormat;
 use App\Enums\User\WeekStart;
@@ -87,6 +88,10 @@ class RegisterRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $invite = $this->invite();
+
+            if (ServiceSwitch::newSignupsClosed() && $invite === null) {
+                $validator->errors()->add('email', __('rxdesk.signup.closed'));
+            }
 
             if ($invite && ! $invite->isFor($this->string('email')->toString())) {
                 $validator->errors()->add(

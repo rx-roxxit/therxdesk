@@ -92,6 +92,9 @@ return [
         'no_end' => '无结束日期',
         'checkout_blocked' => '你的套餐由 The RX Desk 赠送，如需订阅请联系 The RX Desk。',
     ],
+    'signup' => [
+        'closed' => '暂时关闭注册。',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => '暂时无法备份到 Drive。请选择其他视频策略，或稍后重试。',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

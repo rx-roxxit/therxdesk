@@ -7,6 +7,7 @@ namespace App\Jobs\VideoPolicy;
 use App\Actions\VideoPolicy\BackupPostVideos;
 use App\Actions\VideoPolicy\DeletePostVideos;
 use App\Enums\Account\VideoPolicy;
+use App\Enums\Availability\ServiceSwitch;
 use App\Exceptions\VideoPolicy\DriveBackupUnavailable;
 use App\Mail\VideoBackupFailed;
 use App\Models\Post;
@@ -31,8 +32,11 @@ use Throwable;
  * A Backup that fails (Google unreachable, a refused upload) is tried again on
  * the backoff below, about an hour in all, keeping the file meanwhile. After
  * the last try the post records `backup_failed` and the Owner is emailed once
- * per group. A rejected Google token fails at once (retrying cannot help). A
- * post whose file another run is uploading (the file's lock is held) looks
+ * per group. While the System admin has Drive backup switched off, a Backup
+ * records `backup_failed` with "backup unavailable" at once, keeps the file and
+ * sends no email; Retry works once the switch is back on. A rejected Google
+ * token fails at once (retrying cannot help). A post whose file another run is
+ * uploading (the file's lock is held) looks
  * again every `WAIT_SECONDS` in a fresh job that carries the tries already
  * used, so waiting never uses one up.
  */
@@ -112,6 +116,12 @@ class ApplyVideoPolicy implements ShouldQueue
         $policy = $post->workspace?->account?->video_policy;
 
         if (blank($policy)) {
+            return;
+        }
+
+        if ($policy === VideoPolicy::Backup && ! ServiceSwitch::DriveBackup->switchedOn()) {
+            BackupPostVideos::fail($post, BackupPostVideos::UNAVAILABLE_REASON, $this->attemptsMade());
+
             return;
         }
 

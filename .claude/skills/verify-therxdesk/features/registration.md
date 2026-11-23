@@ -13,10 +13,16 @@ Owner. There is no Signup code: registration is upstream's open form (ticket #47
 - An invite link (`?invite=...`) still fills the invite, locks the email and verifies it at signup.
 - No Signup code field, gate or `rxdesk:code` command (ticket #47).
 - Selling mode: a new Owner lands on `/welcome`. Self-hosted `/register` still 404s without an invite (upstream).
+- The `new_signups` Availability switch starts **off**: `/register` shows "Signups are closed for now" instead of
+  the form, and a POST is refused. An Invite link still opens the form and registers. The System admin opens it
+  with `PATCH /internal/v1/availability/new_signups`.
 
 ## How to get to it (user POV)
 
-`$V/selling.sh up`, then open `http://localhost:8000/register` signed out. Fill the form and press "Create account".
+`$V/selling.sh up`, open the signup door with
+`$V/internal.sh PATCH /availability/new_signups --body '{"enabled":true}'`, then open
+`http://localhost:8000/register` signed out. Fill the form and press "Create account". Close it again with
+`--body '{"enabled":false}'` when done; `services-off` expects it closed.
 
 ## Driving it with Playwright
 

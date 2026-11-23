@@ -7,7 +7,10 @@ function waitForAuthTitlesRequirementMet(mixed $page, string $key, string $met):
     waitForState($page, "@password-requirement-{$key}[data-met=\"{$met}\"]", 'true');
 }
 
-beforeEach(fn () => config(['trypost.self_hosted' => false]));
+beforeEach(function (): void {
+    config(['trypost.self_hosted' => false]);
+    enableSignups();
+});
 
 test('login shows the new title without a description and links to register', function () {
     $page = visit(route('login'));

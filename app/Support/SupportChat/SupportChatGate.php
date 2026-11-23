@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\SupportChat;
 
+use App\Enums\Availability\ServiceSwitch;
 use App\Support\Availability\Availability;
 
 /**
@@ -24,7 +25,7 @@ final class SupportChatGate
             return false;
         }
 
-        if (! $this->aiInstalled()) {
+        if (! ServiceSwitch::aiInstalled()) {
             return false;
         }
 
@@ -33,12 +34,5 @@ final class SupportChatGate
         }
 
         return $this->availability->isOn(self::AVAILABILITY_KEY, default: false);
-    }
-
-    private function aiInstalled(): bool
-    {
-        $provider = (string) config('ai.default');
-
-        return filled(config("ai.providers.{$provider}.key"));
     }
 }

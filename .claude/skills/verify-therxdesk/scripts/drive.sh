@@ -51,6 +51,10 @@ gate_env=()
 [ -n "${VERIFY_BLOCKED_POST:-}" ] && gate_env+=(-e "VERIFY_BLOCKED_POST=$VERIFY_BLOCKED_POST")
 [ -n "${VERIFY_GATE_LEAD_MINUTES:-}" ] && gate_env+=(-e "VERIFY_GATE_LEAD_MINUTES=$VERIFY_GATE_LEAD_MINUTES")
 
+# The services journey reads a valid Invite id for the closed-signups check.
+invite_env=()
+[ -n "${VERIFY_INVITE_ID:-}" ] && invite_env+=(-e "VERIFY_INVITE_ID=$VERIFY_INVITE_ID")
+
 # The repo is mounted read-only; only the evidence folder is writable. The
 # container runs as the host user so the evidence stays the host user's.
 docker run --rm --network host --ipc=host \
@@ -63,6 +67,7 @@ docker run --rm --network host --ipc=host \
     "${offer_env[@]}" \
     "${complimentary_env[@]}" \
     "${gate_env[@]}" \
+    "${invite_env[@]}" \
     -v "$HERE_TOPLEVEL":/work:ro \
     -v "$NODE_MODULES_VOLUME":/work/node_modules:ro \
     -v "$out":/out \

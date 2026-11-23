@@ -92,6 +92,9 @@ return [
         'no_end' => 'Sin fecha de fin',
         'checkout_blocked' => 'Tu plan lo ha otorgado The RX Desk; contacta con The RX Desk para suscribirte.',
     ],
+    'signup' => [
+        'closed' => 'Las inscripciones están cerradas por ahora.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => 'La copia de seguridad en Drive no está disponible ahora mismo. Elige otra política de vídeo o inténtalo de nuevo más tarde.',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

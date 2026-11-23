@@ -92,6 +92,9 @@ return [
         'no_end' => '종료일 없음',
         'checkout_blocked' => '이 요금제는 The RX Desk에서 제공하므로 구독하려면 The RX Desk에 문의하세요.',
     ],
+    'signup' => [
+        'closed' => '지금은 신규 가입을 받지 않습니다.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
@@ -101,6 +104,9 @@ return [
             'backup' => 'Backup to Drive',
         ],
         'save_failed' => "Couldn't save the video policy. Try again.",
+        'errors' => [
+            'backup_unavailable' => '지금은 Drive로 백업할 수 없습니다. 다른 동영상 정책을 선택하거나 나중에 다시 시도하세요.',
+        ],
         'record' => [
             'deleted' => 'Video deleted',
             'backed_up' => 'Video backed up',

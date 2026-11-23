@@ -614,6 +614,7 @@ watch(
     { immediate: true },
 );
 const page = usePage<SharedData>();
+const aiEnabled = computed(() => page.props.aiEnabled === true);
 const unavailableSelectedNetworks = computed(() => {
     const platforms = [
         ...new Set(selectedAccounts.value.map((account) => account.platform)),
@@ -2409,6 +2410,7 @@ const onDialogOpenChange = (value: boolean): void => {
                         }}</span></Button
                     >
                     <Button
+                        v-if="aiEnabled"
                         type="button"
                         variant="ghost"
                         :aria-pressed="activePanel === 'assistant'"

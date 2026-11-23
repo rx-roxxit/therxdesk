@@ -70,6 +70,16 @@ test('switching it off again closes both', function () {
         ->assertInertia(fn ($page) => $page->where('supportChat', false));
 });
 
+test('turning AI off takes the chat out of the Help menu even while Support chat is on', function () {
+    switchSupportChatOn($this->availability);
+    $this->availability->set(SupportChatGate::AI_AVAILABILITY_KEY, false);
+
+    $this->actingAs($this->owner->fresh())
+        ->get(route('app.calendar'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('supportChat', false));
+});
+
 test('a self-hosted install never has the chat', function (Closure $configure) {
     $configure();
     switchSupportChatOn($this->availability);

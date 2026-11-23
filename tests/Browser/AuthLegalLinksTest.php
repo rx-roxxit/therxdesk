@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 test('the register screen shows the email form open next to the social buttons', function () {
     config(['trypost.self_hosted' => false, 'trypost.google_auth_enabled' => true]);
+    enableSignups();
 
     $page = visit(route('register'));
     $page->script('new Promise((resolve) => { const check = () => document.querySelector("[data-testid=register-name]") ? resolve(true) : requestAnimationFrame(check); check(); })');
