@@ -323,6 +323,7 @@ test('a trial keeps one allowance across a calendar month boundary', function ()
 test('a provider failure spends nothing and raises an urgent alert without naming the provider', function () {
     config([
         'ai.default' => 'anthropic',
+        'rxdesk.ai.default_text_model' => 'claude-test-model',
         'ai.providers.anthropic.models.text.default' => 'claude-test-model',
     ]);
     Mail::fake();

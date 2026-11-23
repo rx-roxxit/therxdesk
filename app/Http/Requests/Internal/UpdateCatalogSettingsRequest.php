@@ -21,8 +21,6 @@ class UpdateCatalogSettingsRequest extends FormRequest
     {
         return [
             'trial_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
-            'tokens_per_credit' => ['sometimes', 'integer', 'min:1'],
-            'trial_ai_credits' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }

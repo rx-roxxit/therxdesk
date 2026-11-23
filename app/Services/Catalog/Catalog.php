@@ -233,12 +233,8 @@ class Catalog
         $before = $this->settingsSnapshot($current);
 
         $values = [
-            'trial_days' => data_get($attributes, 'trial_days', $current->trial_days),
-            'tokens_per_credit' => data_get($attributes, 'tokens_per_credit', $current->tokens_per_credit),
-            'trial_ai_credits' => data_get($attributes, 'trial_ai_credits', $current->trial_ai_credits),
+            'trial_days' => (int) data_get($attributes, 'trial_days', $current->trial_days),
         ];
-
-        $this->ensureTrialCreditsFitPlans((int) $values['trial_ai_credits']);
 
         $setting = CatalogSetting::updateOrCreate(
             ['id' => CatalogSetting::SINGLETON_ID],
@@ -246,6 +242,41 @@ class Catalog
         );
 
         RecordAuditEntry::execute($actor, 'catalog-settings.update', $setting, $before, $this->settingsSnapshot($setting));
+
+        return $setting;
+    }
+
+    /**
+     * The AI side of the Catalog: the token rate, the Trial's credits and the
+     * two model slots. One audit row for the four values; a save that changes
+     * nothing records no row.
+     *
+     * @param  array{tokens_per_credit: int, trial_ai_credits: int, text_model: string|null, image_model: string|null}  $values
+     */
+    public function saveAiSettings(array $values, string $actor): CatalogSetting
+    {
+        $current = CatalogSetting::current();
+        $before = $this->aiSettingsSnapshot($current);
+
+        $normalized = [
+            'tokens_per_credit' => (int) data_get($values, 'tokens_per_credit', $current->tokens_per_credit),
+            'trial_ai_credits' => (int) data_get($values, 'trial_ai_credits', $current->trial_ai_credits),
+            'text_model' => $this->nullableModel(data_get($values, 'text_model', $current->text_model)),
+            'image_model' => $this->nullableModel(data_get($values, 'image_model', $current->image_model)),
+        ];
+
+        $this->ensureTrialCreditsFitPlans($normalized['trial_ai_credits']);
+
+        if ($before === $normalized) {
+            return $current;
+        }
+
+        $setting = CatalogSetting::updateOrCreate(
+            ['id' => CatalogSetting::SINGLETON_ID],
+            $normalized,
+        );
+
+        RecordAuditEntry::execute($actor, 'ai-settings.update', $setting, $before, $this->aiSettingsSnapshot($setting));
 
         return $setting;
     }
@@ -616,10 +647,30 @@ class Catalog
     private function settingsSnapshot(CatalogSetting $setting): array
     {
         return [
-            'trial_days' => $setting->trial_days,
-            'tokens_per_credit' => $setting->tokens_per_credit,
-            'trial_ai_credits' => $setting->trial_ai_credits,
+            'trial_days' => (int) $setting->trial_days,
         ];
+    }
+
+    /**
+     * @return array{tokens_per_credit: int, trial_ai_credits: int, text_model: string|null, image_model: string|null}
+     */
+    private function aiSettingsSnapshot(CatalogSetting $setting): array
+    {
+        return [
+            'tokens_per_credit' => (int) $setting->tokens_per_credit,
+            'trial_ai_credits' => (int) $setting->trial_ai_credits,
+            'text_model' => $setting->text_model,
+            'image_model' => $setting->image_model,
+        ];
+    }
+
+    private function nullableModel(mixed $model): ?string
+    {
+        if (blank($model)) {
+            return null;
+        }
+
+        return (string) $model;
     }
 
     /**

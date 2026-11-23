@@ -80,9 +80,43 @@ prints them. `selling.sh down` removes the file.
 - `POST /internal/v1/plans/{uuid}/quota-cut-dry-run` (admin): `{ "quota_bytes": <int> }` in; answers
   `{ "quota_bytes", "owners": [{ "account_id", "owner_name", "owner_email", "used_bytes" }] }`, the Owners on that
   Plan, without their own override, whose Storage used is over the proposed Quota.
-- `GET` / `PATCH /internal/v1/catalog-settings` (admin): `trial_days`, `tokens_per_credit`, `trial_ai_credits`
-  (defaults 7, 150, 1,000); `GET` also returns `updated_at`. `trial_ai_credits` may not exceed any active Plan's
-  monthly credits, and a Plan's credits may not fall below it.
+- `GET` / `PATCH /internal/v1/catalog-settings` (admin): `trial_days` only (default 7); `GET` also returns
+  `updated_at`. The AI values moved to `GET` / `PATCH /internal/v1/ai/settings`, so each value has one writer.
+  `tokens_per_credit` and `trial_ai_credits` sent here are ignored, not saved.
+- `GET /internal/v1/ai/models` (admin): `{ "text": [...], "image": [...] }`, the live provider list filtered to
+  registry-priced models. A model is in `text` always and in `image` only when it accepts image input; an id the
+  registry does not price is absent. An item is `id`, `name`, `input_price_per_mtok`, `output_price_per_mtok`,
+  `accepts_image_input`. A provider failure, or a missing provider key, answers `502`.
+- `POST /internal/v1/ai/models/test` (admin): `{ "slot": "text"|"image", "model": "<id>" }`. One short real call
+  with that model (`"Reply with OK."`, 30s); no credit is spent, no ledger row and no admin alert. Answers
+  `{ "ok": true, "slot", "model" }`; a model the slot cannot use answers `422` with `model` validation, and a
+  failed call answers `422` `{ "message", "error" }`.
+- `GET /internal/v1/ai/settings` (admin): `tokens_per_credit`, `trial_ai_credits`, `text_model` and `image_model`
+  (effective values: the stored column, else the Config default), `key_configured`, `provider`, `cost` (the
+  worst-case table below) and `updated_at` (null until a row exists).
+- `PATCH /internal/v1/ai/settings` (admin): any of `tokens_per_credit`, `trial_ai_credits`, `text_model`,
+  `image_model` (null clears the slot back to the Config default) and `confirm`. A changed model runs one real
+  test call before anything is saved; a failed call answers `422` `{ "message", "error" }` and nothing is saved. A
+  change that pushes an active Plan past 10% of its discounted monthly price answers `422`
+  `{ "message", "requires_confirmation": true, "cost": {...} }`; send the same body with `"confirm": true` to
+  save. 200 returns the settings. One audit row `ai-settings.update` per real change; a no-op records nothing.
+  `trial_ai_credits` may not exceed the smallest active Plan's monthly credits.
+- `GET /internal/v1/ai/balances?zero=1|0` (admin): paginated per-Account rows, configured page size (25, never a
+  request `per_page`). `zero=1` keeps `remaining === 0`, `zero=0` keeps `remaining > 0`, absent keeps all. A row
+  is `account_id`, `account_name`, `owner` (`id`, `name`, `email`), `plan` (`id`, `slug`, `name`) or null,
+  `ai_credits_per_month` (override or null), `monthly_credits`, `used`, `remaining`, `renews_at`, `reset_at`.
+  The period is the Account's Trial or calendar month, via `AiCredits`.
+- `GET /internal/v1/ai/ledger` (admin): paginated `ai_credit_usages`, newest first. A row is `id`,
+  `account` (`id`, `name`, `owner` `{name, email}`), `user` (`id`, `name`, `email`) or null, `workspace`
+  (`id`, `name`) or null, `feature`, `model`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `credits`,
+  `list_cost_micros` and `created_at`. `list_cost_micros = round(prompt_tokens * input_price_per_mtok +
+  completion_tokens * output_price_per_mtok)` (micro-USD), null when the model is not in the registry.
+- The **cost table** (`cost` on the AI settings) is computed live: one row per active Plan, ordered `sort` then
+  `name`, with `id`, `slug`, `name`, `ai_credits_per_month`, `monthly_cents`, `discounted_monthly_cents`,
+  `worst_case_cents` (the whole allowance at the output price), `threshold_cents` (`intdiv` of the discounted
+  monthly price by 10) and `over_threshold` (the unrounded worst case passes 10%). Top level: `tokens_per_credit`,
+  `text_model`, `output_price_per_mtok`, `general_offer` (`id`, `slug`, `name`, or null) and a top-level
+  `over_threshold`.
 - `GET /internal/v1/offers` (admin): paginated, newest start first; `?search=` matches name or slug, `?reach=general|link`,
   `?ended=1|0`. A row has `id`, `slug`, `name`, `reach`, `discount` (`type`, `percent_off`, `amount_off`, `currency`,
   `duration`, `duration_in_months`, or null), `stripe_coupon_id`, `trial_days`, `starts_at`, `ends_at`,
@@ -126,6 +160,13 @@ $V/internal.sh POST /plans/<uuid>/archive --token admin
 $V/internal.sh POST /plans/<uuid>/quota-cut-dry-run --token admin --body '{"quota_bytes":536870912}'
 $V/internal.sh GET /catalog-settings --token admin
 $V/internal.sh PATCH /catalog-settings --token admin --body '{"trial_days":14}'
+$V/internal.sh GET /ai/models --token admin
+$V/internal.sh POST /ai/models/test --token admin --body '{"slot":"text","model":"claude-haiku-5-5"}'
+$V/internal.sh GET /ai/settings --token admin
+$V/internal.sh PATCH /ai/settings --token admin --body '{"tokens_per_credit":200}'
+$V/internal.sh PATCH /ai/settings --token admin --body '{"text_model":"claude-opus-5-5","confirm":true}'
+$V/internal.sh GET '/ai/balances?zero=1' --token admin
+$V/internal.sh GET /ai/ledger --token admin
 $V/internal.sh GET /availability --token admin
 $V/internal.sh PATCH /availability/platform:linkedin --token admin --body '{"enabled":false}'
 $V/internal.sh PATCH /availability/platform:linkedin --token admin --body '{"enabled":true}'
@@ -169,3 +210,17 @@ $V/internal.sh GET /health --token admin
   `operator.update` with the before/after values. A second `POST` ends the previous row and `/operator` answers
   exactly one `current` plus the previous row in `history`. A future `effective_from` answers 422; the site token
   answers 404.
+- A `PATCH /catalog-settings` with `tokens_per_credit` or `trial_ai_credits` returns 200 but changes neither: the
+  values are the AI settings' now, and `/audit-log` records `catalog-settings.update` with `trial_days` only.
+- `GET /ai/models` lists the registry models the live provider still offers, with prices; an unpriced id (for
+  example `claude-opus-4-5-20251101`) never appears. With the provider key removed it answers 502.
+- `POST /ai/models/test` with a real model answers 200 `{ "ok": true }` and writes no `ai_credit_usages` row;
+  a model the slot cannot use answers 422.
+- `GET /ai/settings` starts at `tokens_per_credit` 150, `trial_ai_credits` 1000, text and image `claude-haiku-5-5`
+  (or the Config defaults), and includes the cost table. A `PATCH` with `text_model` changed answers 200 and
+  `/audit-log` has one `ai-settings.update` with the four values; the same request replayed is a no-op.
+- A `PATCH` switching to a high-output model (e.g. `claude-opus-5-5`) answers 422 `requires_confirmation: true`
+  with the cost table and saves nothing; repeating it with `"confirm": true` saves and audits.
+- `GET /ai/balances` pages at 25 whatever `per_page` says; `?zero=1` shows only exhausted Accounts,
+  `?zero=0` only those with credits. `GET /ai/ledger` is newest first and `list_cost_micros` is exact (200 prompt
+  plus 100 completion on `claude-haiku-5-5` is 70). The site token answers 404 on both.
