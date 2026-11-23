@@ -20,6 +20,9 @@ declare(strict_types=1);
 use App\Actions\ApiKey\IssueApiKey;
 use App\Actions\Workspace\PurgeWorkspace;
 use App\Models\AccessToken;
+use App\Enums\User\Goal;
+use App\Enums\User\Persona;
+use App\Enums\User\PreviousSoftware;
 use App\Models\Account;
 use App\Models\SocialAccount;
 use App\Models\TrialAccount;
@@ -126,6 +129,7 @@ function describe(): ?array
         'channelPlatform' => $channel?->platform->value,
         'memberEmail' => MEMBER_EMAIL,
         'memberId' => $member?->id,
+        'deletionScheduledAt' => $owner->account?->deletion_scheduled_at?->toIso8601String(),
     ];
 }
 
@@ -263,6 +267,51 @@ if ($command === 'card') {
     );
 
     echo "card {$fingerprint} claimed for the fixture Account\n";
+    exit(0);
+}
+
+// Move the fixture Account onto the Lapsed path with a deletion clock <hours>
+// from now (negative = already due), so the lifecycle sweep can send emails and
+// the plan step can show the date. Also completes onboarding so /welcome/plan
+// renders instead of the persona step.
+if ($command === 'lifecycle') {
+    $hours = (int) ($argv[2] ?? 168);
+    $account = fixtureAccount();
+
+    if ($account === null || $account->owner === null) {
+        fwrite(STDERR, "no fixture: run fixture.sh up\n");
+        exit(1);
+    }
+
+    $account->owner->forceFill([
+        'persona' => Persona::Agency->value,
+        'goals' => [Goal::SaveTime->value],
+        'previous_software' => PreviousSoftware::Buffer->value,
+    ])->save();
+
+    $account->forceFill([
+        'first_paid_at' => now()->subMonth(),
+        'deletion_scheduled_at' => now()->addHours($hours),
+        'suspended_at' => null,
+        'suspension_reason' => null,
+    ])->save();
+
+    if (! $account->subscriptions()->exists()) {
+        $account->subscriptions()->create([
+            'type' => Account::SUBSCRIPTION_NAME,
+            'stripe_id' => 'sub_verify_lapsed',
+            'stripe_status' => 'active',
+            'stripe_price' => 'price_verify_lapsed',
+            'ends_at' => now()->subDay(),
+        ]);
+    }
+
+    echo json_encode([
+        'accountId' => $account->id,
+        'deletionScheduledAt' => $account->fresh()->deletion_scheduled_at?->toIso8601String(),
+        'ownerEmail' => $account->owner->email,
+        'memberEmail' => MEMBER_EMAIL,
+    ], JSON_PRETTY_PRINT), PHP_EOL;
     exit(0);
 }
 

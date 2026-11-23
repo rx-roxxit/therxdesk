@@ -1,0 +1,26 @@
+<x-main>
+  <x-message authenticated="true">
+    <x-heading>
+      @{{ __('rxdesk.lifecycle.deletion_in_1_day.heading') }}
+    </x-heading>
+
+    <p class="m-0 leading-6">
+      @{{ __('rxdesk.lifecycle.deletion_in_1_day.body', ['date' => $deletionDate]) }}
+    </p>
+
+    <p class="m-0 mt-4 leading-6">
+      @{{ __('rxdesk.lifecycle.deletion_in_1_day.export') }}
+    </p>
+
+    <x-spacer height="24px" />
+
+    <x-button href="@{{ $planUrl }}">
+      @{{ __('rxdesk.lifecycle.deletion_in_1_day.button') }}
+    </x-button>
+
+    <p class="m-0 mt-6 leading-6">
+      @{{ __('rxdesk.lifecycle.deletion_in_1_day.support') }}
+      <a href="@{{ $supportUrl }}">@{{ __('rxdesk.lifecycle.deletion_in_1_day.support_link') }}</a>
+    </p>
+  </x-message>
+</x-main>

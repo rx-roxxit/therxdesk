@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Internal\AccountController;
+use App\Http\Controllers\Internal\AccountDeletionController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\CatalogSettingController;
@@ -41,6 +42,10 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::post('accounts/{account}/suspension/lift', [AccountSuspensionController::class, 'lift'])
         ->whereUuid('account')
         ->name('internal.accounts.suspension.lift');
+
+    Route::post('accounts/{account}/delete', [AccountDeletionController::class, 'store'])
+        ->whereUuid('account')
+        ->name('internal.accounts.delete');
 
     Route::get('audit-log', [AuditLogController::class, 'index'])
         ->name('internal.audit-log.index');

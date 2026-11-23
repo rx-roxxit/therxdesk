@@ -137,6 +137,25 @@ route answers `402` with `Account suspended, contact support.` The publishing ga
 holds the full sequence (the gate journeys need `complimentary.sh up` for access, and a suspend inside the 5-minute
 scheduling lead).
 
+## Lifecycle emails and the deletion clock
+
+```sh
+$V/fixture.sh lifecycle 168   # Lapsed fixture, deletion clock 7 days out
+$V/lifecycle.sh sweep         # send the due emails and flush the queue
+$V/lifecycle.sh emails        # the Owner and Member mail in Mailpit
+$V/lifecycle.sh export        # rxdesk:export --dry-run
+$V/lifecycle.sh delete-dry    # rxdesk:delete --dry-run
+$V/lifecycle.sh delete        # rxdesk:delete for the fixture only
+$V/lifecycle.sh show          # access_state, including deletion_scheduled_at
+```
+
+`fixture.sh lifecycle <hours>` puts the fixture Owner on the Lapsed path (completed onboarding, a cancelled
+subscription, `first_paid_at`) with `accounts.deletion_scheduled_at` that many hours out (`-1` is already due).
+`lifecycle.sh sweep` runs `rxdesk:lifecycle --account=<fixture>` and then `queue:work --stop-when-empty`, because the
+dev stack has no worker and the emails are queued. Both CLI commands take `--account` and `--dry-run`, and are off
+while self-hosted. `drive.sh lapsed-deletion` proves the plan step shows the date. `features/lifecycle-deletion.md`
+has the full sequence and the database rows to expect.
+
 ## Media on R2
 
 ```sh

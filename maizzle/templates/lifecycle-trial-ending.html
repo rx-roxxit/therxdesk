@@ -1,0 +1,25 @@
+<x-main>
+  <x-message authenticated="true">
+    <x-heading>
+      @{{ __('rxdesk.lifecycle.trial_ending.heading') }}
+    </x-heading>
+
+    <p class="m-0 leading-6">
+      @{{ __('rxdesk.lifecycle.trial_ending.body', ['date' => $chargeDate]) }}
+    </p>
+
+    <p class="m-0 mt-4 leading-6 font-semibold text-foreground">
+      @{{ __('rxdesk.lifecycle.trial_ending.amount', ['amount' => $amount]) }}
+    </p>
+
+    <x-spacer height="24px" />
+
+    <x-button href="@{{ $billingUrl }}">
+      @{{ __('rxdesk.lifecycle.trial_ending.button') }}
+    </x-button>
+
+    <p class="m-0 mt-6 leading-6">
+      @{{ __('rxdesk.lifecycle.trial_ending.cancel') }}
+    </p>
+  </x-message>
+</x-main>

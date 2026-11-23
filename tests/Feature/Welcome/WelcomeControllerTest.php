@@ -285,6 +285,38 @@ test('an account that had a trial gets no new one', function (Closure $setup) {
     ])],
 ]);
 
+test('a lapsed account sees the date its data will be deleted', function () {
+    completeWelcomeThroughSoftware($this->user);
+
+    $account = $this->user->account;
+    $account->forceFill(['first_paid_at' => now()->subMonth()])->save();
+    $account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_lapsed',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_lapsed',
+        'ends_at' => now()->subDay(),
+    ]);
+    $account->forceFill(['deletion_scheduled_at' => now()->addDays(20)])->save();
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('lapsedDeletion.date', $account->fresh()->deletion_scheduled_at->toIso8601String())
+        );
+});
+
+test('a never-paid signup gets no deletion line', function () {
+    completeWelcomeThroughSoftware($this->user);
+    $this->user->account->forceFill(['deletion_scheduled_at' => now()->addDays(20)])->save();
+
+    $this->actingAs($this->user->fresh())
+        ->get(route('app.welcome.plan'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('lapsedDeletion', null));
+});
+
 test('plan sends a claimed trial offer only to an account that may use it', function (Closure $setup, bool $claims, bool $offered) {
     $trial = Offer::factory()->freeTrial()->create(['slug' => 'long-trial']);
     completeWelcomeThroughSoftware($this->user);

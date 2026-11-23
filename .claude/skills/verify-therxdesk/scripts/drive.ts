@@ -330,6 +330,7 @@ const SELLING_JOURNEYS = [
     'payment-retry',
     'past-due',
     'lapsed',
+    'lapsed-deletion',
     'media-on-r2',
     'suspension',
     'gate-schedule',
@@ -1885,6 +1886,33 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         const offer = await page.locator(tid('@welcome-plan-offer')).count();
         run.check('the plan step shows no Offer banner', offer === 0, offer);
+    },
+    'lapsed-deletion': async (run) => {
+        const { page } = run;
+
+        await signIn(run);
+        await page.waitForURL((url) => url.pathname === '/welcome/plan', {
+            timeout: 30_000,
+        });
+        await page.locator(tid('@plan-card-mini')).waitFor();
+        await page.waitForLoadState('networkidle');
+        await run.step('lapsed-deletion-plan');
+
+        const alert = page.locator(tid('@welcome-plan-lapsed-deletion'));
+        const visible = await alert.isVisible();
+
+        run.check(
+            'the Lapsed plan step shows the deletion date',
+            visible,
+            visible,
+        );
+
+        const text = visible ? await alert.innerText() : '';
+        run.check(
+            'the deletion line names a date and says unless you subscribe again',
+            /deleted on .+ unless/i.test(text),
+            text,
+        );
     },
 
     /**
