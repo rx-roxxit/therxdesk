@@ -43,7 +43,7 @@ prints them. `selling.sh down` removes the file.
   `switched_on` and `effective`; a missing row counts as switched on, and a network is effective only while it is
   installed (env switch and credentials) and switched on.
 - `PATCH /internal/v1/availability/{key}` (admin): `{ "enabled": bool }`, answers the row object. An unknown key is
-  `404`; switching on a network the server is not installed answers `422`. Every PATCH records
+  `404`; switching on a network the server has not installed answers `422`. Every PATCH records
   `availability.enable` or `availability.disable` (even when the value did not change), with `target_type`
   `availability_switches`, `target_id` the row's id and `before` / `after` holding `{ "enabled": bool }`. The site
   token answers `404`.

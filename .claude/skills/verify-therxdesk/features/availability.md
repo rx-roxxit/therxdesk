@@ -74,8 +74,11 @@ CHANNEL=$($V/fixture.sh show | python3 -I -c 'import json,sys; print(json.load(s
 $V/api.sh POST /posts --body "{\"content\":\"Availability refusal\",\"status\":\"scheduled\",\"scheduled_at\":\"$(date -u -d '+2 days' +%Y-%m-%dT%H:%M:%SZ)\",\"social_account_id\":\"$CHANNEL\",\"content_type\":\"linkedin_post\"}"
 #   HTTP 422, errors.social_account_id.0 = "LinkedIn is unavailable right now. Save this post as a draft, or try again once it's back."
 
-# 4. When the scheduled post's time comes, the gate blocks it.
-( source "$V/env.sh"; app_run php artisan posts:process-scheduled )
+# 4. Make the post due (or wait for its time), then let the scheduler try it:
+#    the gate blocks it before any network call.
+( source "$V/env.sh"
+  app_run php artisan tinker --execute "App\\Models\\Post::whereKey('$BLOCKED')->update(['scheduled_at' => now()->subMinute()]);"
+  app_run php artisan posts:process-scheduled )
 $V/db.sh "select status, publish_status, publish_block_reason from posts where id = '$BLOCKED'"
 #   status | publish_status | publish_block_reason
 #   failed | failed         | unavailable
@@ -110,7 +113,8 @@ $V/fixture.sh down
 ## Gotchas
 
 - **Switch off within the scheduled lead** (8 minutes by default in the commands above) or the live scheduler publishes
-  the post before the switch lands. If the window is missed, switch back on, run `gate-schedule` again and switch off.
+  the post before the switch lands. Step 4 moves `scheduled_at` back so the scheduler acts at once; the alternative is
+  waiting for the scheduled time. If the window is missed, switch back on, run `gate-schedule` again and switch off.
 - **The fixture is LinkedIn.** The connect card and `/connect/linkedin` stay available while *either* variant is on,
   so the host sequence switches off both `platform:linkedin` and `platform:linkedin-page`. The Profile switch alone is
   what refuses a LinkedIn post; the Page switch is what hides the card.

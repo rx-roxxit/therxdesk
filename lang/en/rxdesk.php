@@ -199,14 +199,14 @@ return [
         'support_action' => 'Email support',
     ],
     'availability' => [
-        'schedule_refused' => ':network is unavailable right now. Save this post as a draft, or try again once it\'s back.',
-        'banner' => ':network is unavailable right now. You can save drafts, but this channel won\'t post until it\'s back.',
+        'schedule_refused' => ':network is unavailable right now. Save this post as a draft, or try again once it’s back.',
+        'banner' => ':network is unavailable right now. You can save drafts, but this channel won’t post until it’s back.',
     ],
     'publishing_block' => [
         'title' => 'Why it wasn’t published',
         'lapsed' => 'Your subscription ended, so this post was not published. Subscribe again, then try again.',
         'suspended' => 'Your account is suspended, so this post was not published. Contact support, then try again.',
-        'unavailable' => ':network is unavailable right now. Try again once it\'s back.',
+        'unavailable' => ':network is unavailable right now. Try again once it’s back.',
         'retry' => 'Try again',
         'retry_started' => 'Retrying the post.',
         'retry_failed' => 'Couldn’t retry the post. Try again.',

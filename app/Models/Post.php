@@ -708,8 +708,9 @@ class Post extends Model
     }
 
     /**
-     * The Account's access stopped the post before any network call. The reason
-     * is a code, translated only when shown.
+     * The publishing gate stopped the post before any network call: the
+     * network's Availability switch or the Account's access. The reason is a
+     * code, translated only when shown.
      */
     public function markPublicationBlocked(AccessDenial $reason): void
     {
