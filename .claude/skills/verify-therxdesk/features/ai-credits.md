@@ -41,8 +41,9 @@ override and this month's usage at zero). Sign in as the fixture Owner, open **C
 
 ## Gotchas
 
-- The dev stack has no AI provider key, so the journey stops at the gate: no model call, no ledger row. To watch a
-  real debit, add `ANTHROPIC_API_KEY` to the dev stack and run the same call with credits left.
+- Without an AI provider key, the journey stops at the gate: no model call, no ledger row. With a key configured
+  (`AI_TEXT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_TEXT_MODEL`), one real call writes a ledger row and
+  moves the balance by `ceil((prompt + completion) / tokens_per_credit)`.
 - The ledger rows are seeded by `ai-credits.sh` because the running app cannot make a metered call without a
   provider key; the override and reset themselves always go through `/internal/v1`.
 - The month is the calendar month in UTC for everyone; a Trial gets the Catalog's fixed `trial_ai_credits` for its
