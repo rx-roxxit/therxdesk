@@ -61,6 +61,9 @@ services:
       RXDESK_SUPPORT_EMAIL: ${RXDESK_SUPPORT_EMAIL:-support@therxdesk.com}
       RXDESK_HEARTBEAT_URL: ${RXDESK_HEARTBEAT_URL:-}
       NIGHTWATCH_WEBHOOK_SECRET: ${NIGHTWATCH_WEBHOOK_SECRET:-}
+      # Cloudflare Turnstile on /register; blank keys skip the check.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       # Terms and Privacy live on the website, not in the app.
       LEGAL_TERMS_URL: https://${SITE_DOMAIN:?set SITE_DOMAIN}/terms
       LEGAL_PRIVACY_URL: https://${SITE_DOMAIN:?set SITE_DOMAIN}/privacy

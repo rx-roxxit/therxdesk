@@ -31,12 +31,15 @@ class RegisteredUserController extends Controller
         $invite = Invite::fromId(is_string($inviteId) ? $inviteId : null);
         $signupsClosed = ServiceSwitch::newSignupsClosed() && $invite === null;
 
+        $turnstileSiteKey = config('rxdesk.turnstile.site_key');
+
         return Inertia::render('auth/Register', [
             'email' => $request->query('email'),
             'invite' => $signupsClosed ? null : $invite?->id,
             'signupsClosed' => $signupsClosed,
             'passwordRequirements' => PasswordRequirements::checklist(),
             'countries' => config('trypost.self_hosted') ? null : Countries::ISO,
+            'turnstileSiteKey' => filled($turnstileSiteKey) ? $turnstileSiteKey : null,
         ]);
     }
 

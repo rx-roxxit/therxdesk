@@ -163,6 +163,62 @@ const guestEmail = (): string => {
 };
 
 /**
+ * Wait for the network to settle. The Turnstile widget keeps a connection
+ * open, so `networkidle` can time out on /register.
+ */
+const settle = async (page: Page): Promise<void> => {
+    await page.waitForLoadState('networkidle').catch(() => null);
+};
+
+/**
+ * POST /register from a fresh guest context until the IP throttle answers
+ * 429. The Turnstile token is deliberately invalid, so no Owner is created;
+ * the throttle counts the POST before validation runs.
+ */
+const floodRegister = async (run: Run): Promise<number[]> => {
+    const browser = run.page.context().browser();
+
+    if (browser === null) {
+        throw new Error('no browser to open a guest context');
+    }
+
+    const guest = await browser.newContext();
+
+    try {
+        const page = await guest.newPage();
+
+        await page.goto(`${run.baseUrl}/register`);
+
+        const csrf = await page
+            .locator('meta[name="csrf-token"]')
+            .getAttribute('content');
+        const statuses: number[] = [];
+
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const response = await guest.request.post(
+                `${run.baseUrl}/register`,
+                {
+                    // Incomplete on purpose: the throttle counts the POST
+                    // before validation, and no Owner can be created.
+                    form: {
+                        name: 'Throttle Check',
+                        email: `verify-signup-throttle-${Date.now()}-${attempt}@example.com`,
+                    },
+                    headers: { 'X-CSRF-TOKEN': csrf ?? '' },
+                    maxRedirects: 0,
+                },
+            );
+
+            statuses.push(response.status());
+        }
+
+        return statuses;
+    } finally {
+        await guest.close();
+    }
+};
+
+/**
  * The mode php-fpm serves, from the `selfHosted` Inertia prop of the page
  * open now (shared on every page, the login page included).
  */
@@ -705,7 +761,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         await page.goto(`${run.baseUrl}/register`);
         await page.locator(tid('@register-user-button')).waitFor();
-        await page.waitForLoadState('networkidle');
+        await settle(page);
         await run.step('register-form');
 
         const preview = page.locator(tid('@auth-preview-image'));
@@ -762,6 +818,35 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             await codeCopy.count(),
         );
 
+        const turnstile = page.locator(tid('@register-turnstile'));
+
+        await page
+            .waitForFunction(
+                () => {
+                    const input = document.querySelector<HTMLInputElement>(
+                        'input[name="cf-turnstile-response"]',
+                    );
+
+                    return (input?.value ?? '').length > 0;
+                },
+                { timeout: 20_000 },
+            )
+            .catch(() => null);
+
+        const turnstileToken = await page
+            .locator('input[name="cf-turnstile-response"]')
+            .inputValue()
+            .catch(() => '');
+
+        run.check(
+            'the Turnstile widget renders with the dev test key and issues a token',
+            (await turnstile.isVisible()) && turnstileToken.length > 0,
+            {
+                visible: await turnstile.isVisible(),
+                tokenLength: turnstileToken.length,
+            },
+        );
+
         await page.locator(tid('@register-name')).fill('Verify Signup');
         await page.locator(tid('@register-email')).fill(email);
         await page
@@ -798,6 +883,16 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             hasActiveSubscription === false,
             hasActiveSubscription,
         );
+
+        const floodStatuses = await floodRegister(run);
+
+        run.note('registerThrottleStatuses', floodStatuses);
+        run.check(
+            'the register IP throttle answers 429 after the limit',
+            floodStatuses[floodStatuses.length - 1] === 429 &&
+                floodStatuses.includes(429),
+            floodStatuses,
+        );
     },
 
     /** features/registration.md (the EU/UK block) */
@@ -809,7 +904,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
 
         await page.goto(`${run.baseUrl}/register`);
         await page.locator(tid('@register-user-button')).waitFor();
-        await page.waitForLoadState('networkidle');
+        await settle(page);
         await run.step('blocked-country-form');
 
         await page.locator(tid('@register-name')).fill('Verify Blocked');
@@ -831,7 +926,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             .waitFor({ timeout: 15_000 })
             .catch(() => null);
 
-        await page.waitForLoadState('networkidle');
+        await settle(page);
         await run.step('blocked-country-refused');
 
         const path = new URL(page.url()).pathname;

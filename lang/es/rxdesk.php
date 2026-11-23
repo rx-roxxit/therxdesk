@@ -95,6 +95,9 @@ return [
     'signup' => [
         'closed' => 'Las inscripciones están cerradas por ahora.',
     ],
+    'turnstile' => [
+        'failed' => 'Completa la verificación de seguridad y vuelve a intentarlo.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',

@@ -10,6 +10,7 @@ use App\Enums\User\TimeFormat;
 use App\Enums\User\WeekStart;
 use App\Models\Invite;
 use App\Models\User;
+use App\Rules\TurnstileToken;
 use App\Support\Billing\BlockedCountries;
 use App\Support\Countries;
 use Closure;
@@ -37,6 +38,12 @@ class RegisterRequest extends FormRequest
      */
     public function rules(): array
     {
+        $turnstileRules = [new TurnstileToken($this->ip())];
+
+        if (filled(config('rxdesk.turnstile.secret_key'))) {
+            array_unshift($turnstileRules, 'required');
+        }
+
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -45,6 +52,7 @@ class RegisterRequest extends FormRequest
             'timezone' => ['nullable', 'string'],
             'week_starts_on' => ['nullable', Rule::enum(WeekStart::class)],
             'time_format' => ['nullable', Rule::enum(TimeFormat::class)],
+            'cf-turnstile-response' => $turnstileRules,
         ];
 
         if (config('trypost.self_hosted')) {
@@ -66,6 +74,19 @@ class RegisterRequest extends FormRequest
         ];
 
         return $rules;
+    }
+
+    /**
+     * The missing field is the widget's own refusal, so it says the same
+     * thing as an invalid token.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'cf-turnstile-response.required' => __('rxdesk.turnstile.failed'),
+        ];
     }
 
     protected function prepareForValidation(): void

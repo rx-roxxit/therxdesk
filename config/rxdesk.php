@@ -37,6 +37,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Cloudflare Turnstile on /register
+    |--------------------------------------------------------------------------
+    |
+    | The signup abuse guard. The site key is public and handed to the
+    | register page; the secret stays on the server and verifies the token
+    | the widget issues. Both blank skips the check, which is the self-hosted
+    | and dev default.
+    |
+    */
+
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage (Quota and Disk guard)
     |--------------------------------------------------------------------------
     |

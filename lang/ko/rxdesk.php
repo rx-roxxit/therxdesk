@@ -95,6 +95,9 @@ return [
     'signup' => [
         'closed' => '지금은 신규 가입을 받지 않습니다.',
     ],
+    'turnstile' => [
+        'failed' => '보안 확인을 완료한 후 다시 시도하세요.',
+    ],
     'video_policy' => [
         'heading' => 'Video policy',
         'description' => 'One hour after a post publishes, keep its videos on the server, delete them, or back them up to your Google Drive and then delete them. Images are always kept.',
