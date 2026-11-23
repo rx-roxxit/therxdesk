@@ -163,27 +163,59 @@ class RefundAndCancel
 
     private function refund(StripeInvoice $invoice, int $amountPaid): StripeRefund
     {
-        $paymentIntent = $this->stripeId($invoice->payment_intent);
+        // A newer Stripe API drops `payment_intent` and `charge` from the
+        // invoice itself; the payment it was settled by lives in `payments`.
+        $expanded = Cashier::stripe()->invoices->retrieve($invoice->id, ['expand' => ['payments']]);
+        $payment = $this->paymentReference($expanded);
 
-        if ($paymentIntent !== null) {
-            return Cashier::stripe()->refunds->create([
-                'payment_intent' => $paymentIntent,
-                'amount' => $amountPaid,
-            ]);
-        }
-
-        $charge = $this->stripeId($invoice->charge);
-
-        if ($charge === null) {
+        if ($payment === null) {
             throw ValidationException::withMessages([
                 'account' => 'This charge has no refundable payment.',
             ]);
         }
 
         return Cashier::stripe()->refunds->create([
-            'charge' => $charge,
+            ...$payment,
             'amount' => $amountPaid,
         ]);
+    }
+
+    /**
+     * The original payment method of a paid invoice, as the parameter a Stripe
+     * refund takes: its payment intent, else its charge.
+     *
+     * @return array{payment_intent: string}|array{charge: string}|null
+     */
+    private function paymentReference(StripeInvoice $invoice): ?array
+    {
+        $attributes = $invoice->toArray();
+
+        foreach (data_get($attributes, 'payments.data', []) as $entry) {
+            $reference = $this->reference(data_get($entry, 'payment', []));
+
+            if ($reference !== null) {
+                return $reference;
+            }
+        }
+
+        return $this->reference($attributes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payment
+     * @return array{payment_intent: string}|array{charge: string}|null
+     */
+    private function reference(array $payment): ?array
+    {
+        $paymentIntent = $this->stripeId(data_get($payment, 'payment_intent'));
+
+        if ($paymentIntent !== null) {
+            return ['payment_intent' => $paymentIntent];
+        }
+
+        $charge = $this->stripeId(data_get($payment, 'charge'));
+
+        return $charge === null ? null : ['charge' => $charge];
     }
 
     private function cancelAtStripe(Subscription $subscription): void

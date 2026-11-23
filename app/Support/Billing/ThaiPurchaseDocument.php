@@ -18,9 +18,10 @@ use Illuminate\Support\Number;
  * copy in the product (the UI ships 16 other locales), so its text lives here,
  * not in `rxdesk.php`.
  *
- * It reads the current Operator (the Thai legal name and address) when it is
- * built, so changing the Operator changes the document. Null when the Account
- * was billed outside Thailand, so every other buyer gets nothing.
+ * It reads the current Operator (the Thai legal name and address) and the
+ * Account's settled subscription when it is built, so changing the Operator
+ * changes the document. Null when the Account was billed outside Thailand, so
+ * every other buyer gets nothing.
  */
 final class ThaiPurchaseDocument
 {
@@ -56,7 +57,6 @@ final class ThaiPurchaseDocument
         $onTrial = $subscription?->onTrial() ?? false;
         $serviceStart = $onTrial ? self::serviceStart($subscription, $purchaseAt) : $purchaseAt;
         $firstChargeAt = $onTrial ? self::firstChargeAt($subscription, $serviceStart) : $purchaseAt;
-        $price = self::priceAfterTrial($account, $subscription);
 
         return [
             'title' => 'เอกสารการซื้อสินค้าและบริการ',
@@ -66,7 +66,7 @@ final class ThaiPurchaseDocument
                 ['label' => 'ผู้ซื้อ', 'value' => self::buyerName($account)],
                 ['label' => 'วันที่ซื้อ', 'value' => self::thaiDate($purchaseAt)],
                 ['label' => 'วันที่เริ่มให้บริการ', 'value' => self::thaiDate($serviceStart)],
-                ['label' => 'ราคาหลังสิ้นสุดระยะทดลองใช้', 'value' => $price],
+                ['label' => 'ราคาหลังสิ้นสุดระยะทดลองใช้', 'value' => self::priceAfterTrial($account, $subscription)],
                 ['label' => 'วันที่เรียกเก็บเงินครั้งแรก', 'value' => self::thaiDate($firstChargeAt)],
             ],
             'cancellation' => self::CANCELLATION_TEXT,

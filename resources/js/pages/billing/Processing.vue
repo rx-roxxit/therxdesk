@@ -152,7 +152,7 @@ onMounted(() => {
             </dl>
 
             <p
-                class="rounded-lg bg-muted p-3 text-sm leading-6 font-semibold text-foreground"
+                class="mt-1 text-sm leading-6 font-bold text-foreground"
                 data-testid="thai-purchase-document-cancellation"
             >
                 {{ purchaseDocument.cancellation }}

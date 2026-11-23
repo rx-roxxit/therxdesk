@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Billing\Interval;
+use App\Jobs\Billing\SendThaiPurchaseDocument;
 use App\Listeners\StripeCheckoutSessionListener;
 use App\Mail\ThaiPurchaseDocumentMail;
 use App\Models\Account;
@@ -11,6 +12,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Support\Billing\ThaiPurchaseDocument;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Cashier\Events\WebhookReceived;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\ClientInterface;
@@ -129,6 +131,9 @@ function fakeThaiStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice =
                     'id' => 'sub_thai',
                     'object' => 'subscription',
                     'status' => $this->subscriptionStatus,
+                    'trial_start' => $this->subscriptionStatus === 'trialing' ? $this->paidAt : null,
+                    'trial_end' => $this->subscriptionStatus === 'trialing' ? $this->paidAt + 604800 : null,
+                    'items' => ['data' => [['price' => ['id' => 'price_thai_monthly']]]],
                 ]), 200, []];
             }
 
@@ -157,15 +162,12 @@ afterEach(function () {
     ApiRequestor::setHttpClient(null);
 });
 
-test('a Thai checkout records its facts and sends the purchase document once per session', function () {
-    Mail::fake();
+test('a Thai checkout records its facts and queues the purchase document once per session', function () {
+    Queue::fake();
     recordThaiOperator();
     $account = thaiCheckoutAccount();
 
     (new StripeCheckoutSessionListener)->handle(new WebhookReceived(thaiCheckoutPayload()));
-    (new StripeCheckoutSessionListener)->handle(new WebhookReceived(thaiCheckoutPayload([
-        'id' => 'evt_thai_checkout_redelivered',
-    ])));
 
     $account = $account->fresh();
 
@@ -173,11 +175,29 @@ test('a Thai checkout records its facts and sends the purchase document once per
         ->and($account->billing_name)->toBe('Somchai Jaidee')
         ->and($account->checkout_completed_at)->not->toBeNull();
 
+    Queue::assertPushed(SendThaiPurchaseDocument::class, function (SendThaiPurchaseDocument $job) use ($account): bool {
+        return $job->accountId === $account->id && $job->sessionId === 'cs_thai';
+    });
+});
+
+test('the purchase document is sent once per checkout session', function () {
+    Mail::fake();
+    recordThaiOperator();
+    $account = thaiCheckoutAccount();
+
+    (new SendThaiPurchaseDocument($account->id, 'cs_thai'))->handle();
+    (new SendThaiPurchaseDocument($account->id, 'cs_thai'))->handle();
+
+    Mail::assertQueued(ThaiPurchaseDocumentMail::class, function (ThaiPurchaseDocumentMail $mail): bool {
+        return $mail->document['rows'][0]['value'] === 'บริษัท ตัวอย่าง จำกัด'
+            && $mail->document['rows'][5]['value'] === '$11.90 ต่อเดือน';
+    });
+
     Mail::assertQueued(ThaiPurchaseDocumentMail::class, 1);
 });
 
-test('a checkout billed outside Thailand records its facts and sends no document', function () {
-    Mail::fake();
+test('a checkout billed outside Thailand records its facts and queues no document', function () {
+    Queue::fake();
     recordThaiOperator();
     $account = thaiCheckoutAccount('US');
 
@@ -187,11 +207,11 @@ test('a checkout billed outside Thailand records its facts and sends no document
 
     expect($account->fresh()->billing_country)->toBe('US');
 
-    Mail::assertNothingQueued();
+    Queue::assertNothingPushed();
 });
 
 test('an older redelivery never replaces newer checkout facts', function () {
-    Mail::fake();
+    Queue::fake();
     recordThaiOperator();
     $account = thaiCheckoutAccount();
 
@@ -215,7 +235,6 @@ test('an older redelivery never replaces newer checkout facts', function () {
 });
 
 test('a blocked checkout still records the facts before it cancels', function () {
-    Mail::fake();
     recordThaiOperator();
     $account = thaiCheckoutAccount('TH');
     $stripe = fakeThaiStripe(now()->timestamp, subscriptionStatus: 'trialing');

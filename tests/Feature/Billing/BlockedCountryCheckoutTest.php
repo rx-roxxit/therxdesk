@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Cashier\Events\WebhookReceived;
 use Stripe\ApiRequestor;
 use Stripe\Exception\ApiErrorException;
@@ -120,6 +121,7 @@ test('a completed checkout billed to a blocked country records the facts and can
 });
 
 test('an allowed billing country is a no-op', function () {
+    Queue::fake();
     blockedCheckoutAccount('TH');
     $stripe = fakeCheckoutStripe();
 

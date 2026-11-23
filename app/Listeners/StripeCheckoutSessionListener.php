@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
-use App\Mail\ThaiPurchaseDocumentMail;
+use App\Jobs\Billing\SendThaiPurchaseDocument;
 use App\Models\Account;
 use App\Support\Billing\BlockedCountries;
 use App\Support\Billing\StripeValue;
 use App\Support\Billing\ThaiPurchaseDocument;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Events\WebhookReceived;
@@ -130,8 +129,9 @@ class StripeCheckoutSessionListener
     }
 
     /**
-     * The order-confirmation email a Thai checkout gets, once per Checkout
-     * Session. The claim is released if queuing fails, so a retry still sends.
+     * Queues the order-confirmation email a Thai checkout gets. It is sent a
+     * few seconds later so the subscription webhook has settled the Plan, its
+     * price and the Trial's dates; the job claims the Session so it sends once.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -147,26 +147,8 @@ class StripeCheckoutSessionListener
             return;
         }
 
-        $document = ThaiPurchaseDocument::for($account);
-        $owner = $account->owner;
-
-        if ($document === null || $owner === null) {
-            return;
-        }
-
-        $claimKey = "rxdesk:thai_purchase_document:{$sessionId}";
-
-        if (! Cache::add($claimKey, true, now()->addDays(30))) {
-            return;
-        }
-
-        try {
-            Mail::to($owner)->send(new ThaiPurchaseDocumentMail($document));
-        } catch (Throwable $e) {
-            Cache::forget($claimKey);
-
-            throw $e;
-        }
+        SendThaiPurchaseDocument::dispatch($account->id, $sessionId)
+            ->delay(now()->addSeconds(20));
     }
 
     private function recordBlock(Account $account, string $country, mixed $paymentStatus): void

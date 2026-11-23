@@ -48,6 +48,27 @@ function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice
             $verb = strtoupper((string) $method);
             $this->requests[] = ['method' => $verb, 'url' => $absUrl, 'params' => $params];
 
+            if ($verb === 'GET' && preg_match('#/v1/invoices/(in_[^/?]+)#', $absUrl, $matches) === 1) {
+                return [json_encode([
+                    'id' => $matches[1],
+                    'object' => 'invoice',
+                    'customer' => 'cus_thai',
+                    'status' => 'paid',
+                    'amount_paid' => $this->amountPaid,
+                    'currency' => 'usd',
+                    'payments' => [
+                        'object' => 'list',
+                        'has_more' => false,
+                        'data' => [[
+                            'id' => 'inpay_thai',
+                            'object' => 'invoice_payment',
+                            'amount_paid' => $this->amountPaid,
+                            'payment' => ['payment_intent' => 'pi_thai', 'type' => 'payment_intent'],
+                        ]],
+                    ],
+                ]), 200, []];
+            }
+
             if ($verb === 'GET' && str_contains($absUrl, '/v1/invoices')) {
                 return [json_encode([
                     'object' => 'list',
