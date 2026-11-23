@@ -198,10 +198,15 @@ return [
         'auto' => 'Esta página se actualiza automáticamente: no hace falta recargar.',
         'support_action' => 'Escribir a soporte',
     ],
+    'availability' => [
+        'schedule_refused' => ':network no está disponible ahora mismo. Guarda esta publicación como borrador o inténtalo de nuevo cuando vuelva.',
+        'banner' => ':network no está disponible ahora mismo. Puedes guardar borradores, pero este canal no publicará hasta que vuelva.',
+    ],
     'publishing_block' => [
         'title' => 'Por qué no se publicó',
         'lapsed' => 'Tu suscripción terminó, así que esta publicación no se publicó. Vuelve a suscribirte y luego inténtalo de nuevo.',
         'suspended' => 'Tu cuenta está suspendida, así que esta publicación no se publicó. Contacta con soporte y luego inténtalo de nuevo.',
+        'unavailable' => ':network no está disponible ahora mismo. Inténtalo de nuevo cuando vuelva.',
         'retry' => 'Reintentar',
         'retry_started' => 'Reintentando la publicación.',
         'retry_failed' => 'No se pudo reintentar la publicación. Inténtalo de nuevo.',

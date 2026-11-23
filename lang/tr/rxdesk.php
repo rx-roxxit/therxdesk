@@ -198,10 +198,15 @@ return [
         'auto' => 'Bu sayfa otomatik olarak güncellenir — yenilemenize gerek yok.',
         'support_action' => 'Destek ekibine e-posta',
     ],
+    'availability' => [
+        'schedule_refused' => ':network şu anda kullanılamıyor. Bu gönderiyi taslak olarak kaydedin veya ağ yeniden kullanılabilir olduğunda tekrar deneyin.',
+        'banner' => ':network şu anda kullanılamıyor. Taslak kaydedebilirsiniz, ancak bu kanal ağ geri gelene kadar yayımlamaz.',
+    ],
     'publishing_block' => [
         'title' => 'Neden yayımlanmadı',
         'lapsed' => 'Aboneliğiniz sona erdiği için bu gönderi yayımlanmadı. Yeniden abone olun ve ardından tekrar deneyin.',
         'suspended' => 'Hesabınız askıya alındığı için bu gönderi yayımlanmadı. Destek ekibine ulaşın ve ardından tekrar deneyin.',
+        'unavailable' => ':network şu anda kullanılamıyor. Ağ geri geldiğinde tekrar deneyin.',
         'retry' => 'Tekrar dene',
         'retry_started' => 'Gönderi yeniden yayımlanıyor.',
         'retry_failed' => 'Gönderi yeniden yayımlanamadı. Tekrar deneyin.',

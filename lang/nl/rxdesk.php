@@ -198,10 +198,15 @@ return [
         'auto' => 'Deze pagina vernieuwt automatisch — verversen is niet nodig.',
         'support_action' => 'Support mailen',
     ],
+    'availability' => [
+        'schedule_refused' => ':network is nu niet beschikbaar. Sla dit bericht op als concept of probeer het opnieuw zodra het weer beschikbaar is.',
+        'banner' => ':network is nu niet beschikbaar. Je kunt concepten opslaan, maar dit kanaal publiceert pas weer als het terug is.',
+    ],
     'publishing_block' => [
         'title' => 'Waarom het niet is gepubliceerd',
         'lapsed' => 'Je abonnement is afgelopen, daarom is dit bericht niet gepubliceerd. Sluit opnieuw een abonnement af en probeer het daarna nog eens.',
         'suspended' => 'Je account is opgeschort, daarom is dit bericht niet gepubliceerd. Neem contact op met support en probeer het daarna nog eens.',
+        'unavailable' => ':network is nu niet beschikbaar. Probeer het opnieuw zodra het terug is.',
         'retry' => 'Opnieuw proberen',
         'retry_started' => 'Het bericht wordt opnieuw gepubliceerd.',
         'retry_failed' => 'Het bericht kon niet opnieuw worden gepubliceerd. Probeer het nog eens.',

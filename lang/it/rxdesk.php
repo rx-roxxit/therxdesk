@@ -198,10 +198,15 @@ return [
         'auto' => 'Questa pagina si aggiorna automaticamente: non serve ricaricarla.',
         'support_action' => 'Scrivi all\'assistenza',
     ],
+    'availability' => [
+        'schedule_refused' => ':network non è disponibile in questo momento. Salva questo post come bozza oppure riprova quando sarà di nuovo disponibile.',
+        'banner' => ':network non è disponibile in questo momento. Puoi salvare le bozze, ma questo canale non pubblicherà finché non sarà di nuovo disponibile.',
+    ],
     'publishing_block' => [
         'title' => 'Perché non è stato pubblicato',
         'lapsed' => 'Il tuo abbonamento è terminato, quindi questo post non è stato pubblicato. Riattiva l\'abbonamento e poi riprova.',
         'suspended' => 'Il tuo account è sospeso, quindi questo post non è stato pubblicato. Contatta l\'assistenza e poi riprova.',
+        'unavailable' => ':network non è disponibile in questo momento. Riprova quando sarà di nuovo disponibile.',
         'retry' => 'Riprova',
         'retry_started' => 'Nuovo tentativo di pubblicazione del post.',
         'retry_failed' => 'Impossibile riprovare a pubblicare il post. Riprova.',

@@ -198,10 +198,15 @@ return [
         'auto' => 'Cette page se met à jour automatiquement — inutile de la recharger.',
         'support_action' => 'Contacter l\'assistance',
     ],
+    'availability' => [
+        'schedule_refused' => ':network est indisponible pour le moment. Enregistrez cette publication comme brouillon ou réessayez quand il sera de retour.',
+        'banner' => ':network est indisponible pour le moment. Vous pouvez enregistrer des brouillons, mais ce canal ne publiera pas avant son retour.',
+    ],
     'publishing_block' => [
         'title' => 'Pourquoi la publication n\'a pas eu lieu',
         'lapsed' => 'Votre abonnement a pris fin, donc cette publication n\'a pas été faite. Réabonnez-vous, puis réessayez.',
         'suspended' => 'Votre compte est suspendu, donc cette publication n\'a pas été faite. Contactez l\'assistance, puis réessayez.',
+        'unavailable' => ':network est indisponible pour le moment. Réessayez quand il sera de retour.',
         'retry' => 'Réessayer',
         'retry_started' => 'Nouvelle tentative de publication.',
         'retry_failed' => 'Impossible de réessayer la publication. Réessayez.',
