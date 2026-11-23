@@ -81,6 +81,27 @@ test('a second account keeps its own MCP budget', function () {
     mcpThrottleCall($this, $otherToken)->assertOk();
 });
 
+test('REST and MCP spend one budget per account', function () {
+    $restToken = passportToken($this->user, $this->workspaceA);
+
+    for ($request = 0; $request < 30; $request++) {
+        $this->withHeaders(['Authorization' => "Bearer {$restToken}"])
+            ->getJson(route('api.workspace.show'))
+            ->assertOk();
+    }
+
+    auth()->forgetGuards();
+
+    for ($request = 0; $request < 30; $request++) {
+        mcpThrottleCall($this, $this->tokenA)->assertOk();
+    }
+
+    auth()->forgetGuards();
+
+    mcpThrottleCall($this, $this->tokenB)
+        ->assertStatus(Response::HTTP_TOO_MANY_REQUESTS);
+});
+
 test('ChatGPT discovery without a token is never throttled', function () {
     fakeChatGptEgressRanges(['203.0.113.0/24']);
 
