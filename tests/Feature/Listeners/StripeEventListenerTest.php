@@ -249,6 +249,23 @@ test('TrackBilling is not dispatched when api key is missing', function () {
     Bus::assertNotDispatched(TrackBilling::class);
 });
 
+test('subscription created stores the Offer the checkout carried', function () {
+    $offer = Offer::factory()->create();
+
+    $this->listener->handle(new WebhookHandled([
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_with_offer',
+            'customer' => 'cus_test123',
+            'status' => 'active',
+            'metadata' => ['trypost_offer_id' => $offer->id],
+            'items' => ['data' => [['price' => ['id' => 'price_workspace_monthly']]]],
+        ]],
+    ]));
+
+    expect($this->account->subscriptions()->where('stripe_id', 'sub_with_offer')->sole()->offer_id)->toBe($offer->id);
+});
+
 // ========================================
 // Plan mapping by Stripe price id
 // ========================================

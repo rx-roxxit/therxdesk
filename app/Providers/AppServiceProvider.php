@@ -16,6 +16,7 @@ use App\Models\AnalyticsSyncState;
 use App\Models\AuditLog;
 use App\Models\AvailabilitySwitch;
 use App\Models\BackupRun;
+use App\Models\BusinessSnapshot;
 use App\Models\CatalogSetting;
 use App\Models\ChangelogEntry;
 use App\Models\ChangelogEntryView;
@@ -168,6 +169,7 @@ class AppServiceProvider extends ServiceProvider
             'auditLog' => AuditLog::class,
             'availabilitySwitch' => AvailabilitySwitch::class,
             'backupRun' => BackupRun::class,
+            'businessSnapshot' => BusinessSnapshot::class,
             'catalogSetting' => CatalogSetting::class,
             'changelogEntry' => ChangelogEntry::class,
             'changelogEntryView' => ChangelogEntryView::class,

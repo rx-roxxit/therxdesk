@@ -14,6 +14,7 @@ use App\Http\Controllers\Internal\AiModelController;
 use App\Http\Controllers\Internal\AiSettingController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\AvailabilityController;
+use App\Http\Controllers\Internal\BusinessController;
 use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\ComplimentaryPlanController;
 use App\Http\Controllers\Internal\HealthController;
@@ -80,6 +81,9 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('health', HealthController::class)
         ->name('internal.health');
+
+    Route::get('business', BusinessController::class)
+        ->name('internal.business');
 
     Route::get('operator', [OperatorController::class, 'show'])
         ->name('internal.operator.show');
