@@ -98,9 +98,10 @@ class StripeCheckoutSessionListener
     }
 
     /**
-     * The facts the Thai purchase document and the refund action read. A newer
-     * checkout replaces an older one; an older or repeated delivery never
-     * overwrites facts it does not postdate.
+     * The facts the Thai purchase document and the refund action read, and the
+     * Checkout Session they belong to so Processing waits for this checkout
+     * rather than an older one's. A newer checkout replaces an older one; an
+     * older or repeated delivery never overwrites facts it does not postdate.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -114,8 +115,13 @@ class StripeCheckoutSessionListener
 
         $country = data_get($payload, 'data.object.customer_details.address.country');
         $name = data_get($payload, 'data.object.customer_details.name');
+        $sessionId = data_get($payload, 'data.object.id');
 
         $attributes = ['checkout_completed_at' => $completedAt];
+
+        if (is_string($sessionId) && filled($sessionId)) {
+            $attributes['checkout_session_id'] = $sessionId;
+        }
 
         if (is_string($country) && filled($country)) {
             $attributes['billing_country'] = Str::upper(trim($country));

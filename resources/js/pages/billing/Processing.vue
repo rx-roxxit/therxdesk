@@ -23,6 +23,7 @@ type PurchaseDocument = {
 
 const props = defineProps<{
     ready: boolean;
+    checkoutSettled: boolean;
     returnsToBilling: boolean;
     countryBlocked: boolean;
     purchaseDocument: PurchaseDocument | null;
@@ -31,17 +32,28 @@ const props = defineProps<{
 const page = usePage<SharedData>();
 
 // Poll `auth` so `auth.plan` is set after the webhook writes plan_id,
-// `countryBlocked` so a cancelled checkout leaves Processing at once, and
-// `purchaseDocument` so a Thai checkout's document appears once the webhook
-// has recorded its billing country.
+// `checkoutSettled` and `purchaseDocument` so the current checkout's facts are
+// awaited (an older checkout's never count), and `countryBlocked` so a
+// cancelled checkout leaves Processing at once.
 const { stop } = usePoll(2000, {
-    only: ['ready', 'auth', 'countryBlocked', 'purchaseDocument'],
+    only: [
+        'ready',
+        'auth',
+        'checkoutSettled',
+        'countryBlocked',
+        'purchaseDocument',
+    ],
 });
 
 const finishing = ref(false);
 
+// The subscription can be `subscribed()` before this checkout's own facts are
+// recorded (`customer.subscription.created` arrives before
+// `checkout.session.completed`), so leaving waits for them too: otherwise the
+// first paint has no document to show and a Thai buyer misses it.
 const purchaseReady = computed(
-    (): boolean => props.ready && page.props.auth.plan !== null,
+    (): boolean =>
+        props.checkoutSettled && props.ready && page.props.auth.plan !== null,
 );
 
 const showingDocument = computed(
@@ -81,9 +93,9 @@ const goNext = (): void => {
     router.visit(postsIndex.url(), { replace: true });
 };
 
-// Card-required trials are already `subscribed()` (`trialing`) on first paint.
-// A Thai purchase document stays on screen until the buyer continues, so they
-// can read it.
+// Card-required trials are already `subscribed()` (`trialing`) on first paint,
+// but `purchaseReady` also waits for this checkout's facts. A Thai purchase
+// document stays on screen until the buyer continues, so they can read it.
 const completePurchase = (): void => {
     if (finishing.value || showingDocument.value) {
         return;

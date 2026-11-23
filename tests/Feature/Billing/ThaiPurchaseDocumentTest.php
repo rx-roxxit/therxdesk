@@ -173,6 +173,7 @@ test('a Thai checkout records its facts and queues the purchase document once pe
 
     expect($account->billing_country)->toBe('TH')
         ->and($account->billing_name)->toBe('Somchai Jaidee')
+        ->and($account->checkout_session_id)->toBe('cs_thai')
         ->and($account->checkout_completed_at)->not->toBeNull();
 
     Queue::assertPushed(SendThaiPurchaseDocument::class, function (SendThaiPurchaseDocument $job) use ($account): bool {
@@ -300,6 +301,52 @@ test('the processing page carries no document without a recorded operator', func
         ->get(route('app.billing.processing'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('purchaseDocument', null));
+});
+
+test('an older checkout never settles the current one, so processing holds', function () {
+    recordThaiOperator();
+    $account = thaiCheckoutAccount('TH');
+
+    // The account is ready (trialing, plan set) but its facts belong to an
+    // earlier checkout: the current session must not count as complete.
+    $account->forceFill(['checkout_session_id' => 'cs_old'])->save();
+
+    $this->actingAs($account->owner)
+        ->get(route('app.billing.processing', ['session_id' => 'cs_current']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('ready', true)
+            ->where('checkoutSettled', false)
+            ->where('purchaseDocument', null)
+        );
+});
+
+test('the current Thai checkout settles processing and carries the document', function () {
+    recordThaiOperator();
+    $account = thaiCheckoutAccount('TH');
+    $account->forceFill(['checkout_session_id' => 'cs_current'])->save();
+
+    $this->actingAs($account->owner)
+        ->get(route('app.billing.processing', ['session_id' => 'cs_current']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('checkoutSettled', true)
+            ->where('purchaseDocument.title', 'เอกสารการซื้อสินค้าและบริการ')
+        );
+});
+
+test('a current checkout outside Thailand settles processing with no document', function () {
+    recordThaiOperator();
+    $account = thaiCheckoutAccount('US');
+    $account->forceFill(['checkout_session_id' => 'cs_current'])->save();
+
+    $this->actingAs($account->owner)
+        ->get(route('app.billing.processing', ['session_id' => 'cs_current']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('checkoutSettled', true)
+            ->where('purchaseDocument', null)
+        );
 });
 
 test('the order-confirmation email carries the same Thai document', function () {

@@ -54,6 +54,7 @@ class Account extends Model
         'blocked_country_payment_status',
         'billing_country',
         'billing_name',
+        'checkout_session_id',
         'checkout_completed_at',
     ];
 
