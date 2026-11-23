@@ -28,6 +28,7 @@ class CustomerResource extends JsonResource
             ] : null,
             'subscription_status' => $account->subscriptionStatus(),
             'suspended' => $account->isSuspended(),
+            'review_access' => $account->hasReviewAccess(),
             'deletion_scheduled_at' => $account->deletion_scheduled_at?->toIso8601String(),
             'data_purged_at' => $account->data_purged_at?->toIso8601String(),
             'members_count' => $account->users_count ?? $account->users()->count(),

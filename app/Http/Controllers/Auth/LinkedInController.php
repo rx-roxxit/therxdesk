@@ -112,7 +112,7 @@ class LinkedInController extends SocialController
      */
     protected function accountValues(array $identity, ?SocialAccount $reconnect): array
     {
-        if (! SocialPlatform::from((string) data_get($identity, 'platform'))->isAvailable()) {
+        if (! SocialPlatform::from((string) data_get($identity, 'platform'))->isAvailableFor($this->connectAccount())) {
             throw new RuntimeException('This LinkedIn capability is no longer available.');
         }
 
@@ -201,12 +201,12 @@ class LinkedInController extends SocialController
 
     private function personEnabled(): bool
     {
-        return SocialPlatform::LinkedIn->isAvailable();
+        return SocialPlatform::LinkedIn->isAvailableFor($this->connectAccount());
     }
 
     private function organizationEnabled(): bool
     {
-        return SocialPlatform::LinkedInPage->isAvailable();
+        return SocialPlatform::LinkedInPage->isAvailableFor($this->connectAccount());
     }
 
     /**

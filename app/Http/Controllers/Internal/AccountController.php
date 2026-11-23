@@ -4,17 +4,43 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Internal;
 
+use App\Actions\Account\CreateReviewerAccount;
+use App\Http\Middleware\Internal\AuthenticateInternalApi;
+use App\Http\Requests\Internal\StoreAccountRequest;
 use App\Http\Resources\Internal\CustomerDetailResource;
 use App\Http\Resources\Internal\CustomerResource;
+use App\Http\Resources\Internal\ReviewerAccountResource;
 use App\Models\Account;
+use App\Models\Plan;
 use App\Services\Storage\AccountStorage;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\Response;
 
 class AccountController
 {
     public function __construct(private readonly AccountStorage $storage) {}
+
+    public function store(StoreAccountRequest $request, CreateReviewerAccount $create): JsonResponse
+    {
+        $plan = Plan::query()->findOrFail($request->validated('plan_id'));
+
+        $account = $create->execute(
+            (string) $request->validated('email'),
+            (string) $request->validated('password'),
+            $plan,
+            $this->complimentaryUntil($request->validated('complimentary_until')),
+            $request->boolean('review_access'),
+            AuthenticateInternalApi::actor($request),
+        );
+
+        return (new ReviewerAccountResource($account))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -59,5 +85,14 @@ class AccountController
             'recent_posts' => $recentPosts,
             'storage' => $this->storage->usage($account),
         ]);
+    }
+
+    private function complimentaryUntil(mixed $value): ?Carbon
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        return Carbon::parse((string) $value);
     }
 }

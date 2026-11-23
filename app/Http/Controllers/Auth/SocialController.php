@@ -16,6 +16,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\FinishSocialConnectionRequest;
 use App\Jobs\PostHog\TrackSocialAccountConnected;
 use App\Jobs\PostHog\TrackSocialAccountRemoved;
+use App\Models\Account;
 use App\Models\Repurpose;
 use App\Models\SocialAccount;
 use App\Models\Workspace;
@@ -48,13 +49,23 @@ class SocialController extends Controller
 
     /**
      * A network the System admin switched off (or one the server no longer has
-     * credentials for) refuses every connect, reconnect and finish.
+     * credentials for) refuses every connect, reconnect and finish. An Account
+     * with Review access may still connect to a network that is installed but
+     * switched off.
      */
     public function ensurePlatformAvailable(): void
     {
-        if (! $this->platform->isAvailable()) {
+        if (! $this->platform->isAvailableFor($this->connectAccount())) {
             abort(SymfonyResponse::HTTP_FORBIDDEN, 'This platform is currently unavailable.');
         }
+    }
+
+    /**
+     * The Account the connect is made for: the acting user's.
+     */
+    protected function connectAccount(): ?Account
+    {
+        return auth()->user()?->account;
     }
 
     public function disconnect(Request $request, SocialAccount $account): RedirectResponse

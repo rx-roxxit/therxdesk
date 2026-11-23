@@ -394,6 +394,7 @@ const SELLING_JOURNEYS = [
     'gate-retry',
     'availability-off',
     'availability-retry',
+    'review-access',
     'services-off',
     'support-chat',
     'support-chat-limit',
@@ -2728,6 +2729,121 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             observed,
         );
         await run.step('retry-cleared');
+    },
+
+    /**
+     * features/review-access.md
+     *
+     * LinkedIn is switched off in Availability and the fixture Account has
+     * Review access (`review-access.sh on`). The Connect card is offered and a
+     * scheduled post is accepted, with no unavailable banner. Turn Review
+     * access off (`review-access.sh off`) and run `availability-off` to prove
+     * the network is refused again.
+     */
+    'review-access': async (run) => {
+        const { page, fixture } = run;
+        const leadDays = Number(process.env.VERIFY_REVIEW_LEAD_DAYS ?? '7');
+        const scheduledAt = new Date(Date.now() + leadDays * 86_400_000);
+        const day = scheduledAt.toISOString().slice(0, 10);
+        const time = scheduledAt.toISOString().slice(11, 16).replace(':', '');
+        const caption = `Verify review access ${new Date().toISOString()}`;
+        run.note('caption', caption);
+        run.note('scheduledAt', scheduledAt.toISOString());
+
+        await signIn(run);
+        await quietFirstVisits(run);
+        await page.reload();
+
+        const landedOn = new URL(page.url()).pathname;
+
+        if (!landedOn.startsWith('/schedule')) {
+            throw new Error(
+                `the fixture has no app access (landed on ${landedOn}): run complimentary.sh up for the review-access journey`,
+            );
+        }
+
+        // The switched-off network's Connect card is offered to a reviewer.
+        await page.locator(tid('@sidebar-new')).click();
+        await page.locator(tid('@sidebar-new-channel')).click();
+        await page.locator(tid('@connect-channel-dialog')).waitFor();
+        const connectCards = await page
+            .locator(tid('@connect-channel-linkedin'))
+            .count();
+        run.check(
+            'the LinkedIn connect card is offered to a reviewer',
+            connectCards > 0,
+            connectCards,
+        );
+        await run.step('connect-card-visible');
+        await page.keyboard.press('Escape');
+        await page
+            .locator(tid('@connect-channel-dialog'))
+            .waitFor({ state: 'detached' })
+            .catch(() => undefined);
+
+        // Scheduling on the same switched-off network is allowed.
+        await page.locator(tid('@schedule-view-list')).click();
+        await page.waitForURL((url) => url.pathname === '/schedule');
+        await page.locator(tid('@posts-new-post')).click();
+        await page.locator(tid('@post-composer-dialog')).waitFor();
+        await page.locator(tid('@composer-base-content')).waitFor();
+
+        await page.locator(tid('@composer-add-account')).click();
+        await page
+            .locator(tid(`@composer-account-option-${fixture.channelId}`))
+            .click();
+        await page
+            .locator(tid(`@composer-caption-${fixture.channelId}`))
+            .fill(caption);
+
+        const banner = await page
+            .locator(tid('@platform-unavailable-banner'))
+            .count();
+        run.check(
+            'the composer shows no unavailable banner for a reviewer',
+            banner === 0,
+            banner,
+        );
+        await run.step('composer-allowed');
+
+        await page.locator(tid('@composer-schedule-trigger')).click();
+        await page.locator(tid('@composer-schedule-custom')).click();
+        await page.locator(tid('@composer-schedule-picker')).waitFor();
+
+        if (
+            (await page
+                .locator(tid(`@composer-schedule-day-${day}`))
+                .count()) === 0
+        ) {
+            await page.locator(tid('@composer-schedule-calendar-next')).click();
+        }
+
+        await page.locator(tid(`@composer-schedule-day-${day}`)).click();
+        await page.locator(tid('@composer-schedule-time-input')).fill(time);
+        await page.locator(tid('@composer-schedule-done')).click();
+        await run.step('composer-scheduled');
+
+        await page.locator(tid('@composer-submit')).click();
+        await page
+            .locator(tid('@post-composer-dialog'))
+            .waitFor({ state: 'detached' });
+        await page.waitForLoadState('networkidle');
+        await run.step('after-schedule');
+
+        const postId = await cardIdByText(page, caption);
+        run.check(
+            'the scheduled post is accepted for a reviewer',
+            postId !== null,
+            postId,
+        );
+        run.note('scheduledPostId', postId);
+
+        if (postId === null) {
+            throw new Error('the scheduled post never showed in the list');
+        }
+
+        await page.locator(tid(`@post-card-${postId}`)).waitFor();
+        await run.step('scheduled-post');
     },
 
     /**

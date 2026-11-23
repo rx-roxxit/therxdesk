@@ -206,13 +206,14 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
 `selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
 `payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`,
-`availability-off`, `availability-retry`, `services-off`
+`availability-off`, `availability-retry`, `review-access`, `services-off`
 (selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
 `complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
 test clock, `media-on-r2` also needs `media.sh up`, `suspension` needs `suspension.sh up`, `gate-schedule` needs
 `complimentary.sh up` and a `suspension.sh up` right after, `gate-retry` needs `suspension.sh lift` and
 `VERIFY_BLOCKED_POST` from `gate-schedule`'s `notes.blockedPostId`; the availability journeys switch both
-`platform:linkedin` variants off through `internal.sh` first, and `availability-retry` needs them back on and the same
+`platform:linkedin` variants off through `internal.sh` first, `review-access` needs `review-access.sh on` after that,
+and `availability-retry` needs them back on and the same
 `VERIFY_BLOCKED_POST` after the scheduler blocked it). Every journey first checks the mode php-fpm
 serves and stops with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature,
 with or without a journey.
@@ -313,6 +314,7 @@ after every failed attempt too.
 | `mail.sh list\|latest\|wait\|show\|clear` | read the dev Mailpit inbox | `clear` empties it |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
 | `complimentary.sh up\|end\|show\|down` | give the fixture a Complimentary Plan through `/internal/v1`, end it, show it | `up`, `end`, `down` |
+| `review-access.sh on\|off\|show` | grant or revoke the fixture Account's Review access through `/internal/v1`, show it | `on`, `off` |
 | `suspension.sh up\|lift\|show\|down` | suspend the fixture Account through `/internal/v1`, lift it, print its `access_state` | `up`, `lift`, `down` |
 | `api.sh <METHOD> <path>` | call the public `/api` as the fixture Owner with a fresh personal token, never printed | an API token row |
 | `stripe-clock.sh create\|customer\|attach\|advance\|status\|fingerprint\|delete` | a Stripe test clock, its Customer and the fixture Account | Stripe sandbox, fixture, state |

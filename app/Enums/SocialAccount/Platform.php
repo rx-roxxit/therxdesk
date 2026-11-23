@@ -7,6 +7,7 @@ namespace App\Enums\SocialAccount;
 use App\Enums\Media\Type as MediaType;
 use App\Enums\TikTok\PrivacyLevel;
 use App\Enums\YouTube\Category;
+use App\Models\Account;
 use App\Support\Availability\Availability;
 use App\Support\Hashtags;
 use App\Support\Social\XPoll;
@@ -558,11 +559,25 @@ enum Platform: string
     /** Installed and, when it has a switch, switched on. A missing row counts as on. */
     public function isAvailable(): bool
     {
+        return $this->isAvailableFor(null);
+    }
+
+    /**
+     * The same check for one Account: an Account with Review access may use a
+     * network that is installed but switched off. A network the server is not
+     * installed for stays unavailable to it too.
+     */
+    public function isAvailableFor(?Account $account): bool
+    {
         if (! $this->isInstalled()) {
             return false;
         }
 
         if (! $this->hasAvailabilitySwitch()) {
+            return true;
+        }
+
+        if ($account?->hasReviewAccess()) {
             return true;
         }
 
@@ -578,11 +593,16 @@ enum Platform: string
      */
     public function isConnectable(): bool
     {
+        return $this->isConnectableFor(null);
+    }
+
+    public function isConnectableFor(?Account $account): bool
+    {
         return match ($this) {
             self::LinkedInPage, self::InstagramFacebook => false,
-            self::LinkedIn => self::LinkedIn->isAvailable() || self::LinkedInPage->isAvailable(),
-            self::Instagram => self::Instagram->isAvailable() || self::InstagramFacebook->isAvailable(),
-            default => $this->isAvailable(),
+            self::LinkedIn => self::LinkedIn->isAvailableFor($account) || self::LinkedInPage->isAvailableFor($account),
+            self::Instagram => self::Instagram->isAvailableFor($account) || self::InstagramFacebook->isAvailableFor($account),
+            default => $this->isAvailableFor($account),
         };
     }
 
@@ -594,9 +614,17 @@ enum Platform: string
      */
     public static function instagramConnectMethods(): array
     {
+        return self::instagramConnectMethodsFor(null);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function instagramConnectMethodsFor(?Account $account): array
+    {
         return array_values(array_filter([
-            self::Instagram->isAvailable() ? self::Instagram->value : null,
-            self::InstagramFacebook->isAvailable() ? self::InstagramFacebook->value : null,
+            self::Instagram->isAvailableFor($account) ? self::Instagram->value : null,
+            self::InstagramFacebook->isAvailableFor($account) ? self::InstagramFacebook->value : null,
         ]));
     }
 
@@ -605,10 +633,18 @@ enum Platform: string
      */
     public static function connectableOptions(): array
     {
+        return self::connectableOptionsFor(null);
+    }
+
+    /**
+     * @return list<array{value: string, label: string, network: string, analytics: bool, text_only: bool, media_types: list<string>, connect_methods?: list<string>}>
+     */
+    public static function connectableOptionsFor(?Account $account): array
+    {
         return collect(self::cases())
-            ->filter(fn (self $platform): bool => $platform->isConnectable())
+            ->filter(fn (self $platform): bool => $platform->isConnectableFor($account))
             ->sortBy(fn (self $platform): string => mb_strtolower($platform->label()))
-            ->map(function (self $platform): array {
+            ->map(function (self $platform) use ($account): array {
                 $option = [
                     'value' => $platform->value,
                     'label' => $platform->label(),
@@ -619,7 +655,7 @@ enum Platform: string
                 ];
 
                 if ($platform === self::Instagram) {
-                    $option['connect_methods'] = self::instagramConnectMethods();
+                    $option['connect_methods'] = self::instagramConnectMethodsFor($account);
                 }
 
                 return $option;
