@@ -55,12 +55,13 @@ class Account extends Model
     ];
 
     /**
-     * The internal Suspension reason never leaves the System admin's surfaces.
+     * Internal admin facts never leave the System admin's surfaces.
      *
      * @var list<string>
      */
     protected $hidden = [
         'suspension_reason',
+        'review_access',
     ];
 
     protected $casts = [
@@ -81,6 +82,7 @@ class Account extends Model
         'video_policy' => VideoPolicy::class,
         'ai_credits_per_month' => 'integer',
         'ai_credits_reset_at' => 'datetime',
+        'review_access' => 'boolean',
     ];
 
     public function owner(): BelongsTo
@@ -445,6 +447,16 @@ class Account extends Model
         }
 
         return (bool) $this->subscription(self::SUBSCRIPTION_NAME)?->pastDue();
+    }
+
+    /**
+     * The System admin let this Account use networks that are installed but
+     * switched off (a platform reviewer's test Account). It never unlocks a
+     * network the server has no credentials for.
+     */
+    public function hasReviewAccess(): bool
+    {
+        return (bool) $this->review_access;
     }
 
     /**

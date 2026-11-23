@@ -39,6 +39,7 @@ class CustomerDetailResource extends JsonResource
                 'deletion_scheduled_at' => $account->deletion_scheduled_at?->toIso8601String(),
                 'data_purged_at' => $account->data_purged_at?->toIso8601String(),
             ],
+            'review_access' => $account->hasReviewAccess(),
             'plan' => $account->plan ? [
                 'id' => $account->plan->id,
                 'slug' => $account->plan->slug,

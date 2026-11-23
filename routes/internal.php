@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Internal\AccountAiCreditsController;
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
+use App\Http\Controllers\Internal\AccountReviewAccessController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
 use App\Http\Controllers\Internal\AiBalanceController;
 use App\Http\Controllers\Internal\AiLedgerController;
@@ -30,9 +31,16 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::get('accounts', [AccountController::class, 'index'])
         ->name('internal.accounts.index');
 
+    Route::post('accounts', [AccountController::class, 'store'])
+        ->name('internal.accounts.store');
+
     Route::get('accounts/{account}', [AccountController::class, 'show'])
         ->whereUuid('account')
         ->name('internal.accounts.show');
+
+    Route::patch('accounts/{account}/review-access', [AccountReviewAccessController::class, 'update'])
+        ->whereUuid('account')
+        ->name('internal.accounts.review-access.update');
 
     Route::post('accounts/{account}/complimentary', [ComplimentaryPlanController::class, 'store'])
         ->whereUuid('account')

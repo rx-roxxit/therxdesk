@@ -17,15 +17,19 @@ class PublishingGate
 {
     /**
      * Availability (#63) checks the network's own switch here first, before the
-     * Account's access. A post without a platform falls through.
+     * Account's access. An Account with Review access may publish to a network
+     * that is installed but switched off. A post without a platform falls
+     * through.
      */
     public static function denial(Post $post): ?AccessDenial
     {
-        if ($post->platform !== null && ! $post->platform->isAvailable()) {
+        $account = $post->workspace?->account;
+
+        if ($post->platform !== null && ! $post->platform->isAvailableFor($account)) {
             return AccessDenial::Unavailable;
         }
 
-        return $post->workspace?->account?->accessDenial();
+        return $account?->accessDenial();
     }
 
     public static function block(Post $post, AccessDenial $reason): void

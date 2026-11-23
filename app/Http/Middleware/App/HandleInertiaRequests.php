@@ -101,9 +101,9 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::shareOnce($request),
-            'connectablePlatforms' => fn (): array => SocialPlatform::connectableOptions(),
+            'connectablePlatforms' => fn (): array => SocialPlatform::connectableOptionsFor($user?->account),
             'unavailablePlatforms' => fn (): array => collect(SocialPlatform::cases())
-                ->reject(fn (SocialPlatform $platform): bool => $platform->isAvailable())
+                ->reject(fn (SocialPlatform $platform): bool => $platform->isAvailableFor($user?->account))
                 ->map(fn (SocialPlatform $platform): string => $platform->value)
                 ->values()
                 ->all(),
