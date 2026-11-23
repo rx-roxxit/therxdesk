@@ -149,6 +149,27 @@ const signedInEmail = async (page: Page): Promise<string | null> => {
 
 type Mode = 'selling' | 'self-hosted';
 
+/**
+ * Waits until Cloudflare Turnstile has written its token into the form.
+ * `POST /register` refuses a submission whose token is still empty ("Complete
+ * the security check"), so every registration journey waits here before it
+ * presses the button, or a fast journey races the widget.
+ */
+const waitForTurnstile = async (page: Page): Promise<void> => {
+    await page
+        .waitForFunction(
+            () => {
+                const input = document.querySelector<HTMLInputElement>(
+                    'input[name="cf-turnstile-response"]',
+                );
+
+                return (input?.value ?? '').length > 0;
+            },
+            { timeout: 20_000 },
+        )
+        .catch(() => null);
+};
+
 /** The register journey's address, from env.sh; `%` becomes this run's unique part. */
 const guestEmail = (): string => {
     const like = process.env.VERIFY_GUEST_EMAIL_LIKE;
@@ -959,6 +980,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.locator(tid('@register-country')).selectOption('DE');
         await run.step('blocked-country-filled');
 
+        await waitForTurnstile(page);
         await page.locator(tid('@register-user-button')).click();
 
         const notice = page.getByText('Not available in the EU/UK yet', {
@@ -1160,6 +1182,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             .locator(tid('@register-password'))
             .fill('Tr7#pass-Word-2026');
         await page.locator(tid('@register-country')).selectOption('TH');
+        await waitForTurnstile(page);
         await page.locator(tid('@register-user-button')).click();
         await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
             timeout: 30_000,
@@ -1407,6 +1430,7 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
             .locator(tid('@register-password'))
             .fill('Tr7#pass-Word-2026');
         await page.locator(tid('@register-country')).selectOption('TH');
+        await waitForTurnstile(page);
         await page.locator(tid('@register-user-button')).click();
         await page.waitForURL((url) => url.pathname.startsWith('/welcome'), {
             timeout: 30_000,

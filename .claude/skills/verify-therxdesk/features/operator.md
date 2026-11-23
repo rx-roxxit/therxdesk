@@ -1,8 +1,9 @@
 # Operator
 
 The legal entity that sells The RX Desk. One current row, an audited history, a CLI and the internal API the admin
-app writes it with. The row feeds one line in every email footer and the customer-facing fields on the website;
-nothing is shown inside the signed-in app. Selling mode only.
+app writes it with. The row feeds one line in every email footer, the customer-facing fields on the website, and
+the seller fields of the Thai purchase document, which is shown on `/billing/processing` and sent by email to a
+Thailand-billed buyer. Selling mode only.
 
 The current row is cached under `rxdesk:operator:current`; every write goes through
 `App\Services\Operator\OperatorCatalog`, which ends the previous row at the new `effective_from`, clears the cache

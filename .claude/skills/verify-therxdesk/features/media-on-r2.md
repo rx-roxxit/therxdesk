@@ -1,14 +1,16 @@
 # Media on R2
 
 Every upload, read, copy and delete goes through the app's default disk. When that disk is `r2`, media lives on
-object storage and is served from the bucket's public URL (`R2_URL`); the app never proxies the file for display.
+object storage and is served from the bucket's public URL (`R2_URL`). The one exception is the media editor, which
+streams an image through the app (`GET /media/{id}/file`, `Storage::response`) so its canvas stays untainted.
 The Disk guard keeps watching the VPS storage volume, which now only holds temporary files and chunks.
 
 ## Sub-features
 
 - The composer uploads an image and a video through the chunked endpoint (`POST /media/chunked`).
-- A file larger than the client's 5 MiB chunk size is sent in several requests. A video (or PDF) then completes as
-  an S3 multipart object on the bucket, not as assembled local bytes.
+- A file is split into 5 MiB requests. On the `s3`/`r2` disk a video (or PDF) completes as an S3 multipart object on
+  the bucket, not as assembled local bytes; the type and disk choose that, not the file's size (a small video also
+  completes as a one-part multipart object). An image is assembled in a temp file and written to the disk.
 - The upload answer's `url` is on the media host, and the composer previews the stored image from that URL.
 - The Insights share card draws a channel avatar that was fetched from the media host with CORS. A media host
   without CORS makes the card fall back to the network logo, so the card is the check that CORS works.
@@ -40,11 +42,16 @@ The journey checks:
 - The video was sent in more than one chunk (two request totals of 6 MiB).
 - The image `<img>` in the composer has `naturalWidth > 0` from its media URL.
 - Fetching the video URL returns the same byte length, starting with the `ftypmp42` box the test wrote.
-- The host-side `db.sh 'select path, collection from medias order by created_at desc limit 5'` shows the new rows.
+
+Then, from the host (not a journey check):
+
+- `db.sh "select path, collection, type, size from medias order by created_at desc limit 5"` shows the two new
+  `uploads` rows (image and video) under `medias/`.
 
 ## Gotchas
 
-- `media.sh seed` refuses to run while the default disk is local, so a pass cannot come from the wrong disk.
+- `media.sh seed` refuses to run while the default disk is `local` or `public`, so a pass cannot come from the
+  wrong disk (a stack configured with `s3` or `spaces` would pass the guard and is not a supported dev state).
   `media.sh up` and `media.sh down` switch the disk; the marker stacks on the selling overlay, so any later
   `selling.sh up` keeps r2 on.
 - The dev bucket's public URL is its `r2.dev` address; the production bucket is served from a public custom domain

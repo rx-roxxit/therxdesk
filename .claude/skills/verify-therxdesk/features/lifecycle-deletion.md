@@ -65,14 +65,14 @@ $V/db.sh "select owner_id, stripe_id, data_purged_at, deletion_scheduled_at from
 $V/db.sh "select count(*) from workspaces where account_id = '<accountId>'"
 #   accounts: owner_id and stripe_id kept, data_purged_at set, deletion_scheduled_at null
 #   workspaces: 0
-$V/db.sh "select email from users where id = '<ownerId>'"     # still there
+$V/db.sh "select email from users where id = '<userId>'"     # still there
 $V/db.sh "select email from users where email = 'verify-member@example.com'"   # gone
 
 $V/fixture.sh up                     # reset
 $V/selling.sh down
 ```
 
-Take `<accountId>` and `<ownerId>` from `$V/fixture.sh show`.
+Take `<accountId>` and `<userId>` (the Owner's id) from `$V/fixture.sh show`.
 
 The never-paid path (User removed entirely, no email) is covered by
 `tests/Feature/Lifecycle/DeletionTest.php` and

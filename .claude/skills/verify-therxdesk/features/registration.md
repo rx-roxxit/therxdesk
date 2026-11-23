@@ -52,5 +52,8 @@ Owner. There is no Signup code: registration is upstream's open form (ticket #47
 
 - The journeys use a unique address per run (`verify-signup-<timestamp>@example.com`), so a second run does not
   fail the unique email check. `blocked-country` reuses the same pattern and creates nothing.
+- `register` ends by flooding `POST /register` until the IP limiter answers 429, which uses up the whole 5-a-minute
+  budget. Run `blocked-country` before `register`, or wait about a minute between them: otherwise its submit is
+  throttled and "the blocked notice is shown" fails with a 429 page.
 - The password rule calls the Pwned Passwords API (`uncompromised()`), so the run needs outbound network.
 - In self-hosted mode `/register` 404s without an invite, so both journeys fail there by design.

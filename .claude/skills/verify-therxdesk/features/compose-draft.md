@@ -1,7 +1,7 @@
 # Compose a post and save it as a draft
 
-The composer writes one post for one or more channels, with a live preview per network, and saves it as a draft
-without a date.
+The composer writes one draft per selected channel (a two-channel post saves two rows sharing a `post_group_id`),
+with a live preview per network, and saves it without a date.
 
 ## Sub-features
 
@@ -11,7 +11,9 @@ without a date.
 - Write the caption per channel (`@composer-caption-<channel id>`) or the shared text (`@composer-base-content`).
 - Live network preview (LinkedIn preview for the fixture channel).
 - Save draft (`@composer-save-draft`), Publish now / schedule (not drivable: would call the network), Create
-  another, Labels, Templates, AI Assistant, media.
+  another, Labels, Templates, media. The AI Assistant button (`@composer-ai-assistant`) renders only while AI is
+  installed and switched on (`aiEnabled`).
+- A selected channel whose network is switched off shows `@platform-unavailable-banner`; see `availability.md`.
 - An unfinished post is kept in browser storage and offered back on the next open (`@composer-resume-dialog`).
 
 ## How to get to it (user POV)

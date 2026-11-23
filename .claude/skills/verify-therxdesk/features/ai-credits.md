@@ -39,8 +39,8 @@ gone.
 ## How to get to it (user POV)
 
 `$V/selling.sh up`, `$V/fixture.sh up`, `$V/ai-credits.sh none` (a Complimentary Plan for access, a 120-credit
-override and this month's usage at zero). Sign in as the fixture Owner, open **Create**, then **New post**, and open
-**AI Assistant** in the composer.
+override and one seeded ledger row that spends all 120, so 0 remain). Sign in as the fixture Owner, open **Create**,
+then **New post**, and open **AI Assistant** in the composer.
 
 ## Driving it with Playwright
 
@@ -56,10 +56,11 @@ override and this month's usage at zero). Sign in as the fixture Owner, open **C
 
 ## Gotchas
 
-- Without an AI provider key, the journey stops at the gate: no model call, no ledger row. With a key configured
-  (`AI_TEXT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_TEXT_MODEL`), one real call writes a ledger row and
-  moves the balance by `ceil((prompt + completion) / tokens_per_credit)`. In selling mode a saved slot overrides
-  `ANTHROPIC_TEXT_MODEL` for the feature it serves (alt text uses the image slot).
+- Without an AI provider key the AI button itself is absent (`aiEnabled` needs an installed provider and the
+  `service:ai` switch on), so the journey times out clicking `@composer-ai-assistant` and never reaches the gate.
+  With a key configured (`AI_TEXT_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_TEXT_MODEL`), one real call
+  writes a ledger row and moves the balance by `ceil((prompt + completion) / tokens_per_credit)`. In selling mode a
+  saved slot overrides `ANTHROPIC_TEXT_MODEL` for the feature it serves (alt text uses the image slot).
 - The ledger rows are seeded by `ai-credits.sh` because the running app cannot make a metered call without a
   provider key; the override and reset themselves always go through `/internal/v1`.
 - The month is the calendar month in UTC for everyone; a Trial gets the Catalog's fixed `trial_ai_credits` for its

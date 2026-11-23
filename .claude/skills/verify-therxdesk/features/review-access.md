@@ -55,7 +55,7 @@ $V/complimentary.sh up
 $V/internal.sh PATCH /availability/platform:linkedin --body '{"enabled":false}'
 $V/internal.sh PATCH /availability/platform:linkedin-page --body '{"enabled":false}'
 $V/review-access.sh on
-$V/review-access.sh show        # true
+$V/review-access.sh show        # True
 
 # The Connect card and scheduling are allowed for the reviewer.
 $V/drive.sh review-access
@@ -67,7 +67,7 @@ $V/drive.sh availability-off
 # Restore every switch.
 $V/internal.sh PATCH /availability/platform:linkedin --body '{"enabled":true}'
 $V/internal.sh PATCH /availability/platform:linkedin-page --body '{"enabled":true}'
-$V/review-access.sh show        # false
+$V/review-access.sh show        # False
 $V/complimentary.sh down
 $V/fixture.sh down
 ```
@@ -78,8 +78,8 @@ down` removes the post with its Workspace.
 
 ## Host-side proof
 
-- `review-access.sh show` prints `true` after `on` and `false` after `off`; the
-  same value is on `GET /internal/v1/accounts/{id}` as `review_access`.
+- `review-access.sh show` prints `True` after `on` and `False` after `off` (Python's bool spelling); the same value
+  is on `GET /internal/v1/accounts/{id}` as `review_access`.
 - `db.sh "select review_access from accounts where id = '<accountId>'"` shows
   the switch, and `db.sh "select action, before, after from audit_logs where
   target_id = '<accountId>' order by created_at"` holds

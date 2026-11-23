@@ -72,7 +72,10 @@ Run everything from the dev machine, with the stack in selling mode. `$V` is
 
 7. Compare row counts. Save the query, read the dev database read only, read the restored copy, and
    diff. Tables the app writes during the proof (`sessions`, `cache`, `cache_locks`, `jobs`,
-   `failed_jobs`, `backup_runs`) can differ; every other table must match.
+   `failed_jobs`, `backup_runs`) can differ, and so can tables the selling-mode schedule writes at a
+   fixed UTC time (`business_snapshots` at 00:05, `accounts` and `lifecycle_emails` from
+   `rxdesk:lifecycle` at 01:00, `support_conversations` from `rxdesk:prune-support-chat` at 04:00,
+   the analytics snapshots at 23:30/00:30); every other table must match.
 
    ```sh
    cat > /tmp/row-counts.sql <<'SQL'

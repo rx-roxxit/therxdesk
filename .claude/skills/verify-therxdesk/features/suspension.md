@@ -7,7 +7,8 @@ until it is lifted, and a post the scheduler tries meanwhile never reaches the n
 ## Customer-visible contract
 
 - **The Suspended screen.** `GET /welcome/suspended` renders `welcome/Suspended`: the page root
-  `@welcome-suspended`, the banner `@suspended-banner`, the sentence **Account suspended, contact support**, and a
+  `@welcome-suspended`, the banner `@suspended-banner`, the sentence **Account suspended, contact support** plus
+  "Nothing can be published and connected tools can't reach the app while it is suspended.", and a
   support action (`mailto:`). `EnsureAccountReady` sends the Owner and every Member there from any app page;
   `/welcome/plan`, `/welcome/plan/portal` and `/welcome/subscription-required` redirect there too. Once the Suspension
   is lifted the same route forwards the user where they belong (the app with access, the plan step, or the member
@@ -16,8 +17,11 @@ until it is lifted, and a post the scheduler tries meanwhile never reaches the n
   `LoadWorkspaceFromToken`, before the subscription check. An API client sees the same wall a browser does.
 - **The publishing gate.** `PublishPost` and `PublishToSocialPlatform` call `PublishingGate` before any network call.
   A blocked post ends `posts.status = failed`, `posts.publish_status = failed` and
-  `posts.publish_block_reason = suspended`; a Lapsed Account gets `lapsed` instead. The column holds the code
-  (`App\Enums\Account\AccessDenial`) and is translated only when shown. Any real network attempt clears it.
+  `posts.publish_block_reason = suspended`; a Lapsed Account gets `lapsed` instead, and a switched-off network gets
+  `unavailable` (`availability.md`). The column holds the code
+  (`App\Enums\Account\AccessDenial`) and is translated only when shown. Any real network attempt clears it. A
+  `suspended` or `lapsed` block also emails every workspace Member `PostPublishFailed` with the translated reason;
+  an `unavailable` block sends no email.
 - **The failure popover.** A blocked post shows its reason in `@post-failure-<postId>` →
   `@post-failure-reason-<postId>`, and a **Try again** button `@post-retry-<postId>` when the signed-in member may
   publish directly (the Owner always may). `POST /posts/{post}/retry` (`RetryBlockedPost`) sends the post back

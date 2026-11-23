@@ -20,22 +20,48 @@ prints them. `selling.sh down` removes the file.
   "networks": [...], "signups_open", "operator": {...}|null }`. Each Plan has `slug`, `name`, `quota_bytes`,
   `ai_credits_per_month`, `monthly` / `yearly` in USD cents and `offer.monthly` / `offer.yearly` (`regular`,
   `discount`, `discounted` in cents, or null). `offer` is the running general Offer (never a link one) with its
-  name, discount, `trial_days`, dates, `plan_ids`, `intervals` and `banner.<locale>`: the banner sentence rendered
+  `slug`, `name`, `discount` (`percent_off` / `amount_off`, `currency`, `duration`, `duration_in_months`),
+  `trial_days`, dates, `plan_ids`, `intervals` and `banner.<locale>`: the banner sentence rendered
   from the `rxdesk.php` templates in all 16 locales. `networks` lists the platform keys a customer can connect now
   (installed and switched on; network variants collapse the way the connect cards do). `signups_open` is false
   while the `new_signups` switch is off. `trial_days` is the Catalog Trial length, and `operator` the
-  customer-facing fields (null until one is recorded). Values are raw (cents, ISO dates); the site formats them.
-  Only active Plans, by `sort`.
+  customer-facing fields including `effective_from` (null until one is recorded). Values are raw (cents, ISO
+  dates); the site formats them. Only active Plans, by `sort`.
 - `GET /internal/v1/accounts?search=<email>` (admin): paginated `{ "data": [...], "links": {...}, "meta": {...} }`,
   the configured page size (25). A row has `id`, `name`, `owner` (`id`, `name`, `email`), `plan` (`id`, `slug`,
-  `name`), `subscription_status`, `members_count` and `created_at`. `search` matches any User email in the Account.
+  `name`), `subscription_status`, `suspended`, `review_access`, `deletion_scheduled_at`, `data_purged_at`,
+  `members_count` and `created_at`. `search` matches any User email in the Account.
+- `POST /internal/v1/accounts` (admin): creates a reviewer's test Account: `email`, `password`, `plan_id` (archived
+  Plans allowed), optional `complimentary_until` (after now, at most `2037-12-31`) and optional `review_access`.
+  The Owner is pre-verified and gets a default Workspace and the Plan through the Complimentary Plan service; no
+  email is sent. `422` for an email any User already has, an unknown Plan or a password the registration rules
+  refuse. `201` with `id`, `owner` (`id`, `email`), `plan`, `complimentary` (`since`, `until`, `in_force`) and
+  `review_access`; audited as `account.create` without the password.
 - `GET /internal/v1/accounts/{uuid}` (admin): the Customer detail, top level. `id`, `name`, `created_at`, `owner`
-  (`id`, `name`, `email`, `email_verified_at`), `access_state` (null until its source exists), `plan` (`id`, `slug`,
+  (`id`, `name`, `email`, `email_verified_at`), `access_state` (always an object: `has_app_access`, `lapsed`,
+  `never_paid`, `suspended`, `suspended_at`, `suspension_reason`, `deletion_scheduled_at`, `data_purged_at`),
+  `review_access`, `plan` (`id`, `slug`,
   `name`, `quota_bytes`, `ai_credits_per_month`), `subscription` (`status`, `interval`, `amount` in cents,
   `trial_ends_at`, `ends_at`, `created_at`, or null), `complimentary` (`in_force`, `since`, `until`, or null until one
   was ever given), `storage` (`used_bytes`, `quota_bytes`), `members_count`,
   `recent_posts` (the 10 newest; `status`, `publish_status`, `error_message`, `platform`, timestamps, never
-  content) and `lifecycle_emails` (null until the email log exists).
+  content) and `lifecycle_emails` (an array, empty when none; `type`, `user_id`, `sent_at`).
+- `PATCH /internal/v1/accounts/{uuid}/review-access` (admin): `{ "enabled": bool }`; answers `{ id, review_access }`
+  and audits `account.review_access.enable` / `.disable` with before/after. See `review-access.md`.
+- `POST /internal/v1/accounts/{uuid}/suspension` (admin): `reason` (3–255 characters); answers `id`, `suspended`,
+  `suspended_at`, `reason`, `has_app_access` and audits `account.suspend`. `POST .../suspension/lift` answers the
+  same shape and audits `account.lift`; a lift with nothing to lift answers `422`. See `suspension.md`.
+- `PATCH /internal/v1/accounts/{uuid}/ai-credits` (admin): `{ "ai_credits_per_month": int|null }` (null clears the
+  override); `POST .../ai-credits/reset` restarts the month's usage. Both answer `id`, `ai_credits_per_month`,
+  `monthly_credits`, `used`, `remaining`, `reset_at` and audit `account.ai-credits.override` / `.reset`.
+- `POST /internal/v1/accounts/{uuid}/delete` (admin): body `{ "confirm_email": <the Owner's email> }`; deletes the
+  Account's data now (Owner, Account and Stripe customer kept) and audits `account.delete_now`. A wrong email
+  answers `422`. See `lifecycle-deletion.md`.
+- `POST /internal/v1/accounts/{uuid}/refund-and-cancel` (admin): no body. Refunds the latest paid Thai charge inside
+  its 7-day window and cancels the Subscription at once; answers `invoice_id`, `amount_paid`, `currency`,
+  `refund_id`, `subscription` (`id`, `status`, `ends_at`), `cancellation_type: "admin"` and `has_app_access`, and
+  audits `account.refund_and_cancel`. `422` for a non-Thai buyer, no Subscription, no paid charge in the window or
+  nothing refundable; a Stripe failure answers `502` and saves nothing.
 - `POST /internal/v1/accounts/{uuid}/complimentary` (admin): `plan_id` (any Plan, archived included) and an optional
   `ends_at` (after now, at most `2037-12-31`). Gives the Plan outside Stripe: access, Quota and AI credits follow it at
   once. Answers `{ "id", "plan": { "id", "slug", "name" }, "complimentary": { "since", "until", "in_force" } }`. An
@@ -43,10 +69,12 @@ prints them. `selling.sh down` removes the file.
 - `POST /internal/v1/accounts/{uuid}/complimentary/end` (admin): an optional `ends_at`, defaulting to 30 days ahead;
   an earlier date is allowed, at most `2037-12-31`. When the date passes the Account is Lapsed. An Account that never
   had a Complimentary Plan answers 422.
-- `GET /internal/v1/availability` (admin): `{ "switches": [...] }`, one row per network except X, in the
-  `Platform` enum order. A row is `key` (`platform:<value>`), `kind` (`platform`), `value`, `label`, `installed`,
-  `switched_on` and `effective`; a missing row counts as switched on, and a network is effective only while it is
-  installed (env switch and credentials) and switched on.
+- `GET /internal/v1/availability` (admin): `{ "switches": [...] }`, one row per network except X in the `Platform`
+  enum order, then the eight service/signup rows (22 in all; `availability.md` lists them). A row is `key`
+  (`platform:<value>` for a network, the bare key for a service or `new_signups`), `kind` (`platform`, `service` or
+  `signups`), `value`, `label`, `installed`, `switched_on` and `effective`; a missing row counts as switched on
+  except Support chat and new signups, which start off, and a network is effective only while it is installed (env
+  switch and credentials) and switched on.
 - `PATCH /internal/v1/availability/{key}` (admin): `{ "enabled": bool }`, answers the row object. An unknown key is
   `404`; switching on a network the server has not installed answers `422`. Every PATCH records
   `availability.enable` or `availability.disable` (even when the value did not change), with `target_type`
@@ -55,9 +83,20 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/audit-log` (admin): paginated, newest first. A row has `id`, `actor`, `action`, `target_type`
   (the table), `target_id`, `before`, `after` and `created_at`. Every internal write and every CLI write records
   one (the CLI actor is `cli`); a password or secret key is never stored.
-- `GET /internal/v1/health` (admin): `queue` (`available`, `waits`), `backup` (`last_run_at`, null until a run),
-  `restore_drill` (`last_performed_at`, `due_at`, `due`), `disk`, and `nightwatch` (`open`, `recent`). The site
-  token answers 404.
+- `GET /internal/v1/health` (admin): `queue` (`available`, `waits`, `max_wait_seconds`), `failed` (`total`,
+  `last_24h`), `backup` (`last_run_at`, null until a run), `restore_drill` (`last_performed_at`, `due_at`, `due`),
+  `disk`, and `nightwatch` (`open`, `recent`). The site token answers 404.
+- `GET /internal/v1/business` (admin): the metrics payload. `generated_at`, `today`, `current` (`accounts`,
+  `mrr_cents`, `paying_accounts`, `status_counts` for every `BusinessStatus`, `plan_mix`), a `waterfall` for the
+  `30`, `90` and `365` day windows (`new`, `expansion`, `contraction`, `churn`), `churn` for the same windows plus
+  `monthly` (`start`, `end`, `accounts`, `mrr_cents`, `paying_at_start`, `rate` = accounts / paying_at_start to 4
+  decimals, null when nothing was paying at the start, `types`, `reasons`), `trial_conversion` for the three
+  windows, `offers` performance and `support_chat` counters. It reads the live tables and writes nothing; the daily
+  `rxdesk:business-snapshot` command (00:05 UTC) upserts one `business_snapshots` row per Account per day.
+- `GET /internal/v1/support/conversations` (admin): paginated transcripts, newest message first, nothing older than
+  30 days; `?feedback=up|down` keeps only conversations with that answer. A row is `id`, `account` (`id`, `name`),
+  `user` (`id`, `name`, `email`), `plan`, `last_page`, `escalated_at`, `last_message_at` and `messages` (`id`,
+  `role`, `content`, `feedback`, `created_at`).
 - `GET /internal/v1/operator` (admin): `{ "current": {...}|null, "history": [...] }`. A row has `id`,
   `legal_name_th`, `legal_name_latin`, `address_th`, `address_latin`, `tax_id`, `vat_id`, `contact_email`, `phone`,
   `effective_from`, `ended_at`, `is_current`, `created_at` and `updated_at`. `history` holds the ended rows,
@@ -139,7 +178,9 @@ prints them. `selling.sh down` removes the file.
   Offers are never deleted and an ended Offer is read-only.
 - A Stripe failure answers `502` and saves nothing. Every write above that changes something records an audit row
   with the admin email from `X-Internal-Admin-Email` (`offer.create`, `offer.update`, `offer.end`,
-  `account.complimentary.give`, `account.complimentary.end`).
+  `account.create`, `account.review_access.enable` / `.disable`, `account.complimentary.give`,
+  `account.complimentary.end`, `account.suspend`, `account.lift`, `account.ai-credits.override` / `.reset`,
+  `account.delete_now`, `account.refund_and_cancel`).
 
 ## Helper
 
@@ -181,6 +222,15 @@ $V/internal.sh PATCH /offers/<uuid> --token admin --body '{"name":"Spring sale e
 $V/internal.sh POST /offers/<uuid>/end --token admin
 $V/internal.sh POST /accounts/<uuid>/complimentary --token admin --body '{"plan_id":"<uuid>"}'
 $V/internal.sh POST /accounts/<uuid>/complimentary/end --token admin --body '{"ends_at":"2037-12-31"}'
+$V/internal.sh POST /accounts --token admin --body '{"email":"reviewer@example.com","password":"Tr7#pass-Word-2026","plan_id":"<uuid>","review_access":true}'
+$V/internal.sh PATCH /accounts/<uuid>/review-access --token admin --body '{"enabled":true}'
+$V/internal.sh POST /accounts/<uuid>/suspension --token admin --body '{"reason":"Verification run"}'
+$V/internal.sh POST /accounts/<uuid>/suspension/lift --token admin
+$V/internal.sh PATCH /accounts/<uuid>/ai-credits --token admin --body '{"ai_credits_per_month":120}'
+$V/internal.sh POST /accounts/<uuid>/ai-credits/reset --token admin
+$V/internal.sh POST /accounts/<uuid>/refund-and-cancel --token admin
+$V/internal.sh GET /business --token admin
+$V/internal.sh GET /support/conversations --token admin
 $V/internal.sh GET /operator --token admin
 $V/internal.sh POST /operator --token admin --body '{"legal_name_th":"บริษัท ทดสอบ จำกัด","legal_name_latin":"Test Operator Co., Ltd.","address_th":"123 ถนนทดสอบ กรุงเทพมหานคร 10110","address_latin":"123 Test Road, Bangkok 10110","tax_id":"1234567890123","contact_email":"billing@example.com"}'
 $V/internal.sh PATCH /operator --token admin --body '{"phone":"555-0100"}'
@@ -210,10 +260,18 @@ $V/internal.sh GET /health --token admin
 - A `POST /offers` returns 201 and `/audit-log` has `offer.create` with the admin email; the same request reuses the
   coupon with the same slug, and a `PATCH` with `coupon`, `plan_ids` or `reach` answers 422.
 - `--token site` on any of the write endpoints answers 404.
-- `GET /availability` lists 14 switches (no X) with `installed`, `switched_on` and `effective`; a PATCH off answers
-  the row with `switched_on: false` and `effective: false`, and `/audit-log` shows `availability.disable` with the
-  admin email. Enabling a network the server has no credentials for answers 422, and an unknown `platform:…` key
-  answers 404.
+- `GET /availability` lists 22 switches (14 networks, no X, then the eight service/signup rows) with `installed`,
+  `switched_on` and `effective`; a PATCH off answers the row with `switched_on: false` and `effective: false`, and
+  `/audit-log` shows `availability.disable` with the admin email. Enabling a network the server has no credentials
+  for answers 422, and an unknown `platform:…` key answers 404.
+- `GET /business` answers 200 with `current`, `waterfall.30/90/365`, `churn.monthly.rate` and the rest; running
+  `rxdesk:business-snapshot` twice leaves the same `business_snapshots` count (upsert on `date, account_id`).
+- `POST /accounts/{uuid}/refund-and-cancel` on an Account with a paid Thai charge inside 7 days answers 200 and
+  leaves the Subscription `canceled`, `cancellation_type = admin`, `ends_at` set, `plan_id` null and an
+  `account.refund_and_cancel` audit row; on a Trial with no paid charge it answers 422.
+- `POST /accounts/{uuid}/suspension` with a short reason answers 200 and the Account's `access_state.suspended`
+  flips; the lift flips it back and both write their audit rows. `GET /support/conversations` answers 200 (an empty
+  page is normal on a fresh stack).
 - `GET /health` with the admin token answers 200 with `queue`, `backup`, `restore_drill`, `disk` and `nightwatch`;
   with the site token it answers 404.
 - `POST /operator` returns 201 and `/audit-log` has `operator.create` with the admin email; a `PATCH` records

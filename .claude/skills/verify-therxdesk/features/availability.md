@@ -4,13 +4,14 @@ The System admin switches a network off in Availability. Its Connect card disapp
 refused on web, REST and MCP alike (drafts are allowed), and a post whose time comes fails visibly with a reason the
 Owner can retry once the network is back. Channels already connected stay connected, and background work keeps running.
 The switches are database rows (`availability_switches`); a network is effective only when it is installed (env switch
-plus credentials) and switched on.
+plus credentials) and switched on. An Account with Review access is the exception: it may still connect to and
+publish on an installed-but-off network (`review-access.md`).
 
 ## Customer-visible contract
 
-- **Connect.** `GET /connect/{network}` and the confirmation/finish routes answer `403` while the network is off, and
-  its card is left out of `connectablePlatforms`. A network the server has no credentials for is never listed either.
-  Disconnecting an existing channel still works.
+- **Connect.** `GET /connect/{network}` and the confirmation/finish routes answer `403` while the network is off and
+  the Account has no Review access, and its card is left out of `connectablePlatforms`. A network the server has no
+  credentials for is never listed either. Disconnecting an existing channel still works.
 - **Scheduling.** Web (`app.posts.store`), REST (`POST /api/posts`) and MCP (`create-post-tool`) refuse a scheduled or
   publish-now post on a switched-off network with `rxdesk.availability.schedule_refused`, naming the network
   (`destinations.{i}.social_account_id` in a batch, `social_account_id` in a single write). A draft is accepted.
@@ -73,6 +74,8 @@ $V/launch.sh
 $V/selling.sh up
 $V/fixture.sh up
 $V/complimentary.sh up
+# The default, non-reviewer behavior is what this sequence proves.
+$V/review-access.sh off
 
 # Apply this branch's migrations: launch reuses an already-running stack.
 ( source "$V/env.sh"; app_run php artisan migrate --force )
@@ -204,9 +207,10 @@ $V/fixture.sh down
 - **Switch off within the scheduled lead** (8 minutes by default in the commands above) or the live scheduler publishes
   the post before the switch lands. Step 4 moves `scheduled_at` back so the scheduler acts at once; the alternative is
   waiting for the scheduled time. If the window is missed, switch back on, run `gate-schedule` again and switch off.
-- **The fixture is LinkedIn.** The connect card and `/connect/linkedin` stay available while *either* variant is on,
-  so the host sequence switches off both `platform:linkedin` and `platform:linkedin-page`. The Profile switch alone is
-  what refuses a LinkedIn post; the Page switch is what hides the card.
+- **The fixture is LinkedIn.** The connect card stays available while *either* variant is on
+  (`isConnectableFor()` ORs LinkedIn and LinkedInPage), so the host sequence switches off both
+  `platform:linkedin` and `platform:linkedin-page` to hide it. The Profile switch alone is what refuses a LinkedIn
+  post; turning the Page switch off alone hides nothing.
 - **The retry's network call is expected to fail.** The fixture channel carries a fake LinkedIn token; proof is
   `publish_block_reason` null after the retry, not a published post.
 - **Restore both switches.** Leave `platform:linkedin` and `platform:linkedin-page` enabled

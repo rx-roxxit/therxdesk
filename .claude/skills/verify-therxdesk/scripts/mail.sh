@@ -164,7 +164,7 @@ print("Subject: %s" % message.get("Subject", ""))
 print("To: %s" % addresses)
 print("Date: %s" % message.get("Date", ""))
 print()
-# The app sends HTML-only mail, so Text is usually empty: read the HTML then.
+# Mailpit generates Text for HTML-only mail; read it, else strip the HTML.
 print(message.get("Text") or plain_text(message.get("HTML") or ""))
 '
         ;;

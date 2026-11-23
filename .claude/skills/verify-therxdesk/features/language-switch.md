@@ -7,8 +7,9 @@ and the choice is saved on the user.
 
 - Language submenu in the sidebar account menu (`@sidebar-language-trigger`, then
   `@sidebar-language-<code>`, e.g. `@sidebar-language-ja`), 16 locales. The trigger reads "Language: English".
-- Language picker on the auth pages (login, register) for guests (`LanguageSelect`): `@language-picker-trigger`,
-  `@language-picker-option-<code>`.
+- Language picker on the auth pages (login, register, and forgot/reset via the same layout) for guests
+  (`LanguageSelect`): `@language-picker-trigger`, `@language-picker-option-<code>`.
+- The same `LanguageSelect` also sits on Settings → Preferences (`@preferences-language-*`).
 - The calendar header and dates follow the new locale.
 
 ## How to get to it (user POV)
@@ -24,6 +25,9 @@ Sign in, open the account menu at the bottom of the sidebar, hover "Language: En
 - End state: the sidebar's Publish link reads 公開, the shared `locale` prop is `ja`, and `window.__notReloaded`
   is still true (a full page load would clear it).
 - Side effect: `$V/db.sh "select locale from users where email = 'verify-agent@example.com'"` shows `ja`.
+- The journey drives the sidebar path only. The guest picker is proven by
+  `$V/browser-suite.sh tests/Browser/AuthLanguageSwitcherTest.php` (or by opening `/login` signed out and picking a
+  language); the Preferences picker is the same control on `/settings/preferences`.
 
 ## Gotchas
 
