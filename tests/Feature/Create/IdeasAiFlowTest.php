@@ -31,6 +31,7 @@ beforeEach(function () {
     $owner->update(['current_workspace_id' => $this->workspace->id]);
     $this->owner = $owner->fresh();
     subscribeAccount($owner->account);
+    $owner->account->forceFill(['ai_credits_per_month' => 10000])->save();
 });
 
 test('every member flavour runs the whole ideas board', function (string $access) {

@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'تعذّر الوصول إلى الذكاء الاصطناعي الآن. حاول مرة أخرى بعد بضع دقائق.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'لقد استخدمت رصيد الذكاء الاصطناعي لهذا الشهر. سيتجدد في :date.',
+        'exhausted_member' => 'لقد استخدمت رصيد الذكاء الاصطناعي لهذا الشهر. اطلب من مالك مساحة العمل تغيير الخطة.',
+        'low' => 'لم يتبقَّ هذا الشهر سوى :remaining من :total من رصيد الذكاء الاصطناعي.',
+        'change_plan' => 'تغيير الخطة',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'انتظار طويل في قائمة الانتظار',
             'capacity_disk_free' => 'مساحة قرص حرة منخفضة',
             'disk_guard' => 'مساحة القرص على وشك النفاد',
+            'ai_provider_failure' => 'تعطّل مزوّد الذكاء الاصطناعي',
             'nightwatch_burst' => 'اندفاع في مشكلات جديدة',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'أطول انتظار في قائمة الانتظار هو :minutes دقيقة، أعلى من حد التنبيه :threshold_minutes دقيقة.',
             'capacity_disk_free' => 'المساحة الحرة على القرص هي :free، أقل من حد التنبيه :threshold.',
             'disk_guard' => 'المساحة الحرة على القرص هي :free، قريبة من حد حماية القرص :threshold. ستتوقف عمليات الرفع قريبًا.',
+            'ai_provider_failure' => 'فشل النموذج :model: :error',
             'nightwatch_burst' => 'فُتحت :count مشكلات في Nightwatch خلال الساعة الأخيرة.',
         ],
         'resolved_body' => 'تم رفع هذا التنبيه. سيُرسل مجددًا إذا تكرر الشرط.',

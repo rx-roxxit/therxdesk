@@ -11,6 +11,7 @@ use App\Support\AiPromptRules;
 use Illuminate\Auth\Access\Response as AuthResponse;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +28,8 @@ beforeEach(function () {
     $this->user->update(['current_workspace_id' => $this->workspace->id]);
     $this->user = $this->user->fresh();
     subscribeAccount($this->user->account);
+    $this->user->account->forceFill(['ai_credits_per_month' => 1000])->save();
+    $this->user = $this->user->fresh();
 });
 
 function generateIdeaPayload(array $overrides = []): array
@@ -48,7 +51,11 @@ test('returns one generated idea without storing it', function () {
     $this->actingAs($this->user)
         ->postJson(route('app.create.ideas.generate'), generateIdeaPayload())
         ->assertOk()
-        ->assertExactJson(['title' => 'Behind the kiln', 'body' => 'Show the firing process.']);
+        ->assertExactJson([
+            'title' => 'Behind the kiln',
+            'body' => 'Show the firing process.',
+            'ai_credits' => ['remaining' => 1000, 'total' => 1000, 'low' => false],
+        ]);
 
     expect(Idea::count())->toBe(0);
 });
@@ -157,12 +164,13 @@ test('an empty title from the model fails with a message', function () {
 });
 
 test('a failing provider returns a translated bad gateway', function (Throwable $failure) {
+    Mail::fake();
     IdeaGenerator::fake([fn () => throw $failure]);
 
     $this->actingAs($this->user)
         ->postJson(route('app.create.ideas.generate'), generateIdeaPayload())
         ->assertStatus(Response::HTTP_BAD_GATEWAY)
-        ->assertJsonPath('message', __('create.ideas.errors.generate_failed'));
+        ->assertJsonPath('message', __('rxdesk.ai.unavailable'));
 })->with([
     'overloaded' => fn () => new ProviderOverloadedException('overloaded'),
     'connection' => fn () => new ConnectionException('timeout'),

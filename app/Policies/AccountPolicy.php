@@ -7,6 +7,7 @@ namespace App\Policies;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\Ai\AiCredits;
 use Illuminate\Auth\Access\Response;
 
 class AccountPolicy
@@ -31,7 +32,25 @@ class AccountPolicy
             return Response::deny(__('billing.flash.subscription_required'));
         }
 
-        return Response::allow();
+        $credits = app(AiCredits::class);
+
+        if ($credits->canSpend($account)) {
+            return Response::allow();
+        }
+
+        if ($user->id === $account->owner_id) {
+            return Response::deny(
+                __('rxdesk.ai_credits.exhausted_owner', [
+                    'date' => $credits->renewsAt($account)
+                        ->timezone($user->timezone ?: config('app.timezone'))
+                        ->locale(app()->getLocale())
+                        ->isoFormat('LL'),
+                ]),
+                AiCredits::DENIAL_OWNER,
+            );
+        }
+
+        return Response::deny(__('rxdesk.ai_credits.exhausted_member'), AiCredits::DENIAL_MEMBER);
     }
 
     public function swapPlan(User $user, Account $account, Plan $target): Response

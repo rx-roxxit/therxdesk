@@ -19,6 +19,7 @@ use App\Support\Social\XPoll;
 use Illuminate\Auth\Access\Response as AuthResponse;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -339,12 +340,13 @@ test('assistant route keeps its rate limit', function () {
 });
 
 test('a failing provider returns a translated bad gateway', function () {
+    Mail::fake();
     PostWritingAssistant::fake([fn () => throw new ConnectionException('timeout')]);
 
     $this->actingAs($this->user)
         ->postJson(route('app.posts.ai.assist'), ['mode' => PostAssistantMode::Generate->value, 'current_content' => '', 'prompt' => 'Write a short post please'])
         ->assertStatus(Response::HTTP_BAD_GATEWAY)
-        ->assertJsonPath('message', __('posts.composer.assistant_error'));
+        ->assertJsonPath('message', __('rxdesk.ai.unavailable'));
 });
 
 test('ai assist tracks the mode', function () {
@@ -370,6 +372,7 @@ test('ai assist tracks the mode', function () {
 
 test('a failed ai assist is not tracked', function () {
     enablePostHog();
+    Mail::fake();
     Queue::fake([CaptureAccountEvent::class]);
     PostWritingAssistant::fake([fn () => throw new ConnectionException('timeout')]);
 

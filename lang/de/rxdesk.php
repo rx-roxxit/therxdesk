@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'Die KI ist gerade nicht erreichbar. Versuche es in ein paar Minuten noch einmal.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Die KI-Credits für diesen Monat sind aufgebraucht. Sie werden am :date erneuert.',
+        'exhausted_member' => 'Die KI-Credits für diesen Monat sind aufgebraucht. Bitte den Kontoinhaber, den Tarif zu ändern.',
+        'low' => 'Diesen Monat sind nur noch :remaining von :total KI-Credits übrig.',
+        'change_plan' => 'Tarif ändern',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Lange Wartezeit in der Warteschlange',
             'capacity_disk_free' => 'Wenig freier Speicherplatz',
             'disk_guard' => 'Speicherplatz fast erschöpft',
+            'ai_provider_failure' => 'KI-Anbieterfehler',
             'nightwatch_burst' => 'Viele neue Probleme auf einmal',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'Die längste Wartezeit in der Warteschlange beträgt :minutes Minuten, über dem Alarmschwellenwert von :threshold_minutes Minuten.',
             'capacity_disk_free' => 'Der freie Speicherplatz beträgt :free, unter dem Alarmschwellenwert von :threshold.',
             'disk_guard' => 'Der freie Speicherplatz beträgt :free, nahe der Schutzschwelle von :threshold. Uploads werden bald gestoppt.',
+            'ai_provider_failure' => 'Das Modell :model ist fehlgeschlagen: :error',
             'nightwatch_burst' => 'In der letzten Stunde wurden :count Probleme in Nightwatch geöffnet.',
         ],
         'resolved_body' => 'Dieser Alarm hat sich erledigt. Er wird erneut gesendet, wenn die Bedingung wieder auftritt.',

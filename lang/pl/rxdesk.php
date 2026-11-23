@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'Nie można teraz połączyć się z AI. Spróbuj ponownie za kilka minut.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Wykorzystano kredyty AI na ten miesiąc. Odnowią się :date.',
+        'exhausted_member' => 'Wykorzystano kredyty AI na ten miesiąc. Poproś właściciela konta o zmianę planu.',
+        'low' => 'W tym miesiącu zostały tylko :remaining z :total kredytów AI.',
+        'change_plan' => 'Zmień plan',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Długie oczekiwanie w kolejce',
             'capacity_disk_free' => 'Mało wolnego miejsca na dysku',
             'disk_guard' => 'Miejsce na dysku prawie wyczerpane',
+            'ai_provider_failure' => 'Awaria dostawcy AI',
             'nightwatch_burst' => 'Nasilenie nowych problemów',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'Najdłuższe oczekiwanie w kolejce to :minutes min, powyżej progu alertu :threshold_minutes min.',
             'capacity_disk_free' => 'Wolne miejsce na dysku to :free, poniżej progu alertu :threshold.',
             'disk_guard' => 'Wolne miejsce na dysku to :free, blisko progu ochrony dysku :threshold. Przesyłanie wkrótce się zatrzyma.',
+            'ai_provider_failure' => 'Model :model nie powiódł się: :error',
             'nightwatch_burst' => 'W ostatniej godzinie w Nightwatch otwarto problemy: :count.',
         ],
         'resolved_body' => 'Ten alert został wycofany. Wróci, jeśli warunek się powtórzy.',

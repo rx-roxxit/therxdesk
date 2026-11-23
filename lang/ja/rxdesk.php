@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'AIに今すぐ接続できません。数分後にもう一度お試しください。',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => '今月のAIクレジットを使い切りました。:date に更新されます。',
+        'exhausted_member' => '今月のAIクレジットを使い切りました。プランの変更はワークスペースの所有者に依頼してください。',
+        'low' => '今月のAIクレジットは :total 中あと :remaining です。',
+        'change_plan' => 'プランを変更',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'キューの待ち時間が長い',
             'capacity_disk_free' => 'ディスクの空き容量が少ない',
             'disk_guard' => 'ディスク容量がほぼ限界',
+            'ai_provider_failure' => 'AIプロバイダーの障害',
             'nightwatch_burst' => '新しい問題が急増',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'キューの最も長い待ち時間は :minutes 分で、アラートしきい値の :threshold_minutes 分を超えています。',
             'capacity_disk_free' => 'ディスクの空き容量は :free で、アラートしきい値の :threshold を下回っています。',
             'disk_guard' => 'ディスクの空き容量は :free で、ディスク保護しきい値の :threshold に近づいています。まもなくアップロードが停止します。',
+            'ai_provider_failure' => ':model モデルでエラーが発生しました: :error',
             'nightwatch_burst' => '過去1時間に Nightwatch で :count 件の問題が発生しました。',
         ],
         'resolved_body' => 'このアラートは解除されました。同じ状態が再発すると再び通知されます。',

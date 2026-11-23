@@ -15,6 +15,7 @@ enum AdminAlertKey: string
     case CapacityWait = 'capacity_wait';
     case CapacityDiskFree = 'capacity_disk_free';
     case DiskGuard = 'disk_guard';
+    case AiProviderFailure = 'ai_provider_failure';
     case NightwatchBurst = 'nightwatch_burst';
 
     public function severity(): AdminAlertSeverity
@@ -25,7 +26,8 @@ enum AdminAlertKey: string
             self::CapacityWait,
             self::CapacityDiskFree,
             self::NightwatchBurst => AdminAlertSeverity::Today,
-            self::DiskGuard => AdminAlertSeverity::Urgent,
+            self::DiskGuard,
+            self::AiProviderFailure => AdminAlertSeverity::Urgent,
         };
     }
 

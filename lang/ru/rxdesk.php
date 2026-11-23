@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'Сейчас не удаётся связаться с ИИ. Попробуйте через пару минут.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Вы использовали ИИ-кредиты этого месяца. Они обновятся :date.',
+        'exhausted_member' => 'Вы использовали ИИ-кредиты этого месяца. Попросите владельца аккаунта сменить план.',
+        'low' => 'В этом месяце осталось :remaining из :total ИИ-кредитов.',
+        'change_plan' => 'Сменить план',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Долгое ожидание в очереди',
             'capacity_disk_free' => 'Мало свободного места на диске',
             'disk_guard' => 'Место на диске почти исчерпано',
+            'ai_provider_failure' => 'Сбой ИИ-провайдера',
             'nightwatch_burst' => 'Всплеск новых проблем',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'Самое долгое ожидание в очереди — :minutes мин, выше порога оповещения :threshold_minutes мин.',
             'capacity_disk_free' => 'Свободно :free на диске, меньше порога оповещения :threshold.',
             'disk_guard' => 'Свободно :free на диске, близко к порогу защиты диска :threshold. Загрузки скоро остановятся.',
+            'ai_provider_failure' => 'Модель :model завершилась ошибкой: :error',
             'nightwatch_burst' => 'За последний час в Nightwatch открыто проблем: :count.',
         ],
         'resolved_body' => 'Это оповещение снято. Оно вернётся, если условие повторится.',

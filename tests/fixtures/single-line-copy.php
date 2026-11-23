@@ -275,6 +275,7 @@ return [
     'rxdesk.welcome_plan.verify_email.resend' => 24,
     'rxdesk.welcome_plan.verify_email.close' => 14,
     'rxdesk.publishing_block.retry' => 17,
+    'rxdesk.ai_credits.change_plan' => 15,
     'welcome.personas.agency' => 10,
     'welcome.personas.creator' => 23,
     'welcome.personas.developer' => 15,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
+import { Link, useHttp } from '@inertiajs/vue3';
 import {
     IconArrowLeft,
     IconLoader2,
@@ -9,17 +9,24 @@ import {
 import { trans } from 'laravel-vue-i18n';
 import { computed, onBeforeUnmount, ref } from 'vue';
 
+import AiCreditsNote from '@/components/ai/AiCreditsNote.vue';
 import CharacterCounter from '@/components/CharacterCounter.vue';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { extractErrorMessage } from '@/lib/httpError';
+import {
+    AI_CREDITS_EXHAUSTED_OWNER,
+    useAiCredits,
+} from '@/composables/useAiCredits';
+import { extractErrorCode, extractErrorMessage } from '@/lib/httpError';
 import {
     countPromptWords,
     PROMPT_MAX_LENGTH,
     PROMPT_MIN_WORDS,
 } from '@/lib/promptWords';
 import { formatNumber } from '@/lib/utils';
+import { index as billingIndex } from '@/routes/app/billing';
 import { assist } from '@/routes/app/posts/ai';
+import type { AiCredits } from '@/types';
 
 export type AssistantChannel = {
     accountId: string;
@@ -61,7 +68,10 @@ const suggestion = ref('');
 const suggestionAction = ref<'insert' | 'replace'>('insert');
 const busy = ref(false);
 const error = ref('');
+const errorCode = ref<string | null>(null);
 const pendingMode = ref('generate');
+
+const { apply } = useAiCredits();
 
 const http = useHttp({
     mode: '',
@@ -91,6 +101,16 @@ const canGenerate = computed(
     () => !busy.value && !promptTooShort.value && !promptTooLong.value,
 );
 
+/** Only the Account Owner can change the plan, so only their refusal carries the link. */
+const showsChangePlan = computed(
+    (): boolean => errorCode.value === AI_CREDITS_EXHAUSTED_OWNER,
+);
+
+const clearError = (): void => {
+    error.value = '';
+    errorCode.value = null;
+};
+
 const request = async (
     payload: {
         mode: string;
@@ -101,7 +121,7 @@ const request = async (
     action: 'insert' | 'replace',
 ): Promise<void> => {
     busy.value = true;
-    error.value = '';
+    clearError();
     pendingMode.value = payload.mode;
     http.mode = payload.mode;
     http.prompt = payload.prompt ?? '';
@@ -112,7 +132,7 @@ const request = async (
     http.content_type = props.channel?.contentType ?? null;
     try {
         const result = (await http.post(assist.url())) as
-            | { content: string }
+            | { content: string; ai_credits: AiCredits | null }
             | undefined;
         if (!result) {
             error.value =
@@ -120,6 +140,7 @@ const request = async (
                 trans('posts.composer.assistant_error');
             return;
         }
+        apply(result.ai_credits);
         suggestion.value = result.content;
         suggestionAction.value = action;
         screen.value = 'suggestion';
@@ -127,13 +148,14 @@ const request = async (
         error.value =
             extractErrorMessage(exception) ??
             trans('posts.composer.assistant_error');
+        errorCode.value = extractErrorCode(exception);
     } finally {
         busy.value = false;
     }
 };
 
 const openPrompt = (): void => {
-    error.value = '';
+    clearError();
     screen.value = 'prompt';
 };
 
@@ -159,7 +181,7 @@ const rewrite = (mode: RewriteMode): void => {
 };
 
 const back = (): void => {
-    error.value = '';
+    clearError();
     screen.value = 'actions';
 };
 
@@ -343,14 +365,22 @@ const accept = (): void => {
             </div>
         </template>
 
-        <p
+        <div
             v-if="error"
             role="alert"
-            class="text-sm text-destructive"
+            class="space-y-1 text-sm text-destructive"
             data-testid="writing-assistant-error"
         >
-            {{ error }}
-        </p>
+            <p>{{ error }}</p>
+            <Link
+                v-if="showsChangePlan"
+                :href="billingIndex.url()"
+                class="font-medium underline underline-offset-2"
+                data-testid="writing-assistant-change-plan"
+            >
+                {{ $t('rxdesk.ai_credits.change_plan') }}
+            </Link>
+        </div>
 
         <div class="mt-auto space-y-2 border-t pt-4 text-xs text-muted-foreground">
             <p
@@ -364,6 +394,7 @@ const accept = (): void => {
                     })
                 }}
             </p>
+            <AiCreditsNote />
             <p data-testid="writing-assistant-disclaimer">
                 {{ $t('posts.composer.assistant_disclaimer') }}
             </p>

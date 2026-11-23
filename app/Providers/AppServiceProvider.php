@@ -8,6 +8,7 @@ use App\Actions\Mcp\ListChatGptEgressRanges;
 use App\Models\AccessToken;
 use App\Models\Account;
 use App\Models\AdminAlert;
+use App\Models\AiCreditUsage;
 use App\Models\AnalyticsAccountDailySnapshot;
 use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
@@ -152,6 +153,7 @@ class AppServiceProvider extends ServiceProvider
             'accessToken' => AccessToken::class,
             'account' => Account::class,
             'adminAlert' => AdminAlert::class,
+            'aiCreditUsage' => AiCreditUsage::class,
             'analyticsAccountDailySnapshot' => AnalyticsAccountDailySnapshot::class,
             'analyticsPublication' => AnalyticsPublication::class,
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,

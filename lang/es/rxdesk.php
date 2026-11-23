@@ -8,6 +8,15 @@ declare(strict_types=1);
 */
 
 return [
+    'ai' => [
+        'unavailable' => 'La IA no está disponible ahora mismo. Inténtalo de nuevo en unos minutos.',
+    ],
+    'ai_credits' => [
+        'exhausted_owner' => 'Has usado los créditos de IA de este mes. Se renuevan el :date.',
+        'exhausted_member' => 'Has usado los créditos de IA de este mes. Pide al propietario del espacio de trabajo que cambie de plan.',
+        'low' => 'Solo quedan :remaining de :total créditos de IA este mes.',
+        'change_plan' => 'Cambiar plan',
+    ],
     'help' => [
         'source_code' => 'Source code',
     ],
@@ -127,6 +136,7 @@ return [
             'capacity_wait' => 'Espera larga en la cola',
             'capacity_disk_free' => 'Poco espacio libre en disco',
             'disk_guard' => 'Espacio en disco casi agotado',
+            'ai_provider_failure' => 'Fallo del proveedor de IA',
             'nightwatch_burst' => 'Ráfaga de nuevos problemas',
         ],
         'messages' => [
@@ -135,6 +145,7 @@ return [
             'capacity_wait' => 'La espera más larga en la cola es de :minutes minutos, por encima del umbral de alerta de :threshold_minutes minutos.',
             'capacity_disk_free' => 'El espacio libre en disco es :free, por debajo del umbral de alerta de :threshold.',
             'disk_guard' => 'El espacio libre en disco es :free, cerca del umbral de protección de disco de :threshold. Las subidas se detendrán pronto.',
+            'ai_provider_failure' => 'El modelo :model falló: :error',
             'nightwatch_burst' => 'Se abrieron :count problemas en Nightwatch durante la última hora.',
         ],
         'resolved_body' => 'Esta alerta se ha resuelto. Volverá a enviarse si la condición reaparece.',
