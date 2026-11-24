@@ -73,6 +73,20 @@ test('the account menu shows the storage bar and links it to the video policy on
         ->toContain('preferences.url()');
 });
 
-test('the storage bar copy is english in every locale', function (string $locale) {
-    expect(__('rxdesk.storage_bar.usage', ['used' => '1 GB', 'limit' => '5 GB'], $locale))->toBe('1 GB of 5 GB used');
+test('the storage bar copy is translated in every locale', function (string $locale) {
+    $copy = __('rxdesk.storage_bar.usage', ['used' => '1 GB', 'limit' => '5 GB'], $locale);
+
+    expect($copy)
+        ->toContain('1 GB')
+        ->toContain('5 GB')
+        ->not->toContain(':used')
+        ->not->toContain(':limit');
+
+    if ($locale === Locale::English->value) {
+        expect($copy)->toBe('1 GB of 5 GB used');
+
+        return;
+    }
+
+    expect($copy)->not->toBe('1 GB of 5 GB used');
 })->with(Locale::values());
