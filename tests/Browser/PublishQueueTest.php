@@ -824,14 +824,14 @@ test('a publishing post waiting for a network limit shows when it retries', func
     waitFor($page, "@post-limit-retry-{$waiting->id}");
 
     $page->assertVisible("@post-publishing-{$waiting->id}")
-        ->assertSeeIn("@post-limit-retry-{$waiting->id}", __('posts.publish.retrying_at', ['time' => $retryAt->utc()->format('H:i')]))
+        ->assertSeeIn("@post-limit-retry-{$waiting->id}", trans('posts.publish.retrying_at', ['time' => $retryAt->utc()->format('H:i')], $locale))
         ->assertDontSeeIn("@post-publishing-{$waiting->id}", __('posts.publish.publishing_on', ['network' => $channel->platform->label()]))
         ->assertNoJavaScriptErrors();
 });
 
 test('a post waiting on an exhausted network bucket explains the shared limit in its locale', function (string $locale) {
     [$user, $workspace, $channel] = publishQueueSetup();
-    $user->update(['locale' => Locale::from($locale)]);
+    $user->update(['locale' => Locale::from($locale), 'time_format' => TimeFormat::TwentyFourHour]);
     $retryAt = now()->addHours(2)->startOfMinute();
     $waiting = Post::factory()->forAccount($channel)->create([
         'publish_status' => PublishStatus::Retrying,
@@ -857,7 +857,7 @@ test('a post waiting on an exhausted network bucket explains the shared limit in
         "@post-network-limit-{$waiting->id}",
         trans('rxdesk.publishing_block.network_limit', ['network' => $channel->platform->label()], $locale),
     )
-        ->assertSeeIn("@post-limit-retry-{$waiting->id}", __('posts.publish.retrying_at', ['time' => $retryAt->utc()->format('H:i')]))
+        ->assertSeeIn("@post-limit-retry-{$waiting->id}", trans('posts.publish.retrying_at', ['time' => $retryAt->utc()->format('H:i')], $locale))
         ->assertNoJavaScriptErrors();
 })->with(['en', 'de']);
 
