@@ -100,7 +100,7 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/audit-log` (admin): paginated, newest first. A row has `id`, `actor`, `action`, `target_type`
   (the table), `target_id`, `before`, `after` and `created_at`. Every internal write and every CLI write records
   one (the CLI actor is `cli`); a password or secret key is never stored.
-- `GET /internal/v1/health` (admin): `queue` (`available`, `waits`, `max_wait_seconds`), `failed` (`total`,
+- `GET /internal/v1/health` (admin): `queue` (`available`, `waits`, `max_wait_seconds`, `failed` with `total` and
   `last_24h`), `backup` (`last_run_at`, null until a run), `restore_drill` (`last_performed_at`, `due_at`, `due`),
   `disk`, and `nightwatch` (`open`, `recent`). The site token answers 404.
 - `GET /internal/v1/network-limits` (admin): the app's own daily network call budgets for the current UTC day.
@@ -199,8 +199,10 @@ prints them. `selling.sh down` removes the file.
   `429` with `code: "daily_limit"`, the translated message, `retry_after` and a `Retry-After` header. A provider
   failure or an empty answer answers `502` with `code: "unavailable"` and the generic `rxdesk.ai.unavailable`
   message; no answer or error names a provider or model. Each AI call writes one `ask_the_desk` ledger row with
-  `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) names no customer. Self-hosted
-  answers 404, and the site token answers 404.
+  `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) stores the caller's aggregates and
+  question verbatim. “Names no customer” is a caller contract, not server-side anonymization: pass synthetic
+  aggregates only. Cleanup has no Ask-specific helper, so a live call leaves transcript and ledger rows behind.
+  Self-hosted answers 404, and the site token answers 404.
 - The **cost table** (`cost` on the AI settings) is computed live: one row per active Plan, ordered `sort` then
   `name`, with `id`, `slug`, `name`, `ai_credits_per_month`, `monthly_cents`, `discounted_monthly_cents`,
   `worst_case_cents` (the whole allowance at the output price), `threshold_cents` (`intdiv` of the discounted
@@ -292,7 +294,7 @@ $V/internal.sh GET /health --token admin
   `internal.sh PATCH /availability/platform:tiktok --token admin --body '{"enabled":false}'` the `tiktok` key drops
   out of `networks`; with `new_signups` off, `signups_open` is false. `internal.sh POST /site --token site`
   answers `HTTP 405`, and no write reaches the database.
-- `--token admin` without `--email`: `HTTP 422`; with the email: `HTTP 200`.
+- `--token admin` with `--email ''`: `HTTP 422`; with the default email: `HTTP 200`.
 - After `php artisan rxdesk:quota set <owner email> 20GB`, `/audit-log` shows the `account.quota.set` row with
   actor `cli` and its `before` / `after`.
 - A `POST /plans` returns 201; `GET /plans` shows the new `stripe_product_id` and both Price ids; `stripe.sh get

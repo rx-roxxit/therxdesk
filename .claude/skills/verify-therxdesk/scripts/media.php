@@ -9,7 +9,7 @@ declare(strict_types=1);
  * it against production. Run it through media.sh, which runs it in the app
  * image with the selling and r2 overlays when those are up.
  *
- *   php media.php seed    upload the avatar and write the readings (idempotent)
+ *   php media.php seed    upload a fresh avatar and write the readings (use a fresh fixture)
  *   php media.php clear   remove the channel, its readings and the avatar
  */
 

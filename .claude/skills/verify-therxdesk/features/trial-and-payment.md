@@ -5,7 +5,8 @@ Stripe test clock. `tests/Feature/Billing/TrialAndPaymentWebhookTest.php` proves
 these paths prove Stripe sends them and the app answers.
 
 The paths share one setup: a fresh fixture, a Stripe test clock, and a sandbox Customer on that clock, pointed at by
-the fixture Account. `stripe-clock.sh` moves the clock so a Trial can end, a renewal can fail and Smart Retries can
+the fixture Account. A current Operator must already exist if the path asserts the Thai purchase document; neither
+helper creates one. `stripe-clock.sh` moves the clock so a Trial can end, a renewal can fail and Smart Retries can
 run out without waiting days. `fixture.sh up` deletes the fixture Account's `trial_cards` rows, so `4242` can start a
 Trial again on every run.
 
@@ -54,6 +55,11 @@ Expected: `stripe_status` `active`; `trial_started_at`, `trial_ended_at`, `trial
 fingerprint and a null `stripe_subscription_id` (the seeded row wins: the repeat card was never claimed). The journey
 still ends on the Schedule with `hasActiveSubscription` true and Mini.
 
+Known product gap (confirmed live November 24, 2026): the sandbox invoice payload can carry `subscription: null` with
+the id under `parent.subscription`, while `StripeInvoiceListener` reads only the top-level field. The charge then sets
+`first_paid_at` / `first_invoice_id` but leaves `paid_without_trial_at` null. Record the observed value; do not paper
+over it in the verification skill.
+
 ## 2. Never paid, the first charge fails
 
 A first-ever card gets the Catalog Trial; the charge after it is declined, so the Account has no access until it pays.
@@ -70,11 +76,14 @@ Expected after the advance: `stripe_status` `past_due`, `first_paid_at` and `fir
 `trial_started_at` and `trial_ended_at` set, `trial_skipped_at` null. `payment-retry` lands on `/welcome/plan`, sees
 "Your first payment didn't go through", no plan cards, and the Update card button opens `billing.stripe.com`.
 
-Pay the open invoice with the `4242` payment method, then reload `/welcome/plan` (it opens the Schedule):
+Pay the open invoice with an attached `4242` PaymentMethod, then reload `/welcome/plan` (it opens the Schedule).
+The test-clock Customer cannot pay the magic `pm_card_visa` directly; attach it first and use the returned `pm_...`:
 
 ```sh
-$V/stripe.sh get /v1/invoices -d status=open -d customer=<cus_...>     # note the in_... id
-$V/stripe.sh post /v1/invoices/<in_...>/pay -d payment_method=pm_card_visa
+CUS=<cus_...>
+INV=$($V/stripe.sh get /v1/invoices -d status=open -d customer="$CUS" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
+PM=$($V/stripe.sh post /v1/payment_methods/pm_card_visa/attach -d customer="$CUS" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+$V/stripe.sh post "/v1/invoices/$INV/pay" -d payment_method="$PM"
 ```
 
 The `invoice.payment_succeeded` webhook now sets `first_invoice_id` and `first_paid_at`, and the subscription turns
@@ -113,7 +122,9 @@ Continuing from path 3, the declining card fails every retry and the sandbox can
 F=$($V/stripe-clock.sh status | awk '/frozen_time/{print $2}')
 for d in 4 8 12 16 20 24 28; do
   $V/stripe-clock.sh advance "$((F + d*86400))"
-  # stop when the subscription's stripe_status is canceled
+  STATUS=$($V/db.sh "select s.stripe_status from subscriptions s where s.account_id = '<accountId>' order by s.created_at desc limit 1" | awk 'NR==4 {print $1}')
+  echo "retry step $d: $STATUS"
+  [ "$STATUS" = "canceled" ] && break
 done
 $V/drive.sh lapsed
 $V/db.sh "select a.plan_id, a.first_paid_at, s.stripe_status, s.cancellation_type, s.cancelled_at, s.offer_id from accounts a join subscriptions s on s.account_id = a.id where a.id = '<accountId>' order by s.created_at desc limit 1"

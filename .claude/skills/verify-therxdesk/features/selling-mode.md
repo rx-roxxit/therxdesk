@@ -1,9 +1,10 @@
 # Selling mode
 
-The app sells Plans: an Owner without app access (no subscription, no generic trial and no Complimentary Plan) is
-held at Welcome until they check out; a member of such an Account waits on "Waiting for the account owner". A
-legacy generic trial or a Complimentary Plan already has app access, so its Owner goes straight to the Schedule.
-Every new Trial now needs a card and goes through Stripe Checkout. Self-hosted mode skips all of it.
+The app sells Plans: an Owner without app access (no subscription, no generic trial and no Complimentary Plan, or
+a blocked billing country / never-paid pending first charge) is held at Welcome until they check out; a member of
+such an Account waits on "Waiting for the account owner". A legacy generic trial or a Complimentary Plan already has
+app access, so its Owner goes straight to the Schedule. Every new Trial now needs a card and goes through Stripe
+Checkout. Self-hosted mode skips all of it.
 
 ## Sub-features
 
@@ -19,20 +20,22 @@ Every new Trial now needs a card and goes through Stripe Checkout. Self-hosted m
   `selling.sh` seeds the catalog and fills the Stripe ids (see `SKILL.md`, "Selling mode").
 - Billing and Processing answer only here (they redirect to the Schedule when self-hosted); the Welcome plan step
   does too, except for an Owner with a Complimentary Plan, who keeps the plan step (the given Plan and no cards)
-  even while self-hosted. `/register` requires a country, and an EU/UK one is refused; a blocked Owner country or a
-  completed checkout billed to a blocked country never reaches Checkout (see `registration.md` and
-  `welcome-checkout.md`).
+  even while self-hosted. `/register` requires a country, and an EU27/EEA/UK/Crown-dependency one is refused. A
+  blocked Owner country never opens Checkout; a checkout completed with a blocked billing country reaches Stripe,
+  then the completed-session webhook records the block and cancels the Subscription before access is granted
+  (`registration.md` and `welcome-checkout.md`).
 
 ## How to get to it (user POV)
 
-`$V/selling.sh up`, then sign in as the fresh fixture Owner: instead of the Schedule, Welcome asks "What best
-describes you?".
+`$V/launch.sh`, then `$V/selling.sh up`, then sign in as the fresh fixture Owner: instead of the Schedule, Welcome
+asks "What best describes you?".
 
 ## Driving it with Playwright
 
 - Journey: `$V/drive.sh selling-mode` (after `fixture.sh up`, so the Owner has no subscription).
 - Checks: the login page's `selfHosted` prop is `false` (what php-fpm serves, not only the container env), sign-in
-  lands on a `/welcome` path, `auth.hasActiveSubscription` is `false`.
+  lands on a `/welcome` path, `auth.hasActiveSubscription` is `false`. Inspect `01-after-sign-in.png` for the
+  Persona question "What best describes you?"; the URL and prop checks alone do not prove that screen painted.
 - From the host: `$V/selling.sh status` (marker, the container's `SELF_HOSTED`, served mode, listener) and
   `$V/doctor.sh` (fails when the marker and the served mode disagree).
 

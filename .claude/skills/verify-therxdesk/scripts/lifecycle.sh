@@ -48,7 +48,7 @@ sweep() {
 
     app_run php artisan rxdesk:lifecycle --account="${account_id}" || return 1
 
-    # Mailables are queued; the dev stack has no worker, so flush them.
+    # Horizon normally consumes queued mail; this global flush is the fallback.
     app_run php artisan queue:work --stop-when-empty --tries=1 --timeout=60 || true
 }
 

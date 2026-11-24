@@ -1,8 +1,9 @@
 # AI credits
 
-Each Account has a monthly AI credit balance. The writing assistant, alt text, idea generation and the repurpose
-shortener spend it; the AI tools show a quiet line when the balance is low, and refuse with a way forward when it is
-gone.
+In selling mode each Account has a monthly AI credit balance. The writing assistant, alt text, idea generation and
+the repurpose shortener spend it; the visible AI tools show a quiet line when the balance is low and refuse with a
+way forward when it is gone. The automatic caption shortener instead falls back to truncation at zero. Self-hosted
+mode does not meter AI.
 
 ## Sub-features
 
@@ -13,8 +14,9 @@ gone.
 - **Out of credits, Owner**: the refusal names the renewal date and carries a **Change plan** link to Billing
   (`@writing-assistant-change-plan`).
 - **Out of credits, Member**: the same title, and a body that points them to the workspace owner, with no link.
-- **The ledger** (`ai_credit_usages`) is one row per call, per Account: feature, model, tokens, credits, User and
-  Workspace. A Member spends the Owner's credits.
+- **The ledger** (`ai_credit_usages`) is one row per call, normally per Account: feature, model, tokens, credits,
+  User and Workspace. A Member spends the Owner's credits. Ask the Desk also writes accountless zero-credit rows,
+  including when its provider call fails.
 - **`/internal/v1`**: `PATCH /accounts/{uuid}/ai-credits` sets the monthly override (null clears it) and
   `POST .../ai-credits/reset` zeroes this month's use, both audited (`account.ai-credits.override` /
   `.reset`). `GET /ai/settings` and `PATCH /ai/settings` own the token rate, the Trial's credits and the two model
@@ -39,8 +41,8 @@ gone.
 ## How to get to it (user POV)
 
 `$V/selling.sh up`, `$V/fixture.sh up`, `$V/ai-credits.sh none` (a Complimentary Plan for access, a 120-credit
-override and one seeded ledger row that spends all 120, so 0 remain). Sign in as the fixture Owner, open **Create**,
-then **New post**, and open **AI Assistant** in the composer.
+override and one seeded ledger row that spends all 120, so 0 remain). Sign in as the fixture Owner, open
+**Publish/Schedule → List → New post**, and open **AI Assistant** in the composer.
 
 ## Driving it with Playwright
 
@@ -51,8 +53,8 @@ then **New post**, and open **AI Assistant** in the composer.
 - End state: the low line reads "Only 0 of 120 AI credits left this month."; pressing Generate shows "You've used
   this month's AI credits. They renew on :date." and a **Change plan** link; no JavaScript errors.
 - Side effects: none from the journey. `ai-credits.sh low` leaves 5 of 120 (the line, no refusal);
-  `ai-credits.sh up` restores a full balance; `ai-credits.sh clear` removes the seeded rows, the override and the
-  Complimentary Plan.
+  `ai-credits.sh up` restores a full balance; `ai-credits.sh clear` deletes every ledger row for the fixture Account,
+  clears the override and ends the fixture's Complimentary Plan.
 
 ## Gotchas
 

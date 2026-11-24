@@ -9,15 +9,16 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   `@settings-nav-billing`. Owner only (any non-owner, a member or a non-owner admin, gets 403); selling mode only.
 - Plan tab: current plan (`@billing-current-plan-name`, `-price`, `-badge`, `-discount`), the Account balance in
   credit (`@billing-account-balance`, only when Stripe holds a credit), "Change plan" (`@billing-change-plan`),
-  "Subscribe" (`@billing-subscribe`: an Account past its one Trial opens Checkout on the monthly price charged at
-  once; it does not start a new Trial).
+  "Subscribe" (`@billing-subscribe`: an Account with no subscription and no Complimentary Plan opens Checkout on
+  the monthly price charged at once; it does not start a new Trial, including during a generic Trial).
 - Status strip (`@billing-status-strip`, line `@billing-current-plan-status`) renders from the Account's state:
   "Trial until <date>, then $X a month" (`@billing-current-plan-trial-icon`), "Renews on <date> · $X a month",
   "Cancels on <date>", or a past-due strip: "Payment past due" with "Update your payment method to keep your
   subscription active." and `@billing-update-payment`. The renewal date comes from Stripe's
   current period (`renewsAt`), so an active Plan shows no strip when there is no Stripe customer to read.
-- Usage (`@billing-usage`, anchor `#usage`): Storage used of Quota (`@billing-usage-storage-line`) and AI credits
-  used of total with their renewal date in the Owner's zone (`@billing-usage-ai-line`).
+- Usage (anchor `#usage`): Storage used of Quota (`@billing-usage-storage`,
+  `@billing-usage-storage-line`) and AI credits used of total with their renewal date in the Owner's zone
+  (`@billing-usage-ai`, `@billing-usage-ai-line`).
 - Plan dialog (`@billing-plan-dialog`, `PlanPicker`): Monthly / Yearly (`@plan-interval-<interval>`,
   `@plan-save-two-months`), a card per Plan (`@plan-card-<slug>`, `@plan-price-<slug>`, `@plan-select-<slug>`).
   Choosing a Plan opens the confirmation dialog instead of posting.
@@ -37,9 +38,10 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   the EU/UK yet": no swap and no Checkout Session. An Account whose completed checkout was billed to a blocked
   country (`accounts.blocked_country_at`) never reaches Billing at all: that column makes `hasAppAccess()` false, so
   `EnsureAccountReady` sends the Owner to `/welcome/plan`.
-- After any Stripe Checkout the buyer lands on `/billing/processing` (`features/welcome-checkout.md`): a spinner
-  until the webhook records this Checkout Session's facts, then the Schedule. A Thailand-billed buyer reads the Thai
-  purchase document there and presses Continue; the same document is emailed once per Session.
+- After a billing-origin Stripe Checkout the buyer lands on `/billing/processing` (`features/welcome-checkout.md`):
+  a spinner until the webhook records this Checkout Session's facts, then back to Billing. A Welcome-origin Checkout
+  returns to the Schedule instead. A Thailand-billed buyer reads the Thai purchase document there and presses
+  Continue; the same document is emailed once per Session.
 - Payment methods (`@billing-payment-methods`, `@billing-card-<id>`), "Manage on Stripe" (`@billing-manage-stripe`,
   the Customer Portal).
 - Invoices tab (`@billing-tab-invoices`, `@billing-invoices`, `@billing-invoice-download-<id>`, empty state
@@ -90,6 +92,7 @@ Price id in plan_prices>` right after the run (the swap keeps the trial); a repe
   `accounts.blocked_country_at` instead removes access, so Billing redirects to `/welcome/plan`.
 - Not driven yet: the Invoices tab, Subscribe on a generic trial, a yearly swap (the discount is kept only when its
   Offer covers yearly, and dropped otherwise), and the admin refund-and-cancel (no journey; prove it with
-  `internal.sh POST /accounts/<id>/refund-and-cancel` and the `subscriptions` / `audit_logs` rows). The confirmation
-  dialog's copy per state is covered by `tests/Browser/BillingPageTest.php`; the downgrade's Account balance is
-  `billing-downgrade`.
+  `internal.sh POST /accounts/<id>/refund-and-cancel` and the `subscriptions` / `audit_logs` rows).
+  `tests/Browser/BillingPageTest.php` covers the active upgrade and downgrade confirmation dialogs; the Trial
+  no-charge and Offer kept/dropped confirmation branches are not browser-asserted. The downgrade's Account balance
+  is `billing-downgrade`.

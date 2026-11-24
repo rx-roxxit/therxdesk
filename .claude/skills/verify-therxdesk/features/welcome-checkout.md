@@ -15,9 +15,10 @@ until the webhook gives the Account access, and lands on the Schedule.
   (`@plan-unlimited-<slug>`), its button (`@plan-select-<slug>`) and the terms under it (`@plan-terms-<slug>`).
   Prices come from `plan_prices` (see `selling-mode.md`), labels from the Plan row, and the Trial length from the
   Catalog (`catalog_settings.trial_days`).
-- An Owner who never had a Trial sees "Start 7-day free trial" and "Then $11.90/month from <date>. Cancel anytime.
-  One free trial per card."; one who had one sees "Subscribe". A trial always needs a card and always goes through
-  Stripe Checkout: there is no no-card trial path any more.
+- An Owner eligible for a Trial sees "Start 7-day free trial" and "Then $11.90/month from <date>. Cancel anytime.
+  One free trial per card."; one who is not sees "Subscribe". Eligibility also excludes prior payment, prior
+  Complimentary access and a billable subscription without a Trial, not only "had a Trial". A trial always needs a
+  card and always goes through Stripe Checkout: there is no no-card trial path any more.
 - The Plan step has other states after the steps above: a Complimentary Plan replaces the cards with
   `@welcome-plan-complimentary*` and Continue (`complimentary.md`), a Lapsed Owner gets the
   `@welcome-plan-lapsed-deletion` alert above the cards (`lifecycle-deletion.md`), and a never-paid Owner whose
@@ -53,10 +54,10 @@ until the webhook gives the Account access, and lands on the Schedule.
   blocked Owner country never opens Checkout at all.
 - Processing (`/billing/processing?session_id=...`) waits until the webhook has recorded this Checkout Session's
   facts (`accounts.checkout_session_id` equals the `session_id`), then opens the Schedule. When
-  `accounts.billing_country` is `TH` it first renders the Thai purchase document (seller fields from the Operator,
-  dates in Buddhist Era, the 7-day cancellation right) and waits for Continue; the same document is emailed once
-  per Session. It also polls `countryBlocked` and returns to `/welcome/plan` when the webhook cancelled the
-  checkout.
+  `accounts.billing_country` is `TH` and a current Operator exists it first renders the Thai purchase document (seller
+  fields from the Operator, dates in Buddhist Era, the 7-day cancellation right) and waits for Continue; the same
+  document is emailed once per Session. With no current Operator, the document is omitted and Processing proceeds.
+  It also polls `countryBlocked` and returns to `/welcome/plan` when the webhook cancelled the checkout.
 - The webhooks: Cashier's handlers write the `subscriptions` row, and `customer.subscription.created` / `updated`
   writes the Account's Plan (`accounts.plan_id`). `checkout.session.completed` (subscription mode) cancels a
   blocked billing country, records `blocked_country`, `blocked_country_at` and
@@ -73,10 +74,11 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
 
 - Journeys: `$V/drive.sh welcome-plan` (registers a guest through `/register?plan=plus&interval=yearly`, completes
   Welcome, checks the four cards and the switch, the verify dialog and Mailpit, then pays) and
-  `$V/drive.sh welcome-checkout` (the fixture Owner, Mini monthly). `welcome-plan` makes its own guest. `welcome-checkout`
-  needs `fixture.sh up` and a fixture Owner who has not answered Welcome: a second run lands on the Schedule and times
-  out waiting for the persona step. `payment-retry`, `past-due` and `lapsed` are the Trial and payment paths in
-  `trial-and-payment.md`; they need a Stripe test clock.
+  `$V/drive.sh welcome-checkout` (the fixture Owner, Mini monthly). Both guest journeys need `new_signups` enabled
+  and restored to off afterward. `welcome-plan` makes its own guest. `welcome-checkout` needs `fixture.sh up` and a
+  fixture Owner who has not answered Welcome: a second run lands on the Schedule and times out waiting for the persona
+  step. A current Operator is required to prove the Thai document. `payment-retry`, `past-due` and `lapsed` are the
+  Trial and payment paths in `trial-and-payment.md`; they need a Stripe test clock.
 - Offers: `$V/offer.sh up` creates two sandbox link Offers through `/internal/v1/offers` (the app creates each
   Stripe coupon itself) and writes `~/.cache/verify-therxdesk/state/offers.env`; `drive.sh` passes their slugs to the
   journey. Both cover Mini monthly with 20% off the first 3 months and a 14-day trial; one shows the banner and one
@@ -96,10 +98,9 @@ Stripe's page tick Terms, fill the billing name and address, type the test card 
 - Mailpit: `welcome-plan` waits for the signup email through Mailpit's HTTP API (`VERIFY_MAILPIT_URL`, default
   `http://localhost:8025`), clicks Resend, waits for a different message, and opens its `/verify-email/...` link.
 - End state: the path is `/schedule...` and `auth.hasActiveSubscription` is `true`; `auth.plan.name` is `Mini` for
-  `welcome-checkout` and `welcome-offer` (`08-after-checkout.png`) and `Plus` for `welcome-plan`
-  (`10-after-checkout.png`). Before that, Processing shows a spinner until this Session's facts land; a TH-billed
-  buyer sees `@thai-purchase-document` (the `welcome-plan` shots `09-processing.png` and
-  `10-thai-purchase-document.png`) and the journey clicks `@purchase-document-continue`. The subscription is
+  `welcome-checkout` and `welcome-offer`, and `Plus` for `welcome-plan`.
+  Before that, Processing shows a spinner until this Session's facts land; a TH-billed
+  buyer sees `@thai-purchase-document` and the journey clicks `@purchase-document-continue`. The subscription is
   `trialing` for the Catalog's trial days (14 on the Offer path), not
   `active`, unless a repeat card skipped the Trial: then it is `active` and `first_paid_at` / `first_invoice_id` are
   set. On the Offer path, `db.sh "select o.slug, ao.redeemed_at from account_offer ao join offers o on o.id =

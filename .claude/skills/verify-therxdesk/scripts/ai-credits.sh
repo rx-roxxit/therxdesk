@@ -2,12 +2,12 @@
 # Puts the fixture Account at an AI-credits edge, so the gate and the
 # low-credits line can be driven in the browser. The override and the reset go
 # through the app's own /internal/v1 API (the way the System admin does it);
-# only the ledger rows are seeded, because the dev stack has no AI key.
+# only the ledger rows are seeded, so the zero-credit proof makes no real AI call.
 #
 #   ai-credits.sh up     120 credits a month, none used
 #   ai-credits.sh low    leave 5 of 120 credits (under 10%)
 #   ai-credits.sh none   leave 0 credits (the refusal)
-#   ai-credits.sh clear  remove the seeded rows and the override
+#   ai-credits.sh clear  remove all fixture ledger rows and the override
 #
 # The app never prints a token: every call goes through internal.sh.
 source "$(dirname "$0")/env.sh"
@@ -30,7 +30,7 @@ account_id() {
     "$FIXTURE" show | json_field accountId
 }
 
-# seed_usage <credits>: replace this month's ledger rows with one row.
+# seed_usage <credits>: replace every ledger row for this fixture Account with one row.
 seed_usage() {
     compose exec -T -u app app php artisan tinker --execute "
 \$account = App\Models\Account::find('$(account_id)');

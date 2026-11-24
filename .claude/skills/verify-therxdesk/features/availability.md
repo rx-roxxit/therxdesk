@@ -9,9 +9,10 @@ publish on an installed-but-off network (`review-access.md`).
 
 ## Customer-visible contract
 
-- **Connect.** `GET /connect/{network}` and the confirmation/finish routes answer `403` while the network is off and
-  the Account has no Review access, and its card is left out of `connectablePlatforms`. A network the server has no
-  credentials for is never listed either. Disconnecting an existing channel still works.
+- **Connect.** `GET /connect/{network}` (Telegram starts with `POST /connect/telegram`) and the
+  confirmation/finish routes answer `403` while the network is off and the Account has no Review access, and its card
+  is left out of `connectablePlatforms`. A network the server has no credentials for is never listed either.
+  Disconnecting an existing channel still works.
 - **Scheduling.** Web (`app.posts.store`), REST (`POST /api/posts`) and MCP (`create-post-tool`) refuse a scheduled or
   publish-now post on a switched-off network with `rxdesk.availability.schedule_refused`, naming the network
   (`destinations.{i}.social_account_id` in a batch, `social_account_id` in a single write). A draft is accepted.
@@ -24,7 +25,8 @@ publish on an installed-but-off network (`review-access.md`).
 - **Banners.** The channel's publish page and the composer show `PlatformUnavailableBanner`
   (`@platform-unavailable-banner`, one line per network in `@platform-unavailable-<platform>`), fed by the shared
   `unavailablePlatforms` prop.
-- **Internal API.** `GET /internal/v1/availability` lists one switch per network except X, ordered by the Platform enum:
+- **Internal API.** `GET /internal/v1/availability` returns `{ "switches": [...] }` with one switch per network except
+  X, ordered by the Platform enum:
   `{ key, kind: "platform", value, label, installed, switched_on, effective }`. `PATCH /internal/v1/availability/{key}`
   with `{ "enabled": bool }` flips it and answers the same row object. An unknown key answers `404`; switching on a
   network that is not installed answers `422`. Every PATCH writes an `availability.enable` or `availability.disable`
@@ -117,6 +119,9 @@ VERIFY_BLOCKED_POST=$BLOCKED $V/drive.sh availability-retry
 $V/db.sh "select status, publish_status, publish_block_reason, error_message from posts where id = '$BLOCKED'"
 #   publishing | pending | (null) | (null)          right after the click, or
 #   failed     | failed  | (null) | <LinkedIn refusal>   once the fake token fails
+#   A restored but call-exhausted YouTube/TikTok/Pinterest channel instead waits as
+#   publishing | retrying | (null) with retry_at at the next UTC reset. LinkedIn has
+#   no configured bucket, so this recipe does not exercise that branch.
 
 $V/complimentary.sh down
 $V/fixture.sh down

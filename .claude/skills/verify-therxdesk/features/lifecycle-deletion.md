@@ -10,7 +10,9 @@ through `/internal/v1` by typing the Owner's email.
 
 - **The deletion clock is stored.** `accounts.deletion_scheduled_at` is written when access stops (never computed
   from the subscription later). A Suspended Account's clock is frozen; lifting the Suspension adds the frozen time
-  back. `accounts.data_purged_at` marks an Account whose data was already deleted while the Owner was kept.
+  back. `accounts.data_purged_at` marks an Account whose data was already deleted while the Owner was kept. In
+  current code that marker is one-way: after the first retained-Owner purge, a later subscription and lapse does not
+  create a second deletion clock or purge. Treat that as a product gap to report, not a skill behavior to change.
 - **The emails** (Maizzle, keys in `rxdesk.lifecycle`, 16 locales): Trial ending three days before the charge (date,
   amount after the Offer, how to cancel in the billing portal); access stopped; deletion in seven days; deletion in
   one day; and the Member's own warning seven days before. Each deletion email says an export can be requested. Each
@@ -44,6 +46,8 @@ $V/selling.sh up
 $V/fixture.sh up
 
 # 1. Put the fixture on the Lapsed path with a deletion clock 7 days out.
+#    fixture.sh up above is required: an already-subscribed fixture keeps its active
+#    subscription and the next sweep can clear the manually set clock.
 $V/fixture.sh lifecycle 168          # hours; 168 = 7 days, -1 = already due
 $V/lifecycle.sh show                 # access_state.deletion_scheduled_at ~ now + 7 days
 
@@ -65,6 +69,8 @@ $V/db.sh "select owner_id, stripe_id, data_purged_at, deletion_scheduled_at from
 $V/db.sh "select count(*) from workspaces where account_id = '<accountId>'"
 #   accounts: owner_id and stripe_id kept, data_purged_at set, deletion_scheduled_at null
 #   workspaces: 0
+# A fresh fixture has no Stripe customer. Attach a test-clock Customer first if the
+# run must prove retention instead of observing null-to-null.
 $V/db.sh "select email from users where id = '<userId>'"     # still there
 $V/db.sh "select email from users where email = 'verify-member@example.com'"   # gone
 
@@ -88,7 +94,8 @@ Owner is kept.
   `Your data will be deleted in 7 days` to the Owner and `Your workspace will be deleted in 7 days` to the Member.
   Running `sweep` again sends neither a second time (`lifecycle_emails` has one row per recipient and type).
 - `lifecycle.sh export` prints the dry-run counts and writes nothing; the non-dry `rxdesk:export --account=<id>`
-  writes a zip whose `posts.json` lists the posts and whose `media/` entries hold the files.
+  writes a zip whose `posts.json` lists the posts and whose `media/` entries hold the files. The stock fresh fixture
+  has no posts and no media, so the counts are zero unless the run creates them first.
 - `lifecycle.sh delete-dry` prints the impact and changes nothing; `lifecycle.sh delete` then leaves the Owner, the
   empty Account and the Stripe customer, and `audit_logs` is untouched by the CLI (only the internal "Delete now"
   writes `account.delete_now`).
@@ -98,8 +105,9 @@ Owner is kept.
 
 - **Order matters.** `drive.sh lapsed-deletion` needs `fixture.sh lifecycle 168` first, or the plan step has no
   date and the journey fails.
-- **Mailpit only sees mail after the queue flushes.** Mailables are queued; `lifecycle.sh sweep` runs
-  `queue:work --stop-when-empty` for that reason. Never run a second worker beside it.
+- **Mailpit only sees mail after the queue is consumed.** Horizon normally does this; `lifecycle.sh sweep` also
+  runs `queue:work --stop-when-empty` as a fallback. That flush is global: quiesce unrelated queued work and never
+  run a second worker beside it.
 - **The CLI deletes the fixture only.** `lifecycle.sh delete` passes `--account=<fixture>`; never run
   `rxdesk:delete` without it.
 - **Suspension freezes the clock.** A suspended fixture gets no email and is not deleted; `lifecycle.sh backdate`

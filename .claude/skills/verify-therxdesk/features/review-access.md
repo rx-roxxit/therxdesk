@@ -74,7 +74,10 @@ $V/fixture.sh down
 
 The `review-access` journey schedules the post **7 days ahead** (`VERIFY_REVIEW_LEAD_DAYS`),
 so the live dev scheduler never reaches the fixture's fake token. `fixture.sh
-down` removes the post with its Workspace.
+down` removes the post with its Workspace. The journey proves the Account-aware connect card, absent banner and
+accepted scheduling while the switch is off. Reviewer creation/no-email/audit and the REST `201`/`422` path are
+covered by feature tests, not this host sequence; the seven-day schedule does not prove the due-publication path
+(`ReviewAccessTest` asserts that the publish job is queued).
 
 ## Host-side proof
 
