@@ -198,7 +198,7 @@ prints them. `selling.sh down` removes the file.
   { "used", "max", "resets_at" } }`. At the `RXDESK_ASK_THE_DESK_DAILY_LIMIT` cap (default 50, UTC day) it answers
   `429` with `code: "daily_limit"`, the translated message, `retry_after` and a `Retry-After` header. A provider
   failure or an empty answer answers `502` with `code: "unavailable"` and the generic `rxdesk.ai.unavailable`
-  message; no answer or error names a provider or model. Every call writes one `ask_the_desk` ledger row with
+  message; no answer or error names a provider or model. Each AI call writes one `ask_the_desk` ledger row with
   `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) names no customer. Self-hosted
   answers 404, and the site token answers 404.
 - The **cost table** (`cost` on the AI settings) is computed live: one row per active Plan, ordered `sort` then
