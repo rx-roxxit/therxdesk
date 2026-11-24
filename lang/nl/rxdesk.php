@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Schijfruimte bijna uitgeput',
             'ai_provider_failure' => 'Storing bij AI-aanbieder',
             'nightwatch_burst' => 'Golf van nieuwe problemen',
+            'network_bucket_today' => ':network nadert de dagelijkse aanroepenlimiet',
+            'network_bucket_urgent' => ':network zit dicht bij de dagelijkse aanroepenlimiet',
+            'network_bucket_exhausted' => ':network heeft de dagelijkse aanroepenlimiet bereikt',
         ],
         'messages' => [
             'capacity_ram' => 'Het servergeheugen staat op :percent%, boven de waarschuwingsdrempel van :threshold%.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'De vrije schijfruimte is :free, dicht bij de schijfbewakingdrempel van :threshold. Uploads stoppen binnenkort.',
             'ai_provider_failure' => 'Het :model-model is mislukt: :error',
             'nightwatch_burst' => 'In het laatste uur zijn :count problemen in Nightwatch geopend.',
+            'network_bucket_today' => ':network zit op :percent% van de dagelijkse aanroepenlimiet (:calls van :capacity).',
+            'network_bucket_urgent' => ':network zit op :percent% van de dagelijkse aanroepenlimiet (:calls van :capacity).',
+            'network_bucket_exhausted' => ':network heeft de dagelijkse aanroepenlimiet bereikt (:calls van :capacity). Publiceren wacht tot :reset.',
         ],
         'resolved_body' => 'Deze melding is opgelost. Hij komt terug als de situatie zich opnieuw voordoet.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Hersteltest',
             'restore_drill_line' => 'De laatste hersteltest was op :date. Voer er nu een uit.',
             'restore_drill_never' => 'Er is nog geen hersteltest vastgelegd. Voer er nu een uit.',
+            'bucket_accounts' => 'Accounts met een gedeelde limiet',
+            'bucket_accounts_line' => ':network: :account (:owner) gebruikte :percent% van de dagelijkse aanroepen (:calls).',
         ],
         'preview' => [
             'urgent' => 'Een probleem vraagt nu om aandacht.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Je abonnement is afgelopen, daarom is dit bericht niet gepubliceerd. Sluit opnieuw een abonnement af en probeer het daarna nog eens.',
         'suspended' => 'Je account is opgeschort, daarom is dit bericht niet gepubliceerd. Neem contact op met support en probeer het daarna nog eens.',
         'unavailable' => ':network is nu niet beschikbaar. Probeer het opnieuw zodra het terug is.',
+        'network_limit' => ':network kan nu geen nieuwe berichten aannemen. We proberen het opnieuw en publiceren dit bericht zodra het weer kan.',
         'retry' => 'Opnieuw proberen',
         'retry_started' => 'Het bericht wordt opnieuw gepubliceerd.',
         'retry_failed' => 'Het bericht kon niet opnieuw worden gepubliceerd. Probeer het nog eens.',

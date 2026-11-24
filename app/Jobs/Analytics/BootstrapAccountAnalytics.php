@@ -12,6 +12,7 @@ use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsSyncState;
 use App\Models\SocialAccount;
 use App\Services\Analytics\Collectors\Publications\PublicationHistoryCollectorFactory;
+use App\Services\NetworkLimits\NetworkCallContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -59,6 +60,14 @@ class BootstrapAccountAnalytics implements ShouldQueue
             return;
         }
 
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($account),
+            fn () => $this->bootstrap($account),
+        );
+    }
+
+    private function bootstrap(SocialAccount $account): void
+    {
         [$backfill, $backfillRebound] = $this->stateFor($account, SyncCollector::PublicationBackfill, [
             'status' => SyncStatus::Pending,
             'checkpoint' => ['cursor' => null, 'revision' => 0],

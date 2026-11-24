@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'مساحة القرص على وشك النفاد',
             'ai_provider_failure' => 'تعطّل مزوّد الذكاء الاصطناعي',
             'nightwatch_burst' => 'اندفاع في مشكلات جديدة',
+            'network_bucket_today' => ':network قريب من حد الاستدعاءات اليومي',
+            'network_bucket_urgent' => ':network يقترب من حد الاستدعاءات اليومي',
+            'network_bucket_exhausted' => ':network بلغ حد الاستدعاءات اليومي',
         ],
         'messages' => [
             'capacity_ram' => 'ذاكرة الخادم عند :percent%، أعلى من حد التنبيه :threshold%.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'المساحة الحرة على القرص هي :free، قريبة من حد حماية القرص :threshold. ستتوقف عمليات الرفع قريبًا.',
             'ai_provider_failure' => 'فشل النموذج :model: :error',
             'nightwatch_burst' => 'فُتحت :count مشكلات في Nightwatch خلال الساعة الأخيرة.',
+            'network_bucket_today' => ':network عند :percent% من حد الاستدعاءات اليومي (:calls من :capacity).',
+            'network_bucket_urgent' => ':network عند :percent% من حد الاستدعاءات اليومي (:calls من :capacity).',
+            'network_bucket_exhausted' => ':network بلغ حد الاستدعاءات اليومي (:calls من :capacity). سينتظر النشر إليه حتى :reset.',
         ],
         'resolved_body' => 'تم رفع هذا التنبيه. سيُرسل مجددًا إذا تكرر الشرط.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'تمرين الاستعادة',
             'restore_drill_line' => 'آخر تمرين استعادة كان في :date. نفّذ واحدًا الآن.',
             'restore_drill_never' => 'لم يُسجَّل أي تمرين استعادة بعد. نفّذ واحدًا الآن.',
+            'bucket_accounts' => 'حسابات تستخدم الحد المشترك',
+            'bucket_accounts_line' => ':network: استخدم :account (:owner) :percent% من الاستدعاءات اليومية (:calls).',
         ],
         'preview' => [
             'urgent' => 'هناك مشكلة تحتاج إلى انتباه فوري.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'انتهى اشتراكك، لذا لم يُنشر هذا المنشور. اشترك مرة أخرى ثم أعد المحاولة.',
         'suspended' => 'حسابك موقوف، لذا لم يُنشر هذا المنشور. تواصل مع الدعم ثم أعد المحاولة.',
         'unavailable' => ':network غير متاح الآن. أعد المحاولة عندما يعود.',
+        'network_limit' => ':network لا يستقبل منشورات جديدة الآن. سنعيد المحاولة وننشر هذا المنشور بمجرد أن يستطيع.',
         'retry' => 'إعادة المحاولة',
         'retry_started' => 'جارٍ إعادة محاولة نشر المنشور.',
         'retry_failed' => 'تعذّرت إعادة محاولة نشر المنشور. أعد المحاولة.',

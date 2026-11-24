@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Spazio su disco quasi esaurito',
             'ai_provider_failure' => 'Errore del provider IA',
             'nightwatch_burst' => 'Picco di nuovi problemi',
+            'network_bucket_today' => ':network si avvicina al limite giornaliero di chiamate',
+            'network_bucket_urgent' => ':network è vicino al limite giornaliero di chiamate',
+            'network_bucket_exhausted' => ':network ha raggiunto il limite giornaliero di chiamate',
         ],
         'messages' => [
             'capacity_ram' => 'La memoria del server è al :percent%, sopra la soglia di avviso del :threshold%.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'Lo spazio libero su disco è :free, vicino alla soglia di protezione del disco di :threshold. I caricamenti si fermeranno presto.',
             'ai_provider_failure' => 'Il modello :model non è riuscito: :error',
             'nightwatch_burst' => 'Nell\'ultima ora sono stati aperti :count problemi in Nightwatch.',
+            'network_bucket_today' => ':network è al :percent% del limite giornaliero di chiamate (:calls su :capacity).',
+            'network_bucket_urgent' => ':network è al :percent% del limite giornaliero di chiamate (:calls su :capacity).',
+            'network_bucket_exhausted' => ':network ha raggiunto il limite giornaliero di chiamate (:calls su :capacity). La pubblicazione attenderà fino a :reset.',
         ],
         'resolved_body' => 'Questo avviso è rientrato. Verrà inviato di nuovo se la condizione si ripresenta.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Prova di ripristino',
             'restore_drill_line' => 'L\'ultima prova di ripristino è stata il :date. Eseguine una ora.',
             'restore_drill_never' => 'Nessuna prova di ripristino è ancora registrata. Eseguine una ora.',
+            'bucket_accounts' => 'Account che condividono un limite',
+            'bucket_accounts_line' => ':network: :account (:owner) ha usato il :percent% delle chiamate giornaliere (:calls).',
         ],
         'preview' => [
             'urgent' => 'Un problema richiede attenzione subito.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Il tuo abbonamento è terminato, quindi questo post non è stato pubblicato. Riattiva l\'abbonamento e poi riprova.',
         'suspended' => 'Il tuo account è sospeso, quindi questo post non è stato pubblicato. Contatta l\'assistenza e poi riprova.',
         'unavailable' => ':network non è disponibile in questo momento. Riprova quando sarà di nuovo disponibile.',
+        'network_limit' => ':network non può accettare nuovi post in questo momento. Riproveremo e pubblicheremo questo post appena possibile.',
         'retry' => 'Riprova',
         'retry_started' => 'Nuovo tentativo di pubblicazione del post.',
         'retry_failed' => 'Impossibile riprovare a pubblicare il post. Riprova.',

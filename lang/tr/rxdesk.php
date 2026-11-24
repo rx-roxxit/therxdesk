@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Disk alanı neredeyse tükendi',
             'ai_provider_failure' => 'AI sağlayıcı hatası',
             'nightwatch_burst' => 'Yeni sorunlarda artış',
+            'network_bucket_today' => ':network günlük çağrı limitine yaklaşıyor',
+            'network_bucket_urgent' => ':network günlük çağrı limitine çok yakın',
+            'network_bucket_exhausted' => ':network günlük çağrı limitine ulaştı',
         ],
         'messages' => [
             'capacity_ram' => 'Sunucu belleği %:percent seviyesinde, %:threshold uyarı eşiğinin üzerinde.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'Boş disk alanı :free, :threshold disk koruma eşiğine yakın. Yüklemeler yakında duracak.',
             'ai_provider_failure' => ':model modeli başarısız oldu: :error',
             'nightwatch_burst' => 'Son bir saatte Nightwatch\'ta :count sorun açıldı.',
+            'network_bucket_today' => ':network günlük çağrı limitinin %:percent kadarında (:capacity içinde :calls).',
+            'network_bucket_urgent' => ':network günlük çağrı limitinin %:percent kadarında (:capacity içinde :calls).',
+            'network_bucket_exhausted' => ':network günlük çağrı limitine ulaştı (:capacity içinde :calls). Bu ağa yayın :reset saatine kadar bekleyecek.',
         ],
         'resolved_body' => 'Bu uyarı kapandı. Koşul tekrarlarsa yeniden gönderilecek.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Geri yükleme tatbikatı',
             'restore_drill_line' => 'Son geri yükleme tatbikatı :date tarihindeydi. Şimdi bir tane yapın.',
             'restore_drill_never' => 'Henüz kayıtlı bir geri yükleme tatbikatı yok. Şimdi bir tane yapın.',
+            'bucket_accounts' => 'Ortak limiti kullanan hesaplar',
+            'bucket_accounts_line' => ':network: :account (:owner) günlük çağrıların %:percent kadarını kullandı (:calls).',
         ],
         'preview' => [
             'urgent' => 'Bir sorun hemen ilgi bekliyor.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Aboneliğiniz sona erdiği için bu gönderi yayımlanmadı. Yeniden abone olun ve ardından tekrar deneyin.',
         'suspended' => 'Hesabınız askıya alındığı için bu gönderi yayımlanmadı. Destek ekibine ulaşın ve ardından tekrar deneyin.',
         'unavailable' => ':network şu anda kullanılamıyor. Ağ geri geldiğinde tekrar deneyin.',
+        'network_limit' => ':network şu anda yeni gönderi kabul edemiyor. Yeniden deneyeceğiz ve mümkün olur olmaz bu gönderiyi yayımlayacağız.',
         'retry' => 'Tekrar dene',
         'retry_started' => 'Gönderi yeniden yayımlanıyor.',
         'retry_failed' => 'Gönderi yeniden yayımlanamadı. Tekrar deneyin.',

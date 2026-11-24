@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Mcp\ListChatGptEgressRanges;
 use App\Models\AccessToken;
 use App\Models\Account;
+use App\Models\AccountNetworkCall;
 use App\Models\AdminAlert;
 use App\Models\AiCreditUsage;
 use App\Models\AnalyticsAccountDailySnapshot;
@@ -27,6 +28,8 @@ use App\Models\Invite;
 use App\Models\LifecycleEmail;
 use App\Models\Media;
 use App\Models\MediaSourceConnection;
+use App\Models\NetworkCallBucket;
+use App\Models\NetworkLimitSetting;
 use App\Models\NightwatchIssue;
 use App\Models\NotificationPreference;
 use App\Models\Offer;
@@ -62,6 +65,8 @@ use App\Services\Metrics\HorizonQueueMetrics;
 use App\Services\Metrics\HostMetrics;
 use App\Services\Metrics\ProcHostMetrics;
 use App\Services\Metrics\QueueMetrics;
+use App\Services\NetworkLimits\NetworkCallContext;
+use App\Services\NetworkLimits\NetworkCallRecorder;
 use App\Services\PostHogService;
 use App\Services\Storage\DiskSpace;
 use App\Services\Storage\LocalDiskSpace;
@@ -73,6 +78,7 @@ use App\Support\Availability\Availability;
 use App\Support\SupportChat\HelpCorpus;
 use App\Support\SupportChat\SupportChatLinks;
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -84,6 +90,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -93,6 +100,7 @@ use Laravel\Nightwatch\Records\Query;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 use PostHog\PostHog;
+use Psr\Http\Message\RequestInterface;
 use SocialiteProviders\Facebook\FacebookExtendSocialite;
 use SocialiteProviders\LinkedIn\LinkedInExtendSocialite;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -112,6 +120,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(QueueMetrics::class, HorizonQueueMetrics::class);
         $this->app->scoped(Availability::class);
         $this->app->scoped(HelpCorpus::class);
+        $this->app->scoped(NetworkCallContext::class);
         $this->app->scoped(SupportChatLinks::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
@@ -126,6 +135,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureHttpCounting();
         $this->configureMorphMap();
         $this->configureNightwatch();
         $this->configurePostHog();
@@ -155,11 +165,28 @@ class AppServiceProvider extends ServiceProvider
             && $query->duration < $slowQueryMicroseconds);
     }
 
+    /**
+     * Count every outgoing network call at the client, before it is sent. The
+     * recorder checks the feature switches and the host itself, so OAuth,
+     * media and every other service stays uncounted.
+     */
+    protected function configureHttpCounting(): void
+    {
+        Http::globalMiddleware(function (callable $handler): Closure {
+            return function (RequestInterface $request, array $options) use ($handler) {
+                app(NetworkCallRecorder::class)->record($request);
+
+                return $handler($request, $options);
+            };
+        });
+    }
+
     protected function configureMorphMap(): void
     {
         Relation::enforceMorphMap([
             'accessToken' => AccessToken::class,
             'account' => Account::class,
+            'accountNetworkCall' => AccountNetworkCall::class,
             'adminAlert' => AdminAlert::class,
             'aiCreditUsage' => AiCreditUsage::class,
             'analyticsAccountDailySnapshot' => AnalyticsAccountDailySnapshot::class,
@@ -179,6 +206,8 @@ class AppServiceProvider extends ServiceProvider
             'lifecycleEmail' => LifecycleEmail::class,
             'media' => Media::class,
             'mediaSourceConnection' => MediaSourceConnection::class,
+            'networkCallBucket' => NetworkCallBucket::class,
+            'networkLimitSetting' => NetworkLimitSetting::class,
             'nightwatchIssue' => NightwatchIssue::class,
             'notificationPreference' => NotificationPreference::class,
             'offer' => Offer::class,

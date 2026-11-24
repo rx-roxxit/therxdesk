@@ -236,6 +236,9 @@ return [
             'disk_guard' => '磁盘空间即将耗尽',
             'ai_provider_failure' => 'AI 服务商故障',
             'nightwatch_burst' => '新问题激增',
+            'network_bucket_today' => ':network 接近每日调用上限',
+            'network_bucket_urgent' => ':network 即将达到每日调用上限',
+            'network_bucket_exhausted' => ':network 已达到每日调用上限',
         ],
         'messages' => [
             'capacity_ram' => '服务器内存使用率为 :percent%，超过 :threshold% 的告警阈值。',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => '磁盘可用空间为 :free，接近 :threshold 的磁盘保护阈值。上传即将停止。',
             'ai_provider_failure' => ':model 模型失败：:error',
             'nightwatch_burst' => '过去一小时内 Nightwatch 新增了 :count 个问题。',
+            'network_bucket_today' => ':network 已达到每日调用上限的 :percent%（:calls/:capacity）。',
+            'network_bucket_urgent' => ':network 已达到每日调用上限的 :percent%（:calls/:capacity）。',
+            'network_bucket_exhausted' => ':network 已达到每日调用上限（:calls/:capacity）。发布将等待至 :reset。',
         ],
         'resolved_body' => '此告警已解除。如果该情况再次出现，会再次通知。',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => '恢复演练',
             'restore_drill_line' => '上次恢复演练是在 :date。现在再演练一次。',
             'restore_drill_never' => '还没有恢复演练记录。现在演练一次。',
+            'bucket_accounts' => '共用调用上限的账户',
+            'bucket_accounts_line' => ':network：:account（:owner）已使用每日调用的 :percent%（:calls）。',
         ],
         'preview' => [
             'urgent' => '有问题需要立即处理。',
@@ -316,6 +324,7 @@ return [
         'lapsed' => '您的订阅已结束，因此这条帖子未发布。请重新订阅后再试一次。',
         'suspended' => '您的账户已暂停，因此这条帖子未发布。请联系支持后再试一次。',
         'unavailable' => ':network 目前不可用。等它恢复后再试一次。',
+        'network_limit' => ':network 目前无法接收新帖子。我们会重试，并在可以发布时尽快发布这条帖子。',
         'retry' => '重试',
         'retry_started' => '正在重试发布这条帖子。',
         'retry_failed' => '无法重试发布这条帖子。请再试一次。',

@@ -11,6 +11,7 @@ use App\Exceptions\Analytics\AnalyticsCollectionException;
 use App\Models\AnalyticsAccountDailySnapshot;
 use App\Models\SocialAccount;
 use App\Services\Analytics\Collectors\Followers\FollowerCollectorFactory;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Support\Analytics\AnalyticsJobLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -79,6 +80,19 @@ class CollectAccountDailySnapshot implements ShouldQueue
             return;
         }
 
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($channel),
+            fn () => $this->collect($channel, $collectors, $accountKeys, $writer, $log),
+        );
+    }
+
+    private function collect(
+        SocialAccount $channel,
+        FollowerCollectorFactory $collectors,
+        ResolveAnalyticsAccountKey $accountKeys,
+        WriteAccountDailySnapshot $writer,
+        AnalyticsJobLog $log,
+    ): void {
         $alreadyCollected = AnalyticsAccountDailySnapshot::query()
             ->where('workspace_id', $channel->workspace_id)
             ->where('social_account_key', $accountKeys->for($channel))

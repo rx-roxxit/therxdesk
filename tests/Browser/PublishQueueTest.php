@@ -9,6 +9,7 @@ use App\Enums\Post\QueuePosition;
 use App\Enums\Post\ScheduleMode;
 use App\Enums\Post\Status as PostStatus;
 use App\Enums\PostPlatform\ContentType;
+use App\Enums\User\Locale;
 use App\Enums\User\TimeFormat;
 use App\Exceptions\Social\ErrorCategory;
 use App\Models\Post;
@@ -827,6 +828,38 @@ test('a publishing post waiting for a network limit shows when it retries', func
         ->assertDontSeeIn("@post-publishing-{$waiting->id}", __('posts.publish.publishing_on', ['network' => $channel->platform->label()]))
         ->assertNoJavaScriptErrors();
 });
+
+test('a post waiting on an exhausted network bucket explains the shared limit in its locale', function (string $locale) {
+    [$user, $workspace, $channel] = publishQueueSetup();
+    $user->update(['locale' => Locale::from($locale), 'time_format' => TimeFormat::TwentyFourHour]);
+    $retryAt = now()->addHours(2)->startOfMinute();
+    $waiting = Post::factory()->forAccount($channel)->create([
+        'publish_status' => PublishStatus::Retrying,
+        'retry_at' => $retryAt,
+        'error_message' => __('rxdesk.publishing_block.network_limit', ['network' => $channel->platform->label()]),
+        'error_context' => [
+            'category' => 'network_bucket_exhausted',
+            'network' => $channel->platform->network(),
+            'reset_at' => $retryAt->toIso8601String(),
+        ],
+        'user_id' => $user->id,
+        'status' => PostStatus::Publishing,
+        'schedule_mode' => ScheduleMode::Custom,
+        'scheduled_at' => now()->subMinute(),
+        'content' => 'Waiting for the network bucket',
+    ]);
+    $this->actingAs($user->fresh());
+
+    $page = visit(route('app.posts.index'));
+    waitFor($page, "@post-network-limit-{$waiting->id}");
+
+    $page->assertSeeIn(
+        "@post-network-limit-{$waiting->id}",
+        trans('rxdesk.publishing_block.network_limit', ['network' => $channel->platform->label()], $locale),
+    )
+        ->assertSeeIn("@post-limit-retry-{$waiting->id}", trans('posts.publish.retrying_at', ['time' => $retryAt->utc()->format('H:i')], $locale))
+        ->assertNoJavaScriptErrors();
+})->with(['en', 'de']);
 
 test('a google business post waiting for review says google is reviewing it', function () {
     [$user, $workspace] = publishQueueSetup();

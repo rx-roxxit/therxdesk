@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Disk space nearly exhausted',
             'ai_provider_failure' => 'AI provider failure',
             'nightwatch_burst' => 'Burst of new issues',
+            'network_bucket_today' => ':network is close to its daily call limit',
+            'network_bucket_urgent' => ':network is near its daily call limit',
+            'network_bucket_exhausted' => ':network reached its daily call limit',
         ],
         'messages' => [
             'capacity_ram' => 'Server memory is at :percent%, over the :threshold% alert level.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'Free disk space is :free, near the Disk guard threshold of :threshold. Uploads will stop soon.',
             'ai_provider_failure' => 'The :model model failed: :error',
             'nightwatch_burst' => ':count issues opened in Nightwatch within the last hour.',
+            'network_bucket_today' => ':network is at :percent% of its daily call limit (:calls of :capacity).',
+            'network_bucket_urgent' => ':network is at :percent% of its daily call limit (:calls of :capacity).',
+            'network_bucket_exhausted' => ':network reached its daily call limit (:calls of :capacity). Publishing to it waits until :reset.',
         ],
         'resolved_body' => 'This alert cleared. It will be raised again if the condition returns.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Restore drill',
             'restore_drill_line' => 'The last restore drill was on :date. Run one now.',
             'restore_drill_never' => 'No restore drill is recorded yet. Run one now.',
+            'bucket_accounts' => 'Accounts using a shared bucket',
+            'bucket_accounts_line' => ':network: :account (:owner) used :percent% of the daily calls (:calls).',
         ],
         'preview' => [
             'urgent' => 'A problem needs attention now.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Your subscription ended, so this post was not published. Subscribe again, then try again.',
         'suspended' => 'Your account is suspended, so this post was not published. Contact support, then try again.',
         'unavailable' => ':network is unavailable right now. Try again once it’s back.',
+        'network_limit' => ':network can’t take new posts right now. We’ll retry and publish this post as soon as it can.',
         'retry' => 'Try again',
         'retry_started' => 'Retrying the post.',
         'retry_failed' => 'Couldn’t retry the post. Try again.',

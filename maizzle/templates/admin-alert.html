@@ -9,8 +9,17 @@
         <p class="m-0 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.cleared') }}</p>
         <p class="m-0 mt-1 leading-6">@{{ __('rxdesk.alerts.digest.cleared_line') }}</p>
         <x-list>
-          @foreach($items['cleared'] as $clearedKey)
-            <li>@{{ __('rxdesk.alerts.conditions.' . $clearedKey) }}</li>
+          @foreach($items['cleared'] as $cleared)
+            <li>@{{ $cleared['title'] }}</li>
+          @endforeach
+        </x-list>
+      @endif
+
+      @if(! empty($items['bucket_accounts']['rows']))
+        <p class="m-0 mt-6 font-semibold leading-6">@{{ __('rxdesk.alerts.digest.bucket_accounts') }}</p>
+        <x-list>
+          @foreach($items['bucket_accounts']['rows'] as $row)
+            <li>@{{ __('rxdesk.alerts.digest.bucket_accounts_line', ['network' => $row['network'], 'account' => $row['account'], 'owner' => $row['owner'], 'percent' => $row['percent'], 'calls' => $row['calls']]) }}</li>
           @endforeach
         </x-list>
       @endif
