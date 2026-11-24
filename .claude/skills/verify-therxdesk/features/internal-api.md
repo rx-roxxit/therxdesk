@@ -123,6 +123,14 @@ prints them. `selling.sh down` removes the file.
   decimals, null when nothing was paying at the start, `types`, `reasons`), `trial_conversion` for the three
   windows, `offers` performance and `support_chat` counters. It reads the live tables and writes nothing; the daily
   `rxdesk:business-snapshot` command (00:05 UTC) upserts one `business_snapshots` row per Account per day.
+- `GET /internal/v1/overview` (admin): the Overview's figures. `generated_at`, `today` (`Y-m-d`, UTC), `publishing`
+  (exactly 14 zero-filled entries, oldest first, ending today: `date`, `published`, `failed`; published counts the
+  posts the network published, deleted there included, by `published_at`, and failed counts `publish_status = failed`
+  by `publication_updated_at`), `usage` (`storage`: `used_bytes`, `quota_bytes`, `percent`; `ai_credits`: `used`,
+  `allowance`, `percent`, the same per-Account figures `/ai/balances` lists, added up) and `largest_accounts` (up
+  to 10 Owner Accounts storing the most: `account_id`, `name`, `used_bytes`, `quota_bytes`, `percent`). Platform
+  buckets are not here; read them from `/network-limits`. Not paginated, and it reads no `per_page`. No post
+  content or Owner email. Site token 404.
 - `GET /internal/v1/support/conversations` (admin): paginated transcripts, newest message first, nothing older than
   30 days; `?feedback=up|down` keeps only conversations with that answer. A row is `id`, `account` (`id`, `name`),
   `user` (`id`, `name`, `email`), `plan`, `last_page`, `escalated_at`, `last_message_at` and `messages` (`id`,

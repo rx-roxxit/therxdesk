@@ -23,6 +23,7 @@ use App\Http\Controllers\Internal\NetworkLimitController;
 use App\Http\Controllers\Internal\NetworkLimitThresholdController;
 use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\OperatorController;
+use App\Http\Controllers\Internal\OverviewController;
 use App\Http\Controllers\Internal\PlanController;
 use App\Http\Controllers\Internal\SiteController;
 use App\Http\Controllers\Internal\StorageController;
@@ -108,6 +109,9 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('business', BusinessController::class)
         ->name('internal.business');
+
+    Route::get('overview', OverviewController::class)
+        ->name('internal.overview');
 
     Route::get('operator', [OperatorController::class, 'show'])
         ->name('internal.operator.show');
