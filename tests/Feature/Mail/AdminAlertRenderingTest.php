@@ -24,6 +24,22 @@ test('the alert email renders in every locale', function (string $locale) {
         ->and($html)->toContain(e(__('rxdesk.alerts.conditions.capacity_ram')));
 })->with(Locale::values());
 
+test('a network bucket alert names the network in the subject and the body', function () {
+    app()->setLocale('en');
+
+    $mail = new AdminAlertMail(AlertLevel::Today, AdminAlertKey::NetworkBucketToday, [
+        'network' => 'TikTok',
+        'calls' => 70,
+        'capacity' => 100,
+        'percent' => 70.0,
+        'reset' => '2026-11-25 07:00 ICT',
+    ]);
+
+    expect($mail->envelope()->subject)->toContain('TikTok is close to its daily call limit')
+        ->and($mail->render())->toContain('TikTok is at 70% of its daily call limit (70 of 100).')
+        ->and($mail->render())->not->toContain(':network');
+});
+
 test('a resolved alert shows only the cleared copy', function () {
     app()->setLocale('en');
 
