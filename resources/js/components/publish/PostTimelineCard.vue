@@ -224,6 +224,26 @@ const limitRetryAt = computed(() =>
         : null,
 );
 
+const networkLimitKey = computed(() => {
+    if (props.post.publish_status !== PublishStatus.Retrying) {
+        return null;
+    }
+
+    if (props.post.failure?.category !== 'network_bucket_exhausted') {
+        return null;
+    }
+
+    return 'rxdesk.publishing_block.network_limit';
+});
+
+const networkLabel = computed(() => {
+    if (platform.value) {
+        return getPlatformLabel(platform.value);
+    }
+
+    return '';
+});
+
 const isPending = computed(
     () => props.post.status === PostStatus.PendingApproval,
 );
@@ -516,6 +536,16 @@ const onMenuSelect = (action: PostCardMenuAction): void => {
                                 time: formatTime(limitRetryAt),
                             })
                         }}
+                        <span
+                            v-if="networkLimitKey"
+                            :data-testid="`post-network-limit-${post.id}`"
+                        >
+                            {{
+                                $t(networkLimitKey, {
+                                    network: networkLabel,
+                                })
+                            }}
+                        </span>
                     </span>
                     <span
                         v-else-if="isInGoogleReview"
