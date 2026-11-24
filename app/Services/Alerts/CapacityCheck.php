@@ -9,6 +9,7 @@ use App\Models\NightwatchIssue;
 use App\Services\Metrics\HostMetrics;
 use App\Services\Metrics\QueueHealth;
 use App\Services\Metrics\QueueMetrics;
+use App\Services\NetworkLimits\NetworkBucketMonitor;
 use App\Services\Storage\AccountStorage;
 use App\Services\Storage\DiskStatus;
 use App\Support\ByteSize;
@@ -25,6 +26,7 @@ class CapacityCheck
         private readonly QueueMetrics $queues,
         private readonly AccountStorage $storage,
         private readonly AdminAlertNotifier $notifier,
+        private readonly NetworkBucketMonitor $networkBuckets,
     ) {}
 
     public function run(): void
@@ -34,6 +36,7 @@ class CapacityCheck
         $this->checkWait($this->queues->health());
         $this->checkDisk($this->storage->diskStatus());
         $this->checkNightwatchBurst();
+        $this->networkBuckets->evaluateAll();
     }
 
     private function checkRam(float $percent): void

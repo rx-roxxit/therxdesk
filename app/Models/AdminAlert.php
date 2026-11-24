@@ -8,6 +8,7 @@ use App\Enums\Alerts\AdminAlertKey;
 use Database\Factories\AdminAlertFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * One open or closed alert condition. `key` identifies the condition, so the
@@ -40,8 +41,12 @@ class AdminAlert extends Model
         ];
     }
 
+    /**
+     * The condition, without the scope of a per-network key
+     * ("network_bucket_today:tiktok").
+     */
     public function alertKey(): ?AdminAlertKey
     {
-        return AdminAlertKey::tryFrom($this->key);
+        return AdminAlertKey::tryFrom(Str::before($this->key, ':'));
     }
 }

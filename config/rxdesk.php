@@ -106,6 +106,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Network call limits
+    |--------------------------------------------------------------------------
+    |
+    | The app-wide daily call budget of each network, read from that network's
+    | developer console. `buckets` holds the capacity per network key, and the
+    | key is the alias of `App\Enums\SocialAccount\Platform::network()`. A
+    | registered network without a positive capacity has no bucket and its
+    | calls are not counted. The day is UTC, 00:00 to 00:00.
+    |
+    */
+
+    'network_limits' => [
+        'enabled' => (bool) env('RXDESK_NETWORK_LIMITS_ENABLED', true),
+        'buckets' => [
+            'youtube' => (int) env('RXDESK_YOUTUBE_DAILY_CALLS', 10000),
+            'tiktok' => (int) env('RXDESK_TIKTOK_DAILY_CALLS', 10000),
+            'pinterest' => (int) env('RXDESK_PINTEREST_DAILY_CALLS', 1000),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Database backups
     |--------------------------------------------------------------------------
     |

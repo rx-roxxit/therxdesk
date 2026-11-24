@@ -20,6 +20,7 @@ use App\Exceptions\Social\XPublishException;
 use App\Exceptions\Social\YouTubePublishException;
 use App\Exceptions\TokenExpiredException;
 use App\Models\SocialAccount;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Services\Social\Discord\DiscordClient;
 use App\Services\Social\Mastodon\MastodonApi;
 use App\Services\Social\Meta\GraphError;
@@ -69,6 +70,14 @@ class ConnectionVerifier
      * @throws PlatformUnavailableException if the platform's API is down
      */
     public function verify(SocialAccount $account): bool
+    {
+        return app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($account),
+            fn (): bool => $this->verifyConnection($account),
+        );
+    }
+
+    private function verifyConnection(SocialAccount $account): bool
     {
         $this->assertConnectionConfigured($account);
 

@@ -14,6 +14,7 @@ use App\Jobs\Post\ImportExternalPostMedia;
 use App\Models\AnalyticsSyncState;
 use App\Models\SocialAccount;
 use App\Services\Analytics\Collectors\Publications\PublicationHistoryCollectorFactory;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Support\Analytics\AnalyticsJobLog;
 use App\Support\Analytics\AnalyticsRateLimits;
 use Carbon\CarbonImmutable;
@@ -88,6 +89,19 @@ abstract class AbstractPublicationSync implements ShouldQueue
             return;
         }
 
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($channel),
+            fn () => $this->sync($channel, $sync, $collectors, $metrics, $log),
+        );
+    }
+
+    private function sync(
+        SocialAccount $channel,
+        AdvanceAnalyticsSyncState $sync,
+        PublicationHistoryCollectorFactory $collectors,
+        QueuePublicationMetricsForPage $metrics,
+        AnalyticsJobLog $log,
+    ): void {
         $capture = $sync->begin(
             $this->syncStateId,
             restartTerminal: $this->restartTerminal(),

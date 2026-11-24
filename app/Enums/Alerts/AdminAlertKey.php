@@ -17,6 +17,9 @@ enum AdminAlertKey: string
     case DiskGuard = 'disk_guard';
     case AiProviderFailure = 'ai_provider_failure';
     case NightwatchBurst = 'nightwatch_burst';
+    case NetworkBucketToday = 'network_bucket_today';
+    case NetworkBucketUrgent = 'network_bucket_urgent';
+    case NetworkBucketExhausted = 'network_bucket_exhausted';
 
     public function severity(): AdminAlertSeverity
     {
@@ -25,17 +28,23 @@ enum AdminAlertKey: string
             self::CapacityLoad,
             self::CapacityWait,
             self::CapacityDiskFree,
-            self::NightwatchBurst => AdminAlertSeverity::Today,
+            self::NightwatchBurst,
+            self::NetworkBucketToday => AdminAlertSeverity::Today,
             self::DiskGuard,
-            self::AiProviderFailure => AdminAlertSeverity::Urgent,
+            self::AiProviderFailure,
+            self::NetworkBucketUrgent,
+            self::NetworkBucketExhausted => AdminAlertSeverity::Urgent,
         };
     }
 
     /**
-     * The admin-facing title of the condition, translated in the current locale.
+     * The admin-facing title of the condition, translated in the current
+     * locale. A scoped condition names its network through the context.
+     *
+     * @param  array<string, mixed>  $context
      */
-    public function title(): string
+    public function title(array $context = []): string
     {
-        return __("rxdesk.alerts.conditions.{$this->value}");
+        return __("rxdesk.alerts.conditions.{$this->value}", $context);
     }
 }

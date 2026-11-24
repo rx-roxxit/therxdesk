@@ -15,6 +15,7 @@ use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\SocialAccount;
 use App\Services\Analytics\Collectors\Metrics\PublicationMetricsCollectorFactory;
 use App\Services\Analytics\Collectors\Metrics\TikTokPublicationMetricsCollector;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Support\Analytics\AnalyticsJobLog;
 use App\Support\Analytics\AnalyticsRateLimits;
 use App\Support\Analytics\SyncCadence;
@@ -108,6 +109,21 @@ class CollectPublicationMetrics implements ShouldQueue
             return;
         }
 
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($channel),
+            fn () => $this->collect($publication, $channel, $date, $collectors, $assignVideoId, $writer, $log),
+        );
+    }
+
+    private function collect(
+        AnalyticsPublication $publication,
+        SocialAccount $channel,
+        CarbonImmutable $date,
+        PublicationMetricsCollectorFactory $collectors,
+        AssignTikTokVideoId $assignVideoId,
+        WritePublicationDailySnapshot $writer,
+        AnalyticsJobLog $log,
+    ): void {
         $publication->setRelation('socialAccount', $channel);
         $readStartedAt = CarbonImmutable::now('UTC')->startOfSecond();
 

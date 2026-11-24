@@ -67,7 +67,7 @@ class AdminAlert extends Mailable implements ShouldQueue
     private function title(): string
     {
         if ($this->key !== null) {
-            return $this->key->title();
+            return $this->key->title($this->context);
         }
 
         return __('rxdesk.alerts.digest.title');

@@ -21,14 +21,17 @@ class AdminAlertNotifier
 {
     /**
      * Open the alert (or keep it open) and notify: URGENT only on the first
-     * raise, TODAY only when its quiet period has passed.
+     * raise, TODAY only when its quiet period has passed. A scope keeps one
+     * state row per network for a condition every network raises on its own.
      *
      * @param  array<string, mixed>  $context
      */
-    public function raise(AdminAlertKey $key, array $context = []): void
+    public function raise(AdminAlertKey $key, array $context = [], ?string $scope = null): void
     {
-        $this->locked($key, function () use ($key, $context): void {
-            $alert = AdminAlertModel::query()->firstOrNew(['key' => $key->value]);
+        $storageKey = $this->storageKey($key, $scope);
+
+        $this->locked($storageKey, function () use ($key, $storageKey, $context): void {
+            $alert = AdminAlertModel::query()->firstOrNew(['key' => $storageKey]);
             $wasOpen = (bool) $alert->is_open;
             $now = now();
 
@@ -66,10 +69,12 @@ class AdminAlertNotifier
      * Close the alert. URGENT conditions also send a RESOLVED mail; TODAY
      * conditions close silently and surface in the digest.
      */
-    public function clear(AdminAlertKey $key): void
+    public function clear(AdminAlertKey $key, ?string $scope = null): void
     {
-        $this->locked($key, function () use ($key): void {
-            $alert = AdminAlertModel::query()->where('key', $key->value)->first();
+        $storageKey = $this->storageKey($key, $scope);
+
+        $this->locked($storageKey, function () use ($key, $storageKey): void {
+            $alert = AdminAlertModel::query()->where('key', $storageKey)->first();
 
             if ($alert === null) {
                 return;
@@ -126,11 +131,24 @@ class AdminAlertNotifier
     }
 
     /**
+     * The state row's key: the condition, or the condition and its scope for
+     * a per-network alert.
+     */
+    private function storageKey(AdminAlertKey $key, ?string $scope): string
+    {
+        if ($scope === null) {
+            return $key->value;
+        }
+
+        return "{$key->value}:{$scope}";
+    }
+
+    /**
      * Runs the callback under a per-key lock so two workers cannot open or
      * notify the same alert at once.
      */
-    private function locked(AdminAlertKey $key, callable $callback): void
+    private function locked(string $storageKey, callable $callback): void
     {
-        Cache::lock("rxdesk:alert:{$key->value}", 10)->block(5, $callback);
+        Cache::lock("rxdesk:alert:{$storageKey}", 10)->block(5, $callback);
     }
 }

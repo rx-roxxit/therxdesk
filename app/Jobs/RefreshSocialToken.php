@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Exceptions\PlatformUnavailableException;
 use App\Exceptions\TokenExpiredException;
 use App\Models\SocialAccount;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Services\Social\ConnectionVerifier;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,6 +40,14 @@ class RefreshSocialToken implements ShouldBeUnique, ShouldQueue
      * Read" on X — to confirm.
      */
     public function handle(ConnectionVerifier $verifier): void
+    {
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($this->account),
+            fn () => $this->refresh($verifier),
+        );
+    }
+
+    private function refresh(ConnectionVerifier $verifier): void
     {
         try {
             if ($verifier->refreshToken($this->account)) {

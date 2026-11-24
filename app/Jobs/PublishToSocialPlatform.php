@@ -18,6 +18,9 @@ use App\Exceptions\Social\SocialPublishException;
 use App\Exceptions\TokenExpiredException;
 use App\Models\Post;
 use App\Rules\ContentTypeCompatibleWithMedia;
+use App\Services\NetworkLimits\NetworkBucketMonitor;
+use App\Services\NetworkLimits\NetworkCallContext;
+use App\Services\NetworkLimits\NetworkLimits;
 use App\Services\Social\BlueskyPublisher;
 use App\Services\Social\ConnectionVerifier;
 use App\Services\Social\Discord\DiscordPublisher;
@@ -91,6 +94,14 @@ class PublishToSocialPlatform implements ShouldBeUnique, ShouldQueue
 
     public function handle(): void
     {
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($this->post->socialAccount),
+            fn () => $this->publish(),
+        );
+    }
+
+    private function publish(): void
+    {
         $this->post->refresh();
 
         if ($this->post->publish_status->isClosed() || $this->post->isPublicationWaitingForLimitRetry()) {
@@ -101,6 +112,14 @@ class PublishToSocialPlatform implements ShouldBeUnique, ShouldQueue
 
         if ($denial !== null) {
             PublishingGate::block($this->post, $denial);
+
+            return;
+        }
+
+        $network = $this->post->platform->network();
+
+        if (app(NetworkLimits::class)->isExhausted($network)) {
+            $this->waitForExhaustedNetwork($network);
 
             return;
         }
@@ -378,6 +397,30 @@ class PublishToSocialPlatform implements ShouldBeUnique, ShouldQueue
             'processing_retry_count' => (int) data_get($context, 'retry_count', 0),
             'retry_count' => 0,
         ];
+    }
+
+    /**
+     * The app's own call budget for this network ran out today. The post waits
+     * as Retrying until the next UTC day, when ProcessScheduledPosts dispatches
+     * it again; the network is never called. This does not spend the
+     * LimitRetryPolicy budget.
+     */
+    private function waitForExhaustedNetwork(string $network): void
+    {
+        $resetAt = app(NetworkLimits::class)->resetAt();
+
+        $this->post->markPublicationWaitingForLimitRetry(
+            $resetAt,
+            __('rxdesk.publishing_block.network_limit', ['network' => $this->post->platform->label()]),
+            [
+                'category' => 'network_bucket_exhausted',
+                'network' => $network,
+                'reset_at' => $resetAt->toIso8601String(),
+            ],
+        );
+
+        app(NetworkBucketMonitor::class)->raiseExhausted($network);
+        $this->broadcastStatus();
     }
 
     /**

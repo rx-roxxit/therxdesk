@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Actions\Post\AssignTikTokVideoId;
 use App\Models\Post;
+use App\Services\NetworkLimits\NetworkCallContext;
 use App\Services\Social\TikTokPublisher;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,6 +48,14 @@ class ResolveTikTokVideoId implements ShouldBeUnique, ShouldQueue
     }
 
     public function handle(TikTokPublisher $publisher, AssignTikTokVideoId $assignVideoId): void
+    {
+        app(NetworkCallContext::class)->run(
+            NetworkCallContext::accountIdFor($this->post->socialAccount),
+            fn () => $this->resolve($publisher, $assignVideoId),
+        );
+    }
+
+    private function resolve(TikTokPublisher $publisher, AssignTikTokVideoId $assignVideoId): void
     {
         $this->post->refresh();
 
