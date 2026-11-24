@@ -18,6 +18,7 @@ class CustomerDetailResource extends JsonResource
 
         $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
         $priceRow = $account->plan?->prices?->firstWhere('stripe_price_id', $subscription?->stripe_price);
+        $offer = $account->latestRedeemedOffer();
 
         return [
             'id' => $account->id,
@@ -60,6 +61,14 @@ class CustomerDetailResource extends JsonResource
                 'since' => $account->complimentary_since?->toIso8601String(),
                 'until' => $account->complimentary_until?->toIso8601String(),
             ] : null,
+            'offer' => $offer === null ? null : [
+                'id' => $offer->id,
+                'slug' => $offer->slug,
+                'name' => $offer->name,
+            ],
+            'account_balance' => $data['account_balance'],
+            'quota_bytes' => $account->quota_bytes === null ? null : (int) $account->quota_bytes,
+            'refund' => $data['refund'],
             'storage' => [
                 'used_bytes' => $usage->used,
                 'quota_bytes' => $usage->limit,

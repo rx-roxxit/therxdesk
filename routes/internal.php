@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Internal\AccountAiCreditsController;
 use App\Http\Controllers\Internal\AccountController;
 use App\Http\Controllers\Internal\AccountDeletionController;
+use App\Http\Controllers\Internal\AccountQuotaController;
 use App\Http\Controllers\Internal\AccountRefundController;
 use App\Http\Controllers\Internal\AccountReviewAccessController;
 use App\Http\Controllers\Internal\AccountSuspensionController;
@@ -24,6 +25,8 @@ use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\OperatorController;
 use App\Http\Controllers\Internal\PlanController;
 use App\Http\Controllers\Internal\SiteController;
+use App\Http\Controllers\Internal\StorageController;
+use App\Http\Controllers\Internal\SubscriptionController;
 use App\Http\Controllers\Internal\SupportConversationController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +44,10 @@ Route::middleware('internal:admin')->group(function (): void {
     Route::get('accounts/{account}', [AccountController::class, 'show'])
         ->whereUuid('account')
         ->name('internal.accounts.show');
+
+    Route::patch('accounts/{account}/quota', [AccountQuotaController::class, 'update'])
+        ->whereUuid('account')
+        ->name('internal.accounts.quota.update');
 
     Route::patch('accounts/{account}/review-access', [AccountReviewAccessController::class, 'update'])
         ->whereUuid('account')
@@ -80,6 +87,12 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('audit-log', [AuditLogController::class, 'index'])
         ->name('internal.audit-log.index');
+
+    Route::get('subscriptions', [SubscriptionController::class, 'index'])
+        ->name('internal.subscriptions.index');
+
+    Route::get('storage', [StorageController::class, 'index'])
+        ->name('internal.storage.index');
 
     Route::get('health', HealthController::class)
         ->name('internal.health');

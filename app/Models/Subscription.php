@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\Billing\CancellationType;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Subscription as CashierSubscription;
 use Stripe\Subscription as StripeSubscription;
@@ -29,6 +30,15 @@ class Subscription extends CashierSubscription
         'cancelled_at' => 'datetime',
         'cancellation_type' => CancellationType::class,
     ];
+
+    /**
+     * The Account this Subscription belongs to. Cashier names the same
+     * relation `owner`; `account` is what the internal read models call it.
+     */
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 
     /** Incomplete / incomplete_expired never became billable. */
     public function becameBillable(): bool

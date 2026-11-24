@@ -7,16 +7,15 @@ namespace App\Actions\Billing;
 use App\Actions\Account\SyncDeletionClock;
 use App\Actions\Audit\RecordAuditEntry;
 use App\Enums\Billing\CancellationType;
+use App\Enums\Billing\RefundDenial;
 use App\Exceptions\Billing\RefundFailed;
 use App\Models\Account;
 use App\Models\Subscription;
-use App\Support\Billing\StripeValue;
-use App\Support\Billing\ThaiPurchaseDocument;
+use App\Support\Billing\RefundEligibility;
 use Carbon\CarbonInterface;
 use Illuminate\Validation\ValidationException;
 use Laravel\Cashier\Cashier;
 use Stripe\Exception\ApiErrorException;
-use Stripe\Invoice as StripeInvoice;
 use Stripe\Refund as StripeRefund;
 use Stripe\Subscription as StripeSubscription;
 
@@ -27,9 +26,10 @@ use Stripe\Subscription as StripeSubscription;
  * cancellation is recorded as an admin one (a later webhook never replaces
  * it), and the whole action is audited.
  *
- * It refuses (422) a non-Thai buyer, an Account with no Subscription or no paid
- * charge in the window, and a charge with nothing refundable. A Stripe failure
- * is a 502 that exposes no detail.
+ * The checks live in RefundEligibility, the same decision the customer detail
+ * read exposes. It refuses (422) a non-Thai buyer, an Account with no
+ * Subscription or no paid charge in the window, and a charge with nothing
+ * refundable. A Stripe failure is a 502 that exposes no detail.
  */
 class RefundAndCancel
 {
@@ -49,45 +49,33 @@ class RefundAndCancel
      */
     public function execute(Account $account, string $actor): array
     {
-        if (! ThaiPurchaseDocument::applies($account)) {
-            throw ValidationException::withMessages([
-                'account' => 'Refund and cancel is only available for a Thai buyer.',
-            ]);
-        }
-
-        $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
-
-        if ($subscription === null) {
-            throw ValidationException::withMessages([
-                'account' => 'This Account has no subscription to cancel.',
-            ]);
-        }
-
-        if (blank($account->stripe_id)) {
-            throw ValidationException::withMessages([
-                'account' => 'This Account has no Stripe customer.',
-            ]);
-        }
-
-        $before = $this->snapshot($subscription);
-
         try {
-            $invoice = $this->latestPaidInvoice($account);
+            $eligibility = RefundEligibility::for($account);
 
-            if ($invoice === null) {
+            if ($eligibility['denial'] !== null) {
                 throw ValidationException::withMessages([
-                    'account' => 'This Account has no paid charge in the last seven days.',
+                    'account' => $eligibility['denial']->message(),
                 ]);
             }
 
-            $amountPaid = (int) $invoice->amount_paid;
+            $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
 
-            $refund = $this->refund($invoice, $amountPaid);
+            if (! $subscription instanceof Subscription) {
+                throw ValidationException::withMessages([
+                    'account' => RefundDenial::NoSubscription->message(),
+                ]);
+            }
+
+            $before = $this->snapshot($subscription);
+
+            $refund = $this->refund($eligibility['payment'], $eligibility['amount_paid']);
             $this->cancelAtStripe($subscription);
         } catch (ApiErrorException $exception) {
             throw RefundFailed::because($exception);
         }
 
+        $invoiceId = $eligibility['invoice']->id;
+        $amountPaid = $eligibility['amount_paid'];
         $cancelledAt = now();
 
         $this->endLocalSubscription($subscription, $cancelledAt);
@@ -97,9 +85,9 @@ class RefundAndCancel
             'status' => StripeSubscription::STATUS_CANCELED,
             'ends_at' => $cancelledAt->toIso8601String(),
             'cancellation_type' => CancellationType::Admin->value,
-            'invoice_id' => $invoice->id,
+            'invoice_id' => $invoiceId,
             'amount_paid' => $amountPaid,
-            'currency' => $invoice->currency,
+            'currency' => $eligibility['currency'],
             'refund_id' => $refund->id,
         ]);
 
@@ -107,9 +95,9 @@ class RefundAndCancel
         SyncDeletionClock::execute($account);
 
         return [
-            'invoice_id' => $invoice->id,
+            'invoice_id' => $invoiceId,
             'amount_paid' => $amountPaid,
-            'currency' => $invoice->currency,
+            'currency' => $eligibility['currency'],
             'refund_id' => $refund->id,
             'subscription_id' => $subscription->stripe_id,
             'status' => StripeSubscription::STATUS_CANCELED,
@@ -119,103 +107,14 @@ class RefundAndCancel
     }
 
     /**
-     * The newest paid invoice whose charge landed within the window.
+     * @param  array{payment_intent: string}|array{charge: string}  $payment
      */
-    private function latestPaidInvoice(Account $account): ?StripeInvoice
+    private function refund(array $payment, int $amountPaid): StripeRefund
     {
-        $invoices = Cashier::stripe()->invoices->all([
-            'customer' => $account->stripe_id,
-            'status' => 'paid',
-            'limit' => 100,
-        ]);
-
-        $cutoff = now()->subDays(self::WINDOW_DAYS);
-        $latest = null;
-        $latestAt = null;
-
-        foreach ($invoices->data as $invoice) {
-            if ((int) $invoice->amount_paid <= 0) {
-                continue;
-            }
-
-            $paidAt = $this->paidAt($invoice);
-
-            if ($paidAt === null || $paidAt->lessThan($cutoff)) {
-                continue;
-            }
-
-            if ($latestAt === null || $paidAt->greaterThan($latestAt)) {
-                $latest = $invoice;
-                $latestAt = $paidAt;
-            }
-        }
-
-        return $latest;
-    }
-
-    private function paidAt(StripeInvoice $invoice): ?CarbonInterface
-    {
-        $attributes = $invoice->toArray();
-
-        return StripeValue::timestamp(data_get($attributes, 'status_transitions.paid_at'))
-            ?? StripeValue::timestamp(data_get($attributes, 'created'));
-    }
-
-    private function refund(StripeInvoice $invoice, int $amountPaid): StripeRefund
-    {
-        // A newer Stripe API drops `payment_intent` and `charge` from the
-        // invoice itself; the payment it was settled by lives in `payments`.
-        $expanded = Cashier::stripe()->invoices->retrieve($invoice->id, ['expand' => ['payments']]);
-        $payment = $this->paymentReference($expanded);
-
-        if ($payment === null) {
-            throw ValidationException::withMessages([
-                'account' => 'This charge has no refundable payment.',
-            ]);
-        }
-
         return Cashier::stripe()->refunds->create([
             ...$payment,
             'amount' => $amountPaid,
         ]);
-    }
-
-    /**
-     * The original payment method of a paid invoice, as the parameter a Stripe
-     * refund takes: its payment intent, else its charge.
-     *
-     * @return array{payment_intent: string}|array{charge: string}|null
-     */
-    private function paymentReference(StripeInvoice $invoice): ?array
-    {
-        $attributes = $invoice->toArray();
-
-        foreach (data_get($attributes, 'payments.data', []) as $entry) {
-            $reference = $this->reference(data_get($entry, 'payment', []));
-
-            if ($reference !== null) {
-                return $reference;
-            }
-        }
-
-        return $this->reference($attributes);
-    }
-
-    /**
-     * @param  array<string, mixed>  $payment
-     * @return array{payment_intent: string}|array{charge: string}|null
-     */
-    private function reference(array $payment): ?array
-    {
-        $paymentIntent = $this->stripeId(data_get($payment, 'payment_intent'));
-
-        if ($paymentIntent !== null) {
-            return ['payment_intent' => $paymentIntent];
-        }
-
-        $charge = $this->stripeId(data_get($payment, 'charge'));
-
-        return $charge === null ? null : ['charge' => $charge];
     }
 
     private function cancelAtStripe(Subscription $subscription): void
@@ -250,16 +149,5 @@ class RefundAndCancel
             'ends_at' => $subscription->ends_at?->toIso8601String(),
             'cancellation_type' => $subscription->cancellation_type?->value,
         ];
-    }
-
-    private function stripeId(mixed $value): ?string
-    {
-        if (is_string($value) && filled($value)) {
-            return $value;
-        }
-
-        $id = data_get($value, 'id');
-
-        return is_string($id) && filled($id) ? $id : null;
     }
 }
