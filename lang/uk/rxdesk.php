@@ -19,6 +19,9 @@ return [
         'label' => 'ШІ-кредити',
         'usage_line' => 'використано :used з :total · оновлення :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk обмежено :max повідомленнями на день.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Написати в підтримку',

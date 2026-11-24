@@ -14,6 +14,7 @@ use App\Models\AnalyticsAccountDailySnapshot;
 use App\Models\AnalyticsPublication;
 use App\Models\AnalyticsPublicationDailySnapshot;
 use App\Models\AnalyticsSyncState;
+use App\Models\AskTheDeskMessage;
 use App\Models\AuditLog;
 use App\Models\AvailabilitySwitch;
 use App\Models\BackupRun;
@@ -193,6 +194,7 @@ class AppServiceProvider extends ServiceProvider
             'analyticsPublication' => AnalyticsPublication::class,
             'analyticsPublicationDailySnapshot' => AnalyticsPublicationDailySnapshot::class,
             'analyticsSyncState' => AnalyticsSyncState::class,
+            'askTheDeskMessage' => AskTheDeskMessage::class,
             'auditLog' => AuditLog::class,
             'availabilitySwitch' => AvailabilitySwitch::class,
             'backupRun' => BackupRun::class,

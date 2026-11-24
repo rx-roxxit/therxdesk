@@ -19,6 +19,9 @@ return [
         'label' => 'Μονάδες AI',
         'usage_line' => ':used από :total σε χρήση · ανανεώνεται :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Το Ask the Desk περιορίζεται σε :max μηνύματα την ημέρα.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Επικοινωνία με την υποστήριξη',

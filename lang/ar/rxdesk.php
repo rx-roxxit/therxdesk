@@ -19,6 +19,9 @@ return [
         'label' => 'رصيد AI',
         'usage_line' => ':used من :total مستخدم · يتجدد في :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'يقتصر Ask the Desk على :max رسالة في اليوم.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'مراسلة الدعم بالبريد',

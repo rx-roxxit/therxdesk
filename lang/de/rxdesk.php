@@ -19,6 +19,9 @@ return [
         'label' => 'KI-Credits',
         'usage_line' => ':used von :total verbraucht · erneuert am :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk ist auf :max Nachrichten pro Tag begrenzt.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Support per E-Mail',

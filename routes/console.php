@@ -22,6 +22,7 @@ use App\Console\Commands\RxDesk\BusinessSnapshotCommand;
 use App\Console\Commands\RxDesk\CapacityCommand;
 use App\Console\Commands\RxDesk\DigestCommand;
 use App\Console\Commands\RxDesk\LifecycleCommand;
+use App\Console\Commands\RxDesk\PruneAskTheDeskCommand;
 use App\Console\Commands\RxDesk\PruneSupportChatCommand;
 use App\Console\Commands\SyncPostHogLifecycleStages;
 use App\Enums\SocialAccount\Platform;
@@ -86,6 +87,13 @@ Schedule::command(LifecycleCommand::class)
 
 Schedule::command(PruneSupportChatCommand::class)
     ->dailyAt('04:00')
+    ->timezone('UTC')
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(PruneAskTheDeskCommand::class)
+    ->dailyAt('04:10')
     ->timezone('UTC')
     ->when(fn (): bool => ! config('trypost.self_hosted'))
     ->withoutOverlapping()

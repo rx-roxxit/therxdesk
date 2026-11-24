@@ -22,6 +22,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Ask the Desk
+    |--------------------------------------------------------------------------
+    |
+    | The System admin's assistant caps messages per UTC day, so one operator
+    | cannot run up the AI bill. Reaching the cap answers 429 with the reset
+    | time; the transcript keeps its messages for 30 days.
+    |
+    */
+
+    'ask_the_desk' => [
+        'daily_limit' => (int) env('RXDESK_ASK_THE_DESK_DAILY_LIMIT', 50),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Support address
     |--------------------------------------------------------------------------
     |

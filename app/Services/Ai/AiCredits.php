@@ -137,9 +137,31 @@ final class AiCredits
             return null;
         }
 
-        $prompt = $usage->promptTokens;
-        $completion = $usage->completionTokens;
-        $total = $prompt + $completion;
+        return $this->record(
+            $account,
+            $user,
+            $workspace,
+            $feature,
+            $usage->promptTokens,
+            $usage->completionTokens,
+            $model,
+        );
+    }
+
+    /**
+     * Write one ledger row, always: operator work such as Ask the Desk has no
+     * Account, but its tokens still belong in the one ledger.
+     */
+    public function record(
+        ?Account $account,
+        ?User $user,
+        ?Workspace $workspace,
+        AiFeature $feature,
+        int $promptTokens,
+        int $completionTokens,
+        ?string $model = null,
+    ): ?AiCreditUsage {
+        $total = $promptTokens + $completionTokens;
 
         $credits = 0;
 
@@ -150,19 +172,19 @@ final class AiCredits
 
         try {
             return AiCreditUsage::query()->create([
-                'account_id' => $account->id,
+                'account_id' => $account?->id,
                 'user_id' => $user?->id,
                 'workspace_id' => $workspace?->id,
                 'feature' => $feature,
                 'model' => $model,
-                'prompt_tokens' => $prompt,
-                'completion_tokens' => $completion,
+                'prompt_tokens' => $promptTokens,
+                'completion_tokens' => $completionTokens,
                 'total_tokens' => $total,
                 'credits' => $credits,
             ]);
         } catch (Throwable $exception) {
             Log::error('Failed to record AI credit usage.', [
-                'account_id' => $account->id,
+                'account_id' => $account?->id,
                 'feature' => $feature->value,
                 'error' => $exception->getMessage(),
             ]);

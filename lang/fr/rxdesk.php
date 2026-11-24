@@ -19,6 +19,9 @@ return [
         'label' => 'Crédits IA',
         'usage_line' => ':used sur :total utilisés · renouvellement le :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk est limité à :max messages par jour.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Contacter l\'assistance',

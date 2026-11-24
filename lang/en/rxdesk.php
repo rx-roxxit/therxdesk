@@ -19,6 +19,9 @@ return [
         'label' => 'AI credits',
         'usage_line' => ':used of :total used · renews :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk is limited to :max messages a day.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Email support',

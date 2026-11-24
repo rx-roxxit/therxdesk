@@ -19,6 +19,9 @@ return [
         'label' => 'Kredyty AI',
         'usage_line' => 'wykorzystano :used z :total · odnowienie :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk jest ograniczony do :max wiadomości dziennie.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Napisz do pomocy technicznej',
