@@ -193,6 +193,14 @@ prints them. `selling.sh down` removes the file.
   (`id`, `name`) or null, `feature`, `model`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `credits`,
   `list_cost_micros` and `created_at`. `list_cost_micros = round(prompt_tokens * input_price_per_mtok +
   completion_tokens * output_price_per_mtok)` (micro-USD), null when the model is not in the registry.
+- `POST /internal/v1/ask-the-desk` (admin): `{ "page_aggregates": {...}, "question": "..." }` (a question up to
+  2,000 characters). Answers from the aggregates with the text-model slot, and returns `{ "answer", "limits":
+  { "used", "max", "resets_at" } }`. At the `RXDESK_ASK_THE_DESK_DAILY_LIMIT` cap (default 50, UTC day) it answers
+  `429` with `code: "daily_limit"`, the translated message, `retry_after` and a `Retry-After` header. A provider
+  failure or an empty answer answers `502` with `code: "unavailable"` and the generic `rxdesk.ai.unavailable`
+  message; no answer or error names a provider or model. Every call writes one `ask_the_desk` ledger row with
+  `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) names no customer. Self-hosted
+  answers 404, and the site token answers 404.
 - The **cost table** (`cost` on the AI settings) is computed live: one row per active Plan, ordered `sort` then
   `name`, with `id`, `slug`, `name`, `ai_credits_per_month`, `monthly_cents`, `discounted_monthly_cents`,
   `worst_case_cents` (the whole allowance at the output price), `threshold_cents` (`intdiv` of the discounted

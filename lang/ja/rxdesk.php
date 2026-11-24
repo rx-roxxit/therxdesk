@@ -19,6 +19,9 @@ return [
         'label' => 'AIクレジット',
         'usage_line' => ':total 中 :used 使用済み · :date に更新',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk は 1 日 :max 件のメッセージまでです。',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'サポートにメール',

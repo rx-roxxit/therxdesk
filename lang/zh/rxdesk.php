@@ -19,6 +19,9 @@ return [
         'label' => 'AI 额度',
         'usage_line' => '已用 :used / :total · :date 重置',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk 每天最多可发送 :max 条消息。',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => '发送邮件给支持团队',

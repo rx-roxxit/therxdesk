@@ -19,6 +19,9 @@ return [
         'label' => 'AI 크레딧',
         'usage_line' => ':total 중 :used 사용 · :date에 갱신',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk는 하루 :max개의 메시지로 제한됩니다.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => '지원팀에 이메일',

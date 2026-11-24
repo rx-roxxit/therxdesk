@@ -13,6 +13,7 @@ use App\Http\Controllers\Internal\AiBalanceController;
 use App\Http\Controllers\Internal\AiLedgerController;
 use App\Http\Controllers\Internal\AiModelController;
 use App\Http\Controllers\Internal\AiSettingController;
+use App\Http\Controllers\Internal\AskTheDeskController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\AvailabilityController;
 use App\Http\Controllers\Internal\BusinessController;
@@ -186,4 +187,7 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('support/conversations', [SupportConversationController::class, 'index'])
         ->name('internal.support.conversations.index');
+
+    Route::post('ask-the-desk', [AskTheDeskController::class, 'store'])
+        ->name('internal.ask-the-desk');
 });

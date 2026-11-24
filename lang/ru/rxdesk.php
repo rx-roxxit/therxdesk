@@ -19,6 +19,9 @@ return [
         'label' => 'ИИ-кредиты',
         'usage_line' => 'использовано :used из :total · обновление :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk ограничен :max сообщениями в день.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Написать в поддержку',

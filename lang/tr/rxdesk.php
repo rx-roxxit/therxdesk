@@ -19,6 +19,9 @@ return [
         'label' => 'AI kredileri',
         'usage_line' => ':total içinden :used kullanıldı · :date yenilenir',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk günde :max mesajla sınırlıdır.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Destek ekibine e-posta',

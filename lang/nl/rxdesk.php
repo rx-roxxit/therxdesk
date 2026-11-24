@@ -19,6 +19,9 @@ return [
         'label' => 'AI-credits',
         'usage_line' => ':used van :total gebruikt · vernieuwt op :date',
     ],
+    'ask_the_desk' => [
+        'daily_limit' => 'Ask the Desk is beperkt tot :max berichten per dag.',
+    ],
     'help' => [
         'source_code' => 'Source code',
         'support_email' => 'Support mailen',
