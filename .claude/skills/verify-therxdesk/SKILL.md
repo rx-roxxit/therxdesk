@@ -61,7 +61,7 @@ $V/selling.sh logs      # the Stripe listener's log, signing secret redacted
 $V/selling.sh down      # back to .env's mode (self-hosted)
 ```
 
-Run `launch.sh` first; `up` needs the stack running. It does five things, each safe to repeat:
+Run `launch.sh` first; `up` needs the stack running. It is safe to repeat:
 
 1. **Plan catalog.** Runs `php artisan migrate --force` and then `Database\Seeders\PlanSeeder` in a one-off
    container (both idempotent, no env): the seeder writes the four RX Desk Plans and their `plan_prices` rows into
@@ -77,19 +77,21 @@ Run `launch.sh` first; `up` needs the stack running. It does five things, each s
 3. **Legacy sandbox objects.** Sandbox Products and Prices that earlier runs created with a `rxdesk-verify-*`
    lookup key or `metadata.rxdesk_verify=true` are archived (`active=false`), never deleted. The step is
    idempotent, so finding none is normal.
-4. **Webhook secret.** `stripe listen --print-secret` (stable for the sandbox key) goes into
-   `~/.cache/verify-therxdesk/state/stripe-webhook.env`, mode 600, never shown.
+4. **Local credentials.** `stripe listen --print-secret` (stable for the sandbox key) goes into
+   `~/.cache/verify-therxdesk/state/stripe-webhook.env`, mode 600, never shown. The helper also writes the admin
+   and site internal-API tokens to `internal-api.env`, mode 600, never shown.
 5. **Recreate.** It writes the marker `~/.cache/verify-therxdesk/state/selling` and recreates `app` with
    `scripts/compose.selling.yaml` on top of the project's compose files: `SELF_HOSTED=false` and
    `STRIPE_WEBHOOK_SECRET` as container env (Laravel keeps container env over `.env`, and php-fpm passes it
    through, `clear_env = no`), plus a `stripe` service running `stripe listen --all-snapshot --forward-to
-   http://app/stripe/webhook`. It waits until the app is usable, php-fpm serves `selfHosted=false`, and the
-   listener is ready.
+   http://app/stripe/webhook` and a local `heartbeat` receiver. It waits until the app is usable, php-fpm serves
+   `selfHosted=false`, and the listener and heartbeat receiver are ready.
 
 While the marker exists, every script (`compose` in `env.sh`) includes the overlay, so `compose stop`, `run` and
 `up` see the same services. The owner's own `docker compose` commands do not: they warn about the orphan
-`therxdesk-stripe-1` container (never pass `--remove-orphans`; `selling.sh down` removes it), and a plain
-`docker compose up -d` recreates `app` in self-hosted mode, which `doctor.sh` reports as a mismatch.
+`therxdesk-stripe-1` and `therxdesk-heartbeat-1` containers (never pass `--remove-orphans`; `selling.sh down`
+removes them), and a plain `docker compose up -d` recreates `app` in self-hosted mode, which `doctor.sh` reports
+as a mismatch.
 
 Switching recreates the owner's running `app` container (about a minute; the entrypoint runs again), so the
 owner's open dev browser follows the mode too. `cleanup.sh` runs `selling.sh down`.
@@ -151,8 +153,9 @@ $V/lifecycle.sh show          # access_state, including deletion_scheduled_at
 
 `fixture.sh lifecycle <hours>` puts the fixture Owner on the Lapsed path (completed onboarding, a cancelled
 subscription, `first_paid_at`) with `accounts.deletion_scheduled_at` that many hours out (`-1` is already due).
-`lifecycle.sh sweep` runs `rxdesk:lifecycle --account=<fixture>` and then `queue:work --stop-when-empty`, because the
-dev stack has no worker and the emails are queued. Both CLI commands take `--account` and `--dry-run`, and are off
+`lifecycle.sh sweep` runs `rxdesk:lifecycle --account=<fixture>`. Horizon normally consumes the queued lifecycle
+mail; the helper also runs `queue:work --stop-when-empty` as a fallback. That worker is global, so quiesce unrelated
+queued work and never run a second worker beside it. Both CLI commands take `--account` and `--dry-run`, and are off
 while self-hosted. `drive.sh lapsed-deletion` proves the plan step shows the date. `features/lifecycle-deletion.md`
 has the full sequence and the database rows to expect.
 
@@ -203,20 +206,33 @@ mounted read-only, the dev `node_modules` volume for `playwright`, and the fixtu
 `ok`/`FAIL` per check and exits non-zero when the journey fails. `VERIFY_TEST_CARD` overrides the `4242` card
 `payOnStripeCheckout()` fills (the failed-first-charge path uses it).
 
-Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode); `register`,
-`selling-mode`, `welcome-plan`, `welcome-checkout`, `billing`, `complimentary`, `complimentary-ended`,
-`payment-retry`, `past-due`, `lapsed`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`,
-`availability-off`, `availability-retry`, `review-access`, `services-off`
-(selling mode, listed in `SELLING_JOURNEYS`; `complimentary` needs `complimentary.sh up` and
-`complimentary-ended` needs `complimentary.sh end` after it, `payment-retry`, `past-due` and `lapsed` need a Stripe
-test clock, `media-on-r2` also needs `media.sh up`, `suspension` needs `suspension.sh up`, `gate-schedule` needs
-`complimentary.sh up` and a `suspension.sh up` right after, `gate-retry` needs `suspension.sh lift` and
-`VERIFY_BLOCKED_POST` from `gate-schedule`'s `notes.blockedPostId`; the availability journeys switch both
-`platform:linkedin` variants off through `internal.sh` first, `review-access` needs `review-access.sh on` after that,
-and `availability-retry` needs them back on and the same
-`VERIFY_BLOCKED_POST` after the scheduler blocked it). Every journey first checks the mode php-fpm
-serves and stops with "run selling.sh up|down" when it is the other one. `features/README.md` maps every feature,
-with or without a journey.
+Journeys today: `sign-in`, `compose-draft`, `storage-bar`, `language-switch` (self-hosted mode);
+`register`, `blocked-country`, `selling-mode`, `welcome-plan`, `welcome-checkout`, `welcome-offer`, `billing`,
+`billing-downgrade`, `complimentary`, `complimentary-ended`, `payment-retry`, `past-due`, `lapsed`,
+`lapsed-deletion`, `media-on-r2`, `suspension`, `gate-schedule`, `gate-retry`, `availability-off`,
+`availability-retry`, `review-access`, `services-off`, `support-chat`, `support-chat-limit`, `support-handoff`,
+`ai-credits` (selling mode, listed in `SELLING_JOURNEYS`). `features/README.md` maps every feature, with or without
+a journey.
+
+Prerequisites that belong to the journey:
+
+- `register`, `blocked-country`, `welcome-plan` and `welcome-offer` need `new_signups` enabled through
+  `internal.sh`; restore it to off afterward. `welcome-offer` also needs `offer.sh up`.
+- `complimentary` needs `complimentary.sh up`; `complimentary-ended` needs `complimentary.sh end` after it.
+- `payment-retry`, `past-due` and `lapsed` need the Stripe test-clock state built by `trial-and-payment.md`;
+  `billing-downgrade` needs a paid Standard subscription past its Trial.
+- `media-on-r2` needs a subscribed fixture and `media.sh up`.
+- `suspension` needs `suspension.sh up`; `gate-schedule` needs `complimentary.sh up` and a suspension inside the
+  scheduling lead; `gate-retry` needs `suspension.sh lift` and `VERIFY_BLOCKED_POST` from `gate-schedule`.
+- The availability journeys switch both LinkedIn variants off first. `review-access` needs
+  `review-access.sh on`; `availability-retry` needs them back on and the same `VERIFY_BLOCKED_POST` after the
+  scheduler blocked it.
+- `support-chat`, `support-chat-limit` and `support-handoff` need Complimentary access,
+  `support-chat.sh up`, a configured AI provider key/model and Mailpit. `ai-credits` needs Complimentary access
+  and `ai-credits.sh none`; it makes no real AI call.
+
+Every journey first checks the mode php-fpm serves and stops with "run selling.sh up|down" when it is the other
+one.
 
 Writing a journey (add it to `JOURNEYS`, then a row and a file in `features/`):
 
@@ -250,6 +266,7 @@ $V/db.sh "select id, status, content from posts where workspace_id = '<workspace
 ```sh
 $V/browser-suite.sh                                    # the whole suite, three processes
 $V/browser-suite.sh tests/Browser/BillingPageTest.php  # one file
+$V/browser-suite.sh tests/Browser/OneTest.php tests/Browser/TwoTest.php  # files run serially
 ```
 
 `tests/Browser` never runs in the Alpine dev image: the bundled Chromium needs glibc, and the Pest browser plugin
@@ -312,14 +329,18 @@ after every failed attempt too.
 | `selling.sh up\|down\|status\|logs\|heartbeat` | switch the stack to selling mode and back, show it | stack, Stripe sandbox objects, `plan_prices` |
 | `media.sh up\|down\|seed\|clear` | switch the media disk to r2 and back; seed or remove the media proof | stack, `medias` rows, the bucket |
 | `mail.sh list\|latest\|wait\|show\|clear` | read the dev Mailpit inbox | `clear` empties it |
+| `support-chat.sh up\|limit\|clear` | switch Support chat on, fill the fixture conversation to the user-question cap, or clear it | Availability row and fixture conversations |
+| `ai-credits.sh none\|low\|up\|clear` | set the fixture's AI-credit proof state | fixture override, ledger rows and Complimentary Plan |
+| `offer.sh up\|down` | create/reuse the two sandbox link Offers and pass their slugs to `welcome-offer` | sandbox Offers/coupon and journey env |
 | `stripe.sh <stripe cli args>` | one Stripe CLI command on the sandbox (`get /v1/customers -d email=...`) | what you ask |
 | `complimentary.sh up\|end\|show\|down` | give the fixture a Complimentary Plan through `/internal/v1`, end it, show it | `up`, `end`, `down` |
 | `review-access.sh on\|off\|show` | grant or revoke the fixture Account's Review access through `/internal/v1`, show it | `on`, `off` |
 | `suspension.sh up\|lift\|show\|down` | suspend the fixture Account through `/internal/v1`, lift it, print its `access_state` | `up`, `lift`, `down` |
 | `api.sh <METHOD> <path>` | call the public `/api` as the fixture Owner with a fresh personal token, never printed | an API token row |
 | `stripe-clock.sh create\|customer\|attach\|advance\|status\|fingerprint\|delete` | a Stripe test clock, its Customer and the fixture Account | Stripe sandbox, fixture, state |
+| `lifecycle.sh backdate\|sweep\|emails\|export\|delete-dry\|delete\|show` | prove the fixture's lifecycle mail, export and deletion paths | fixture data, queued mail, global queue flush |
 | `cleanup.sh` | remove the fixture, leave selling mode, stop the stack if we started it | fixture, stack |
-| `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | no |
+| `internal.sh <METHOD> <path> ...` | call `/internal/v1` with a generated token, never printed | GET reads; POST/PATCH can write app rows, audit entries, switches, transcripts or ledger rows |
 
 `env.sh` holds the shared settings (`VERIFY_BASE_URL`, `VERIFY_VITE_URL`, `VERIFY_EVIDENCE_ROOT` override them),
 `compose` (with the selling overlay while the marker exists), `wait_until_usable` and `served_mode`.

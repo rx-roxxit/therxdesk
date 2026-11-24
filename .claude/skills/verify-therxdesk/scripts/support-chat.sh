@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Switches the Support chat on for the fixture and can fill its last
-# conversation to the 20-message cap, so the sheet and its limit copy can be
-# driven in the browser. The switch is an Availability row; there is no admin
-# API for service switches yet (#64), so it is written through the app's own
-# service, in a one-off container.
+# conversation to the 20-user-question cap, so the sheet and its limit copy can be
+# driven in the browser. The switch is an Availability row. This helper writes it
+# through the app's own service in a one-off container; the internal API also
+# exposes PATCH /availability/service:support_chat.
 #
 #   support-chat.sh up     switch the chat on
-#   support-chat.sh limit  fill the fixture's last conversation to 20 messages
+#   support-chat.sh limit  fill the fixture's last conversation to 20 user questions
 #   support-chat.sh clear  switch the chat off and delete its conversations
 #
 # The chat needs app access: run complimentary.sh up first.

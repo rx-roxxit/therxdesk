@@ -96,7 +96,7 @@ else:
 
 case "$ACTION" in
     list)
-        fetch_messages 500 | filter list || true
+        fetch_messages 500 | filter list
         ;;
     latest)
         if ! fetch_messages 500 | filter latest; then

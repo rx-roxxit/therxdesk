@@ -12,8 +12,12 @@ and keeps the object. Run the upload once per proof session. Do not run it in a 
 Run everything from the dev machine, with the stack in selling mode. `$V` is
 `.claude/skills/verify-therxdesk/scripts`.
 
-1. `$V/selling.sh up` starts the local `heartbeat` receiver. It receives both the queue heartbeat and
-   the backup heartbeat, so nothing calls Better Stack.
+Prerequisites: `launch.sh` has run, `doctor.sh` passes, and the dev environment already contains non-production backup
+bucket credentials scoped to the test bucket. Set `RXDESK_BACKUP_ENABLED=false` during the one manual upload so the
+hourly scheduler cannot race it. Never point these settings at the production bucket.
+
+1. `$V/launch.sh`, `$V/doctor.sh`, then `$V/selling.sh up` starts the local `heartbeat` receiver. It receives both the
+   queue heartbeat and the backup heartbeat, so nothing calls Better Stack.
 
 2. One real dump to the test bucket. `BACKUP_DIRECTORY` names the proof folder and is passed as a
    container env:
@@ -75,7 +79,9 @@ Run everything from the dev machine, with the stack in selling mode. `$V` is
    `failed_jobs`, `backup_runs`) can differ, and so can tables the selling-mode schedule writes at a
    fixed UTC time (`business_snapshots` at 00:05, `accounts` and `lifecycle_emails` from
    `rxdesk:lifecycle` at 01:00, `support_conversations` from `rxdesk:prune-support-chat` at 04:00,
-   the analytics snapshots at 23:30/00:30); every other table must match.
+   the analytics snapshots at 23:30/00:30). The scheduler also runs every-minute, fifteen-minute and hourly work.
+   Treat the allowlist as a starting point, not proof that every other table must match: compare promptly and explain
+   each difference by its writer.
 
    ```sh
    cat > /tmp/row-counts.sql <<'SQL'

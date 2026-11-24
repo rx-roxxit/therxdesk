@@ -31,6 +31,11 @@ fixture_account() {
     "$FIXTURE" show | json_field 'accountId'
 }
 
+write_env() {
+    mkdir -p "$STATE_DIR"
+    (umask 077 && printf 'VERIFY_COMPLIMENTARY_PLAN=%s\nVERIFY_COMPLIMENTARY_ACCOUNT=%s\n' "$1" "$2" >"$COMPLIMENTARY_ENV")
+}
+
 standard_plan() {
     local listing
     listing="$("$INTERNAL" GET '/plans?search=standard' --token admin)" || return 1
@@ -43,9 +48,31 @@ up() {
         exit 1
     fi
 
-    local account_id listing plan_id plan_name response status
+    local account_id listing plan_id plan_name response status current_response current_status current_plan
     account_id="$(fixture_account)" || { echo "[complimentary] no fixture: run launch.sh" >&2; exit 1; }
     [ -n "$account_id" ] || { echo "[complimentary] the fixture has no account id" >&2; exit 1; }
+
+    current_response="$("$INTERNAL" GET "/accounts/${account_id}" --token admin)" || {
+        echo "[complimentary] could not read the fixture Account" >&2
+        exit 1
+    }
+    current_status="$(printf '%s\n' "$current_response" | head -1)"
+
+    if [ "$current_status" = "HTTP 200" ]; then
+        current_plan="$(printf '%s\n' "$current_response" | tail -n +2 | python3 -I -c '
+import json, sys
+data = json.load(sys.stdin)
+block = data.get("complimentary") or {}
+if block.get("in_force"):
+    print((data.get("plan") or {}).get("name") or "")
+')"
+
+        if [ -n "$current_plan" ]; then
+            write_env "$current_plan" "$account_id"
+            echo "[complimentary] fixture Account ${account_id} is already on ${current_plan}; no second give"
+            return 0
+        fi
+    fi
 
     listing="$(standard_plan)" || { echo "[complimentary] could not read the Standard Plan" >&2; exit 1; }
     plan_id="$(printf '%s\n' "$listing" | json_field 'data.0.id')"
@@ -61,8 +88,7 @@ up() {
         *) echo "[complimentary] FAILED giving the Plan: ${status}" >&2; printf '%s\n' "$response" >&2; return 1 ;;
     esac
 
-    mkdir -p "$STATE_DIR"
-    (umask 077 && printf 'VERIFY_COMPLIMENTARY_PLAN=%s\nVERIFY_COMPLIMENTARY_ACCOUNT=%s\n' "$plan_name" "$account_id" >"$COMPLIMENTARY_ENV")
+    write_env "$plan_name" "$account_id"
     echo "[complimentary] fixture Account ${account_id} now has ${plan_name}"
 }
 
@@ -107,7 +133,30 @@ down() {
         return 0
     fi
 
-    end || echo "[complimentary] the Plan could not be ended (the Account may be gone)"
+    # shellcheck disable=SC1090
+    source "$COMPLIMENTARY_ENV"
+
+    local response status
+    response="$("$INTERNAL" GET "/accounts/${VERIFY_COMPLIMENTARY_ACCOUNT}" --token admin)" || {
+        echo "[complimentary] could not read the Account; keeping the journey env" >&2
+        return 1
+    }
+    status="$(printf '%s\n' "$response" | head -1)"
+
+    if [ "$status" = "HTTP 200" ]; then
+        if printf '%s\n' "$response" | tail -n +2 | python3 -I -c '
+import json, sys
+block = json.load(sys.stdin).get("complimentary") or {}
+sys.exit(0 if block.get("in_force") else 1)
+'; then
+            end || echo "[complimentary] the Plan could not be ended (the Account may be gone)"
+        else
+            echo "[complimentary] the Plan is already ended"
+        fi
+    else
+        echo "[complimentary] the Account is no longer readable (${status})"
+    fi
+
     rm -f "$COMPLIMENTARY_ENV"
     echo "[complimentary] journey env removed"
 }

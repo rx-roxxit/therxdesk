@@ -14,16 +14,18 @@ spends no AI credits, so it keeps working when the balance is gone. See ADR 0007
   Storage; a Member's brief has none of the Account block, only the workspace count, channels with state and last
   error, up to five failed posts, the pending-approval count and the page the chat was opened from. No email, name
   or avatar, and the agent has no tools.
-- **Limits:** 20 messages per conversation, 40 per user per day (00:00 UTC), 2,000 characters a message, 10 a
-  minute. A refusal returns `code` = `conversation`, `daily` or `minute`. A `conversation` or `daily` refusal locks
-  the input with the matching line; a `minute` refusal shows its own line but leaves the input enabled. The `daily`
-  line carries the reset time in the user's time zone.
+- **Limits:** 20 user questions per conversation, 40 per user per day (00:00 UTC), 2,000 characters a question, 10
+  a minute. Assistant replies do not spend the conversation or daily allowance. A refusal returns `code` =
+  `conversation`, `daily` or `minute`. A `conversation` or `daily` refusal locks the input with the matching line; a
+  `minute` refusal shows its own line but leaves the input enabled. The `daily` line carries the reset time in the
+  user's time zone.
 - **The ledger** gets one row per call with feature `support_chat` and `credits` 0; the balance does not move.
 - **A provider failure** shows "Can't answer right now." with **Try again**, stores the question, spends nothing
   and raises the URGENT `ai_provider_failure` alert naming the model.
 - **Storage:** conversations and messages (with 👍/👎) live in `support_conversations` and `support_messages`. The
-  last conversation reopens within 24 hours; **New conversation** starts another. A daily command prunes them after
-  30 days, and both account-purge actions delete them with the Account.
+  last conversation reopens within 24 hours; **New conversation** starts another. A daily command prunes
+  conversations after 30 days of inactivity (creation time is the fallback for an empty conversation), and both
+  account-purge actions delete them with the Account.
 - **Hand-off:** **Contact the team** in the sheet footer opens a form (message, email prefilled with the signed-in
   user's address). A real send emails `rxdesk.support.email` synchronously (Maizzle, English chrome, Reply-To the
   customer, subject `[Support] <email> — <Plan>`, the message and context then the transcript), sets
@@ -32,21 +34,23 @@ spends no AI credits, so it keeps working when the balance is gone. See ADR 0007
 - **Daily counters:** `support_chat_daily_counters` has one row per UTC day for conversations started, user
   messages, hand-offs, 👍/👎, and the tokens and list cost of `support_chat` ledger rows. It holds no Account id and
   no content, and has no foreign key, so pruning and account deletion leave the counts in place.
-- **For the admin:** `GET /internal/v1/support/conversations` (admin token) returns the transcripts with their
-  messages, nothing older than 30 days, and `?feedback=down` keeps only conversations with a 👎 answer.
+- **For the admin:** `GET /internal/v1/support/conversations` (admin token plus a valid
+  `X-Internal-Admin-Email`) returns the transcripts with their messages, nothing older than 30 days of inactivity,
+  and `?feedback=down` keeps only conversations with a 👎 answer.
 
 ## How to get to it (user POV)
 
 ```sh
+$V/launch.sh               # stack and fixture first
 $V/selling.sh up            # selling mode
-$V/launch.sh >/dev/null     # ensure the stack and fixture
 $V/complimentary.sh up      # app access for the fixture Account
 $V/support-chat.sh up       # Availability: service:support_chat on
 ```
 
 Sign in as the fixture Owner, open the account menu, then **Help & support** → **Chat support**. The empty state
-offers three suggested questions. The dev stack has an Anthropic key, so one short question makes a real call for a
-fraction of a cent; keep it to one or two questions per run.
+offers three suggested questions. The run needs a configured default AI-provider key and model, `service:ai` on,
+Mailpit and the support email; `support-chat.sh up` only writes the Availability row. One short question makes a
+real AI call for a fraction of a cent; keep it to one or two questions per run.
 
 ## Driving it with Playwright
 
@@ -71,10 +75,11 @@ $V/drive.sh support-chat-limit
 ```
 
 The journey opens the sheet on `@support-chat-limit-conversation`: "This conversation has reached 20 messages.
-Start a new conversation to keep going." The input is disabled and **New conversation** in the header clears it.
-The same happens at 40 messages a day, with the reset time (`@support-chat-limit-daily`). The per-minute refusal
-(`@support-chat-limit-minute`) has no timer: its line stays until the next send, retry or **New conversation**.
-`support-chat-limit` drives the conversation cap only; the daily and minute lines are covered by
+Start a new conversation to keep going." The copy says messages; the counter counts user questions only. The input
+is disabled and **New conversation** in the header clears it. The same cap applies after 40 user questions in a UTC
+day, with the reset time (`@support-chat-limit-daily`). The per-minute refusal (`@support-chat-limit-minute`) has no
+timer: its line stays until the next send, retry or **New conversation**. `support-chat-limit` drives the
+conversation cap only; the daily and minute lines are covered by
 `tests/Feature/Support/SupportChatLimitsTest.php`, not by a journey.
 
 ## The hand-off
@@ -95,15 +100,15 @@ question in its text. Selectors: `@support-handoff-open`, `@support-handoff-mess
 Side effects to check from the host:
 
 ```sh
-$V/db.sh "select escalated_at from support_conversations where user_id = '<userId>' order by created_at desc limit 1"
+$V/db.sh "select escalated_at from support_conversations where account_id = '<accountId>' and user_id = '<userId>' order by created_at desc limit 1"
 $V/db.sh "select * from support_chat_daily_counters order by date desc limit 1"
 ```
 
 ## Checking the rows
 
 ```sh
-$V/db.sh "select feature, credits, total_tokens from ai_credit_usages where feature = 'support_chat' order by created_at desc limit 1"
-$V/db.sh "select count(*) from support_messages"
+$V/db.sh "select feature, credits, total_tokens from ai_credit_usages where account_id = '<accountId>' and feature = 'support_chat' order by created_at desc limit 1"
+$V/db.sh "select count(*) from support_messages where conversation_id in (select id from support_conversations where account_id = '<accountId>' and user_id = '<userId>')"
 ```
 
 The ledger row reads `support_chat | 0 | <tokens>`; the balance the account menu shows is unchanged.

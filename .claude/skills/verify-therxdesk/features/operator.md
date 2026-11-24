@@ -1,14 +1,16 @@
 # Operator
 
 The legal entity that sells The RX Desk. One current row, an audited history, a CLI and the internal API the admin
-app writes it with. The row feeds one line in every email footer, the customer-facing fields on the website, and
-the seller fields of the Thai purchase document, which is shown on `/billing/processing` and sent by email to a
-Thailand-billed buyer. Selling mode only.
+app writes it with. The row feeds one line in every shared email footer, the customer-facing fields on the website,
+and the seller fields of the Thai purchase document, which is shown on `/billing/processing` and sent by email to a
+Thailand-billed buyer. The Thai purchase email has its own footer and intentionally does not repeat the shared
+Operator sentence. Selling mode is required for the checkout/capacity proof; Operator storage, the CLI and footer
+rendering themselves are not gated by it.
 
 The current row is cached under `rxdesk:operator:current`; every write goes through
 `App\Services\Operator\OperatorCatalog`, which ends the previous row at the new `effective_from`, clears the cache
 after the commit and records `operator.create` / `operator.update` in the audit log. `effective_from` may never be
-in the future.
+in the future. “One current row” is enforced by service locking and discipline, not by a unique database constraint.
 
 ## CLI
 
@@ -70,13 +72,14 @@ source "$V/env.sh"
    admin email and the before/after values. A second `POST` ends the previous row: `/operator` answers `current`
    as the new row and one `history` row, and `show` prints the history table.
 4. A future `effective_from` (CLI or API) fails and writes nothing.
-5. Real email proof. Create an Operator with the Latin name and address the footer uses, clear the inbox, then
-   force a capacity alert with the threshold trick `features/admin-alerts.md` documents:
+5. Real email proof. Create an Operator with the Latin name and address the footer uses, clear the inbox, ensure no
+   open capacity alert or TODAY notification is suppressing mail, then force a capacity alert with the threshold trick
+   `features/admin-alerts.md` documents (`-1` is deterministic):
 
    ```sh
    $V/mail.sh clear
    compose run --rm -T -u app \
-       -e RXDESK_CAPACITY_LOAD=0.001 \
+       -e RXDESK_CAPACITY_LOAD=-1 \
        -e RXDESK_CAPACITY_DISK_FREE=0GB \
        -e RXDESK_CAPACITY_DISK_URGENT_MARGIN=0GB \
        -e RXDESK_DISK_GUARD_THRESHOLD=100TB \
@@ -86,20 +89,11 @@ source "$V/env.sh"
    ```
 
    The body contains `The RX Desk is operated by Test Operator Co., Ltd., 123 Test Road, Bangkok 10110.`
-6. Repeat with no Operator. Delete the row, clear the alert state and the inbox, and force the alert again:
-
-   ```sh
-   compose run --rm -T -u app app php artisan tinker --execute='App\Models\Operator::query()->delete(); App\Models\Operator::forgetCurrent(); App\Models\AdminAlert::query()->delete();'
-   $V/mail.sh clear
-   compose run --rm -T -u app \
-       -e RXDESK_CAPACITY_LOAD=0.001 \
-       -e RXDESK_CAPACITY_DISK_FREE=0GB \
-       -e RXDESK_CAPACITY_DISK_URGENT_MARGIN=0GB \
-       -e RXDESK_DISK_GUARD_THRESHOLD=100TB \
-       app php artisan rxdesk:capacity
-   $V/mail.sh wait --to admin@therxdesk.com --subject '[TODAY]'
-   $V/mail.sh show <id>
-   ```
-
-   The operator sentence is absent, and the footer carries no empty line where it was.
-7. `$V/selling.sh down`.
+6. Thai document proof. With a current Operator, run `welcome-checkout`; the `thai-purchase-document` step screenshot
+   must show the Thai seller name and address, and the purchase-document email must carry the same values. Journey
+   check alone is not enough because the document is omitted when no Operator exists.
+7. Empty-footer proof mutates global shared state (all Operators and admin alerts). Run it only on a disposable dev
+   database with explicit owner approval: record the current Operator first, delete only those rows, clear the alert
+   state and inbox, force one alert, inspect the absent sentence, then recreate the Operator from the saved values.
+   Never run the old `Operator::query()->delete()` block on the owner's shared dev database.
+8. `$V/selling.sh down`.

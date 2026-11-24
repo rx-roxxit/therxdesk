@@ -25,9 +25,10 @@ Sign in, open the account menu at the bottom of the sidebar, hover "Language: En
 - End state: the sidebar's Publish link reads 公開, the shared `locale` prop is `ja`, and `window.__notReloaded`
   is still true (a full page load would clear it).
 - Side effect: `$V/db.sh "select locale from users where email = 'verify-agent@example.com'"` shows `ja`.
-- The journey drives the sidebar path only. The guest picker is proven by
-  `$V/browser-suite.sh tests/Browser/AuthLanguageSwitcherTest.php` (or by opening `/login` signed out and picking a
-  language); the Preferences picker is the same control on `/settings/preferences`.
+- The journey drives the sidebar path only. `tests/Browser/AuthLanguageSwitcherTest.php` directly opens **login** and
+  then navigates to register; forgot/reset use the same guest picker but are not directly asserted. The Preferences
+  picker is the same `LanguageSelect` control on `/settings/preferences`, covered by
+  `tests/Browser/PreferencesPageTest.php`.
 
 ## Gotchas
 

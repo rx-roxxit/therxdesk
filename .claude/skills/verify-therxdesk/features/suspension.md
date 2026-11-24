@@ -9,19 +9,21 @@ until it is lifted, and a post the scheduler tries meanwhile never reaches the n
 - **The Suspended screen.** `GET /welcome/suspended` renders `welcome/Suspended`: the page root
   `@welcome-suspended`, the banner `@suspended-banner`, the sentence **Account suspended, contact support** plus
   "Nothing can be published and connected tools can't reach the app while it is suspended.", and a
-  support action (`mailto:`). `EnsureAccountReady` sends the Owner and every Member there from any app page;
-  `/welcome/plan`, `/welcome/plan/portal` and `/welcome/subscription-required` redirect there too. Once the Suspension
-  is lifted the same route forwards the user where they belong (the app with access, the plan step, or the member
-  hold screen).
-- **The API.** Any `/api` route answers `402` with `{"message":"Account suspended, contact support."}`, from
-  `LoadWorkspaceFromToken`, before the subscription check. An API client sees the same wall a browser does.
+  support action (`mailto:`). `EnsureAccountReady` sends the Owner and every Member there from middleware-covered app
+  pages; `/welcome/plan`, `/welcome/plan/portal` and `/welcome/subscription-required` redirect there too. Profile and
+  Preferences are auth-only routes outside that middleware, so say "main app routes", not literally every page. Once
+  the Suspension is lifted the same route forwards the user where they belong (the app with access, the plan step, or
+  the member hold screen).
+- **The API.** Workspace-token `/api` routes answer `402` with `{"message":"Account suspended, contact support."}`,
+  from `LoadWorkspaceFromToken`, before the subscription check. The signed upload route sits outside
+  `workspace.token` and is not covered by that wall. An API client sees the same wall a browser does.
 - **The publishing gate.** `PublishPost` and `PublishToSocialPlatform` call `PublishingGate` before any network call.
   A blocked post ends `posts.status = failed`, `posts.publish_status = failed` and
   `posts.publish_block_reason = suspended`; a Lapsed Account gets `lapsed` instead, and a switched-off network gets
   `unavailable` (`availability.md`). The column holds the code
   (`App\Enums\Account\AccessDenial`) and is translated only when shown. Any real network attempt clears it. A
-  `suspended` or `lapsed` block also emails every workspace Member `PostPublishFailed` with the translated reason;
-  an `unavailable` block sends no email.
+  `suspended` or `lapsed` block queues `PostPublishFailed` for workspace Members subject to each Member's
+  `post_failed` email preference; an `unavailable` block sends no email.
 - **The failure popover.** A blocked post shows its reason in `@post-failure-<postId>` →
   `@post-failure-reason-<postId>`, and a **Try again** button `@post-retry-<postId>` when the signed-in member may
   publish directly (the Owner always may). `POST /posts/{post}/retry` (`RetryBlockedPost`) sends the post back
@@ -61,7 +63,8 @@ $V/suspension.sh up
 $V/drive.sh suspension
 $V/api.sh GET /posts              # HTTP 402, "Account suspended, contact support."
 
-# 4. Tick the scheduler (or wait for the every-minute one): the gate blocks the post.
+# 4. Wait until result.json notes.scheduledAt has passed (the command claims only due posts),
+#    or let the every-minute scheduler run. Then tick it if needed:
 ( source "$V/env.sh"; app_run php artisan posts:process-scheduled )
 $V/db.sh "select status, publish_status, publish_block_reason from posts where id = '<blockedPostId>'"
 #   status | publish_status | publish_block_reason
@@ -110,7 +113,8 @@ python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["notes"]["blo
   force across the Suspension, so the retry after the lift reaches the network.
 - **The retry's network call is expected to fail.** The fixture channel carries a fake LinkedIn token. The proof is
   `publish_block_reason` null after the retry (the access block is gone), not a published post.
-- **`fixture.sh up` recreates the Member and the API token too.** `fixture.sh down` / `cleanup.sh` remove the Owner
+- **The API token is issued on demand.** `fixture.sh up` creates the Member but not the API token; `api.sh` asks
+  `fixture.php token` for a fresh one, revoking the prior token. `fixture.sh down` / `cleanup.sh` remove the Owner
   and the Member with the Account.
 - **Never print the token.** `fixture.sh token` refuses a terminal and writes nothing to logs; `api.sh` keeps it in a
   mode-600 curl config. The internal token stays inside `internal.sh`.

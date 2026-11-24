@@ -21,8 +21,8 @@ that drives one convenient entry point is incomplete when the feature's file lis
 | Availability: network and service switches, refusal on web/REST/MCP and retry, closed signups (`selling.sh up`, `fixture.sh up`, `complimentary.sh up`) | [availability.md](availability.md) | `availability-off`, `availability-retry`, `services-off` |
 | Reviewer accounts and Review access (`selling.sh up`, `complimentary.sh up`, `review-access.sh on`) | [review-access.md](review-access.md) | `review-access` |
 | Lifecycle emails, the 30-day deletion clock and the export/delete CLI (`selling.sh up`, `fixture.sh lifecycle`) | [lifecycle-deletion.md](lifecycle-deletion.md) | `lapsed-deletion` |
-| Operator: one current legal entity, its history, the CLI and the internal API (`selling.sh up`) | [operator.md](operator.md) | not a browser journey; internal.sh + selling.sh + mail.sh |
-| Trial and payment: repeat card, failed first charge, past due, a lapse (`selling.sh up`, a Stripe test clock) | [trial-and-payment.md](trial-and-payment.md) | `payment-retry`, `past-due`, `lapsed` |
+| Operator: one current legal entity, its history, the CLI and the internal API (`selling.sh up`) | [operator.md](operator.md) | no dedicated journey; `welcome-checkout` covers the Thai purchase document |
+| Trial and payment: repeat card, failed first charge, past due, a lapse (`selling.sh up`, a Stripe test clock) | [trial-and-payment.md](trial-and-payment.md) | `welcome-checkout`, `payment-retry`, `past-due`, `lapsed` |
 | Media on R2: uploads, previews, share-card avatars (`selling.sh up`, `media.sh up`) | [media-on-r2.md](media-on-r2.md) | `media-on-r2` |
 | Internal API (`/internal/v1`) | [internal-api.md](internal-api.md) | not a browser journey; internal.sh |
 | The dev email inbox (Mailpit) | [mailpit.md](mailpit.md) | not a browser journey; mail.sh |

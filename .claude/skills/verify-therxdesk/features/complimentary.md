@@ -7,7 +7,8 @@ date that defaults to 30 days ahead (ADR 0006). There is no Checkout, no card, n
 
 - **Give.** `POST /internal/v1/accounts/{uuid}/complimentary` with a `plan_id` (any Plan, archived included) and an
   optional `ends_at`. The Account's `plan_id`, `complimentary_since` and `complimentary_until` are written; app access,
-  the Quota and the AI credits follow that Plan at once. Audited as `account.complimentary.give`.
+  the Quota and the AI credits normally follow that Plan at once. A per-Account Quota or AI-credit override still wins,
+  and an active generic Trial allowance wins for AI credits. Audited as `account.complimentary.give`.
 - **End.** `POST /internal/v1/accounts/{uuid}/complimentary/end` with an optional `ends_at`, defaulting to 30 days
   ahead; an earlier date (now, or in the past) ends it at once. Audited as `account.complimentary.end`. When the end
   passes the Account is Lapsed, `SyncDeletionClock` starts the 30-day data-deletion clock and the plan step shows
@@ -18,8 +19,8 @@ date that defaults to 30 days ahead (ADR 0006). There is no Checkout, no card, n
   (`@welcome-plan-complimentary-continue`) that opens the Schedule.
 - **Billing.** `/settings/account/billing` keeps the Plan name and shows the same strip
   (`@billing-current-plan-complimentary`, `-until` / `-no-end`) with no price, Change plan, Subscribe, payment
-  methods, Manage on Stripe, plan dialog or Invoices tab. The Usage section (Storage and AI credits,
-  `@billing-usage`) still renders.
+  methods, Manage on Stripe, plan dialog or Invoices tab. The Usage section (`@billing-usage-storage`,
+  `@billing-usage-ai`) still renders.
 - **No self-service.** Checkout, Change plan, Subscribe and the Customer Portal answer with the toast
   `Your plan was given by The RX Desk; contact The RX Desk to subscribe.` The Account never gets a Trial afterwards,
   and the System admin ends the Plan before it can pay.
@@ -40,22 +41,24 @@ the journeys, then `complimentary.sh end` and the second journey.
 ```sh
 $V/selling.sh up
 $V/fixture.sh up                 # a fresh Owner with no persona (rerun after a previous drive)
-$V/complimentary.sh up           # give Standard; writes VERIFY_COMPLIMENTARY_* to the state dir
+$V/complimentary.sh up           # give Standard; a repeat call while it is in force writes no second give
 $V/drive.sh complimentary        # plan step, Schedule, billing
 $V/complimentary.sh end          # end it 1 minute ago: the Account is Lapsed at once
 $V/drive.sh complimentary-ended  # /schedule -> /welcome/plan with the cards again
-$V/complimentary.sh down         # end (if still given) and remove the journey env
+$V/complimentary.sh down         # end only if still in force, then remove the journey env
 ```
 
 `drive.sh` passes `VERIFY_COMPLIMENTARY_PLAN` and `VERIFY_COMPLIMENTARY_ACCOUNT` from
-`~/.cache/verify-therxdesk/state/complimentary.env`.
+`~/.cache/verify-therxdesk/state/complimentary.env`. The `complimentary` journey proves the no-end-date branch only.
+After `end`, inspect the plan step for `@welcome-plan-lapsed-deletion` and its 30-day date; the ended journey does not
+assert that selector.
 
 ## Host-side proof
 
 ```sh
 $V/complimentary.sh show                 # the Account's complimentary block
 $V/internal.sh GET /accounts/<uuid> --token admin   # complimentary: { in_force, since, until }
-$V/db.sh "select action, actor, before, after from audit_logs where action like 'account.complimentary.%' order by created_at"
+$V/db.sh "select action, actor, before, after from audit_logs where target_type = 'accounts' and target_id = '<accountId>' and action like 'account.complimentary.%' order by created_at"
 ```
 
 While the Plan is in force the block reads `in_force: true`; after `complimentary.sh end` it reads `in_force: false`

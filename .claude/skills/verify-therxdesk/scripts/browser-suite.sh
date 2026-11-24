@@ -67,25 +67,32 @@ if [ ! -d "$REPO/.git" ]; then
 fi
 rm -rf "$REPO/.pest"
 
+run_pest() {
+    docker run --rm -u "$(id -u):$(id -g)" \
+        --network "${project}_default" \
+        -e HOME=/tmp \
+        -e DB_HOST=pgsql \
+        -e REDIS_HOST=redis \
+        -v "$REPO:/var/www/html" \
+        -v "${project}_app-node-modules:/var/www/html/node_modules" \
+        -v "${project}_app-vendor:/var/www/html/vendor" \
+        -v "$MAIN_CHECKOUT/.env.ci:/var/www/html/.env:ro" \
+        -v "$MAIN_CHECKOUT/.env.ci:/var/www/html/.env.testing:ro" \
+        -w /var/www/html \
+        "$image" \
+        ./vendor/bin/pest "$@" --compact --parallel --processes=3
+}
+
 if [ "$#" -gt 0 ]; then
-    pest_args=("$@")
-else
-    pest_args=("tests/Browser")
+    status=0
+    for test_path in "$@"; do
+        echo "[browser-suite] running $test_path"
+        run_pest "$test_path" || status=1
+    done
+    exit "$status"
 fi
 
 echo "[browser-suite] running on Playwright $playwright_version"
-docker run --rm -u "$(id -u):$(id -g)" \
-    --network "${project}_default" \
-    -e HOME=/tmp \
-    -e DB_HOST=pgsql \
-    -e REDIS_HOST=redis \
-    -v "$REPO:/var/www/html" \
-    -v "${project}_app-node-modules:/var/www/html/node_modules" \
-    -v "${project}_app-vendor:/var/www/html/vendor" \
-    -v "$MAIN_CHECKOUT/.env.ci:/var/www/html/.env:ro" \
-    -v "$MAIN_CHECKOUT/.env.ci:/var/www/html/.env.testing:ro" \
-    -w /var/www/html \
-    "$image" \
-    ./vendor/bin/pest "${pest_args[@]}" --compact --parallel --processes=3
+run_pest tests/Browser
 
 echo "[browser-suite] screenshots and traces: $REPO/tests/Browser/"

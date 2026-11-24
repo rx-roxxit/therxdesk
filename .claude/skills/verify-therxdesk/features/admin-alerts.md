@@ -5,18 +5,19 @@ The System admin gets one email alert system: `[URGENT]` at once, `[RESOLVED]` w
 there is something to report. The scheduler dispatches a heartbeat job every 5 minutes, and a
 capacity command every 5 minutes reads host RAM and load, the Horizon queue wait, free disk and the
 Nightwatch burst. Nightwatch's webhook feeds the TODAY burst alert and the digest. `GET
-/internal/v1/health` gives the admin app the figures. There is no UI. All three scheduled jobs run
-only in selling mode (`routes/console.php`), and the commands themselves return success without doing
+/internal/v1/health` gives the admin app the figures. There is no admin alert screen in this checkout. Alerts are queued email; the capacity check also drives the
+publisher-facing shared-bucket exhaustion reason, and health feeds the admin app's health screen. All three scheduled
+jobs run only in selling mode (`routes/console.php`), and the commands themselves return success without doing
 anything while self-hosted, so the selling overlay is required to exercise them.
 
 ## Alerts
 
 | Level | When | De-duplication |
 | --- | --- | --- |
-| `[URGENT]` | free disk near the Disk guard threshold; an AI provider failure (`AiProviderFailure`, raised from the AI entry points) | once per open cycle |
+| `[URGENT]` | free disk near the Disk guard threshold; an AI provider failure (`AiProviderFailure`, raised from the AI entry points); a network bucket at 90% / exhausted | once per open cycle |
 | `[RESOLVED]` | an URGENT disk condition clears; the AI failure alert has no clear path, so it sends no RESOLVED mail | once per open cycle |
-| `[TODAY]` | RAM > 75%, 5-minute load > 5, queue wait > 2 min, free disk < 30 GB, a Nightwatch burst (5 issues an hour) | one per condition per 6 hours |
-| `[DIGEST]` | 08:00 Asia/Bangkok, only when non-empty | cleared TODAY alerts, new issues, yesterday's failed jobs, a due restore drill (a fresh install sends it daily until a drill is recorded) |
+| `[TODAY]` | RAM > 75%, 5-minute load > 5, queue wait > 2 min, free disk < 30 GB, a Nightwatch burst (5 issues an hour), a network bucket at its TODAY threshold | one per condition per 6 hours |
+| `[DIGEST]` | 08:00 Asia/Bangkok, only when non-empty | cleared TODAY alerts, new issues, yesterday's failed jobs, a due restore drill (a fresh install sends it daily until a drill is recorded), Accounts above the network bucket digest percentage |
 
 A free disk inside the Disk guard plus its 5 GB margin raises `[URGENT]` and suppresses the TODAY
 disk alert, so the same run raises one or the other, never both.
@@ -32,9 +33,12 @@ Run everything from the dev machine, with the stack up. `$V` is
 `.claude/skills/verify-therxdesk/scripts`, and `selling.sh up` also starts the local `heartbeat`
 receiver, so the heartbeat pings `http://heartbeat:8080/hb`, never Better Stack.
 
+Start from a clean alert state: no open `capacity_load` / `disk_guard` alert, no TODAY notification sent in the last
+six hours, and no Pinterest bucket for the current UTC day. Clearing Mailpit alone does not reset those suppressors.
+
 1. `$V/selling.sh up` and `$V/mail.sh clear`.
 2. Force a capacity alert. The run container gets the same selling overlay, so the command raises and
-   emails. A load threshold of `0.001` raises TODAY, and a `100TB` Disk guard threshold (with no
+   emails. Load is compared with strict `>`, so `-1` is deterministic. A `100TB` Disk guard threshold (with no
    margin) makes free disk always look near the guard, so the same run raises URGENT:
 
    ```sh
@@ -42,7 +46,7 @@ receiver, so the heartbeat pings `http://heartbeat:8080/hb`, never Better Stack.
    $V/mail.sh clear
    source .claude/skills/verify-therxdesk/scripts/env.sh
    compose run --rm -T -u app \
-       -e RXDESK_CAPACITY_LOAD=0.001 \
+       -e RXDESK_CAPACITY_LOAD=-1 \
        -e RXDESK_CAPACITY_DISK_FREE=0GB \
        -e RXDESK_CAPACITY_DISK_URGENT_MARGIN=0GB \
        -e RXDESK_DISK_GUARD_THRESHOLD=100TB \
@@ -64,8 +68,8 @@ receiver, so the heartbeat pings `http://heartbeat:8080/hb`, never Better Stack.
    ```
 
    `$V/mail.sh wait --to admin@therxdesk.com --subject '[RESOLVED]'`.
-4. Health: `$V/internal.sh GET /health --token admin`. It answers `HTTP 200` with `queue`,
-   `backup` (the last successful run, `null` until one exists), `restore_drill`, `disk` and
+4. Health: `$V/internal.sh GET /health --token admin`. It answers `HTTP 200` with `queue` (including
+   `queue.failed`), `backup` (the last successful run, `null` until one exists), `restore_drill`, `disk` and
    `nightwatch` figures. [database-backups.md](database-backups.md) fills `backup` and
    `restore_drill`.
 5. Heartbeat from the queue. Dispatch the job, run one worker, and read the receiver's log:
@@ -100,6 +104,24 @@ receiver, so the heartbeat pings `http://heartbeat:8080/hb`, never Better Stack.
 
    It answers `200`; `$V/internal.sh GET /health --token admin` then lists the issue under
    `nightwatch.recent`. An unsigned request answers 401, and a wrong signature records nothing.
-7. `$V/selling.sh down` returns the stack to self-hosted mode (and removes the heartbeat receiver).
+7. Shared network bucket. Clear the inbox and make one synthetic Pinterest call through the local heartbeat
+   receiver. The run container overrides only its own capacity, so the alert fires even though the main app reports
+   its normal 1,000-call capacity:
+
+   ```sh
+   $V/mail.sh clear
+   compose run --rm -T -u app \
+       -e RXDESK_PINTEREST_DAILY_CALLS=1 \
+       -e PINTEREST_API=http://heartbeat:8080/pinterest/v5 \
+       app php artisan tinker --execute='Illuminate\Support\Facades\Http::get(config("trypost.platforms.pinterest.api")."/verify");'
+   $V/mail.sh wait --to admin@therxdesk.com --subject '[URGENT] The RX Desk: Pinterest reached its daily call limit'
+   $V/internal.sh GET /network-limits --token admin
+   ```
+
+   `exhausted_at` is set for Pinterest. The publisher-facing part is the post-card waiting reason
+   (`PostTimelineCard`); the digest part lists Accounts above `account_digest_percent`. A Pinterest bucket already
+   created today suppresses a second first-crossing alert, so use an untouched network/day.
+
+8. `$V/selling.sh down` returns the stack to self-hosted mode (and removes the heartbeat receiver).
 
 Never point the dev stack at a real Better Stack heartbeat or the real Nightwatch webhook.
