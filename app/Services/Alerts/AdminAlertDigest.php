@@ -94,7 +94,7 @@ class AdminAlertDigest
                 continue;
             }
 
-            $minimumCalls = (int) ceil($capacity * $threshold / 100);
+            $minimumCalls = (int) floor($capacity * $threshold / 100) + 1;
 
             $this->networkLimits->accountRows($network, $date)
                 ->where('account_network_calls.calls', '>=', $minimumCalls)

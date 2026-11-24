@@ -44,12 +44,15 @@ class NetworkBucketMonitor
         }
 
         if ($bucket['percent'] >= $setting->urgent_percent) {
+            $this->notifier->clear(AdminAlertKey::NetworkBucketExhausted, $network);
             $this->notifier->raise(AdminAlertKey::NetworkBucketUrgent, $context, $network);
 
             return;
         }
 
         if ($bucket['percent'] >= $setting->today_percent) {
+            $this->notifier->clear(AdminAlertKey::NetworkBucketUrgent, $network);
+            $this->notifier->clear(AdminAlertKey::NetworkBucketExhausted, $network);
             $this->notifier->raise(AdminAlertKey::NetworkBucketToday, $context, $network);
 
             return;

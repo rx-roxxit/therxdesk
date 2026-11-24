@@ -103,6 +103,28 @@ test('a bucket with room left publishes normally', function () {
     expect($post->refresh()->publish_status)->toBe(PublishStatus::Published);
 });
 
+test('raising the capacity lets the same bucket publish again', function () {
+    NetworkCallBucket::factory()->create([
+        'network' => 'tiktok',
+        'calls' => 10,
+        'exhausted_at' => now(),
+    ]);
+    $post = networkBucketTarget($this);
+    config(['rxdesk.network_limits.buckets.tiktok' => 20]);
+
+    $publisher = Mockery::mock(TikTokPublisher::class);
+    $publisher->shouldReceive('publish')->once()->andReturn([
+        'id' => 'tt-3',
+        'url' => 'https://www.tiktok.com/@demo/video/3',
+    ]);
+    $this->app->instance(TikTokPublisher::class, $publisher);
+
+    (new PublishToSocialPlatform($post))->handle();
+
+    expect($post->refresh()->publish_status)->toBe(PublishStatus::Published)
+        ->and(app(NetworkLimits::class)->isExhausted('tiktok'))->toBeFalse();
+});
+
 test('after the UTC reset a fresh bucket publishes the waiting post', function () {
     NetworkCallBucket::factory()->create([
         'network' => 'tiktok',

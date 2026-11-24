@@ -99,6 +99,11 @@ test('the digest names the Accounts that used a shared bucket the previous UTC d
     AccountNetworkCall::factory()->create([
         'network' => 'tiktok',
         'date' => $previousDay,
+        'calls' => 10,
+    ]);
+    AccountNetworkCall::factory()->create([
+        'network' => 'tiktok',
+        'date' => $previousDay,
         'calls' => 5,
     ]);
 

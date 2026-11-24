@@ -53,21 +53,23 @@ class NetworkLimits
         return ($calls / $capacity) * 100;
     }
 
+    /**
+     * The capacity is the rule, not the `exhausted_at` stamp: raising a
+     * network's budget lets publishing resume the same day instead of waiting
+     * for the next UTC reset. A network with no registered capacity has no
+     * bucket and is never exhausted.
+     */
     public function isExhausted(string $network): bool
     {
-        $row = $this->bucketRow($network);
+        $capacity = $this->capacity($network);
 
-        if ($row === null) {
+        if ($capacity === null) {
             return false;
         }
 
-        $capacity = $this->capacity($network);
+        $row = $this->bucketRow($network);
 
-        if ($capacity !== null && (int) $row->calls >= $capacity) {
-            return true;
-        }
-
-        return $row->exhausted_at !== null;
+        return $row !== null && (int) $row->calls >= $capacity;
     }
 
     /**
@@ -85,7 +87,7 @@ class NetworkLimits
             'calls' => $calls,
             'capacity' => $capacity,
             'percent' => $this->percent($calls, $capacity),
-            'status' => $this->status($calls, $capacity, $row?->exhausted_at !== null),
+            'status' => $this->status($calls, $capacity),
             'exhausted_at' => $row?->exhausted_at?->toIso8601String(),
             'reset_at' => $this->resetAt()->toIso8601String(),
         ];
@@ -156,9 +158,9 @@ class NetworkLimits
             ->orderBy('account_network_calls.account_id');
     }
 
-    private function status(int $calls, int $capacity, bool $exhausted): string
+    private function status(int $calls, int $capacity): string
     {
-        if ($exhausted || ($capacity > 0 && $calls >= $capacity)) {
+        if ($capacity > 0 && $calls >= $capacity) {
             return 'exhausted';
         }
 

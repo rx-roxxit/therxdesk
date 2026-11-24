@@ -72,6 +72,19 @@ test('dropping below the TODAY threshold clears every bucket alert for the netwo
     expect(AdminAlert::query()->where('key', 'network_bucket_today:tiktok')->sole()->is_open)->toBeFalse();
 });
 
+test('a bucket that falls back under the capacity closes the exhausted alert', function () {
+    $bucket = NetworkCallBucket::factory()->create(['network' => 'tiktok', 'calls' => 100]);
+    app(NetworkBucketMonitor::class)->evaluate('tiktok');
+
+    expect(AdminAlert::query()->where('key', 'network_bucket_exhausted:tiktok')->sole()->is_open)->toBeTrue();
+
+    $bucket->update(['calls' => 95]);
+    app(NetworkBucketMonitor::class)->evaluate('tiktok');
+
+    expect(AdminAlert::query()->where('key', 'network_bucket_exhausted:tiktok')->sole()->is_open)->toBeFalse()
+        ->and(AdminAlert::query()->where('key', 'network_bucket_urgent:tiktok')->sole()->is_open)->toBeTrue();
+});
+
 test('a new bucket day clears the alerts opened on the old one', function () {
     $alert = AdminAlert::factory()->open()->create([
         'key' => 'network_bucket_today:tiktok',

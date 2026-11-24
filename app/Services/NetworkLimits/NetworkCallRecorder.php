@@ -52,7 +52,7 @@ class NetworkCallRecorder
 
             $accountId = $this->context->currentAccountId();
 
-            if ($accountId !== null) {
+            if (filled($accountId)) {
                 AccountNetworkCall::incrementFor($accountId, $network, $today);
             }
 
