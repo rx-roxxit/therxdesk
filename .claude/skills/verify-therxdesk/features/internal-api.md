@@ -45,7 +45,20 @@ prints them. `selling.sh down` removes the file.
   `trial_ends_at`, `ends_at`, `created_at`, or null), `complimentary` (`in_force`, `since`, `until`, or null until one
   was ever given), `storage` (`used_bytes`, `quota_bytes`), `members_count`,
   `recent_posts` (the 10 newest; `status`, `publish_status`, `error_message`, `platform`, timestamps, never
-  content) and `lifecycle_emails` (an array, empty when none; `type`, `user_id`, `sent_at`).
+  content), `lifecycle_emails` (an array, empty when none; `type`, `user_id`, `sent_at`), `offer` (`id`, `slug`,
+  `name`, or null: the last Offer the Subscription redeemed), `account_balance` (cents, or null: the same credit
+  the billing page shows), `quota_bytes` (the Account's own override, or null when the Plan's applies) and
+  `refund` (`allowed`, `reason` from `RefundDenial` or null, and `charge` with `invoice_id`, `amount_paid`,
+  `currency`, `paid_at` only when allowed; a Stripe failure answers `allowed: false`,
+  `reason: "stripe_unavailable"`). The refund decision is the one `POST .../refund-and-cancel` uses.
+- `GET /internal/v1/subscriptions` (admin): paginated, newest first, the configured page size (`per_page` is
+  ignored). One row per default Subscription: `account` (`id`, `name`), `owner` (`email`), `plan_name`,
+  `interval`, `amount` in cents, `status` (`canceled` once it has ended), `trial_ends_at`, `ends_at` and `offer`
+  (`id`, `slug`, `name`, or null: the Offer the Subscription redeemed). Site token 404.
+- `GET /internal/v1/storage` (admin): paginated, Account name order, the configured page size (`per_page`
+  ignored). One row per Owner Account with a Workspace: `account` (`id`, `name`), `owner` (`email`),
+  `used_bytes`, `quota_bytes` (the Quota in force) and `percent` (one decimal). Every number comes from
+  `AccountStorage`. Site token 404.
 - `PATCH /internal/v1/accounts/{uuid}/review-access` (admin): `{ "enabled": bool }`; answers `{ id, review_access }`
   and audits `account.review_access.enable` / `.disable` with before/after. See `review-access.md`.
 - `POST /internal/v1/accounts/{uuid}/suspension` (admin): `reason` (3–255 characters); answers `id`, `suspended`,
@@ -54,6 +67,10 @@ prints them. `selling.sh down` removes the file.
 - `PATCH /internal/v1/accounts/{uuid}/ai-credits` (admin): `{ "ai_credits_per_month": int|null }` (null clears the
   override); `POST .../ai-credits/reset` restarts the month's usage. Both answer `id`, `ai_credits_per_month`,
   `monthly_credits`, `used`, `remaining`, `reset_at` and audit `account.ai-credits.override` / `.reset`.
+- `PATCH /internal/v1/accounts/{uuid}/quota` (admin): `{ "quota_bytes": int|null }` (null clears the override; 0
+  is a valid Quota), written through `AccountStorage::setQuota()`. Answers `quota_bytes`,
+  `effective_quota_bytes`, `used_bytes` and audits `account.quota.override` with the admin email and
+  before/after. Site token 404.
 - `POST /internal/v1/accounts/{uuid}/delete` (admin): body `{ "confirm_email": <the Owner's email> }`; deletes the
   Account's data now (Owner, Account and Stripe customer kept) and audits `account.delete_now`. A wrong email
   answers `422`. See `lifecycle-deletion.md`.
