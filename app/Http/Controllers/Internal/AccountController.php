@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Internal;
 
 use App\Actions\Account\CreateReviewerAccount;
+use App\Actions\Billing\ShowAccountBalance;
+use App\Enums\Billing\RefundDenial;
 use App\Http\Middleware\Internal\AuthenticateInternalApi;
 use App\Http\Requests\Internal\StoreAccountRequest;
 use App\Http\Resources\Internal\CustomerDetailResource;
@@ -13,11 +15,15 @@ use App\Http\Resources\Internal\ReviewerAccountResource;
 use App\Models\Account;
 use App\Models\Plan;
 use App\Services\Storage\AccountStorage;
+use App\Support\Billing\RefundEligibility;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
+use Stripe\Exception\ApiErrorException;
+use Stripe\Invoice as StripeInvoice;
 use Symfony\Component\HttpFoundation\Response;
 
 class AccountController
@@ -80,11 +86,71 @@ class AccountController
                 'posts.created_at',
             ]);
 
+        [$accountBalance, $refund] = $this->billingFacts($account);
+
         return new CustomerDetailResource([
             'account' => $account,
             'recent_posts' => $recentPosts,
             'storage' => $this->storage->usage($account),
+            'account_balance' => $accountBalance,
+            'refund' => $refund,
         ]);
+    }
+
+    /**
+     * The Stripe facts the billing screen needs, read here so the admin app
+     * never calls Stripe. A Stripe failure leaves both empty instead of
+     * failing the whole detail read.
+     *
+     * @return array{0: int|null, 1: array{allowed: bool, reason: string|null, charge: array<string, mixed>|null}}
+     */
+    private function billingFacts(Account $account): array
+    {
+        try {
+            $balance = ShowAccountBalance::creditCents($account);
+            $eligibility = RefundEligibility::for($account);
+        } catch (ApiErrorException) {
+            return [null, [
+                'allowed' => false,
+                'reason' => RefundDenial::StripeUnavailable->value,
+                'charge' => null,
+            ]];
+        }
+
+        return [$balance, $this->refundBlock($eligibility)];
+    }
+
+    /**
+     * @param  array{
+     *     denial: RefundDenial|null,
+     *     invoice: StripeInvoice|null,
+     *     amount_paid: int,
+     *     currency: string|null,
+     *     paid_at: CarbonImmutable|null,
+     *     payment: array{payment_intent: string}|array{charge: string}|null
+     * }  $eligibility
+     * @return array{allowed: bool, reason: string|null, charge: array<string, mixed>|null}
+     */
+    private function refundBlock(array $eligibility): array
+    {
+        if ($eligibility['denial'] !== null) {
+            return [
+                'allowed' => false,
+                'reason' => $eligibility['denial']->value,
+                'charge' => null,
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'reason' => null,
+            'charge' => [
+                'invoice_id' => $eligibility['invoice']->id,
+                'amount_paid' => $eligibility['amount_paid'],
+                'currency' => $eligibility['currency'],
+                'paid_at' => $eligibility['paid_at']?->toIso8601String(),
+            ],
+        ];
     }
 
     private function complimentaryUntil(mixed $value): ?Carbon
