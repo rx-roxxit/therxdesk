@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'ディスク容量がほぼ限界',
             'ai_provider_failure' => 'AIプロバイダーの障害',
             'nightwatch_burst' => '新しい問題が急増',
+            'network_bucket_today' => ':network は1日の呼び出し上限に近づいています',
+            'network_bucket_urgent' => ':network は1日の呼び出し上限に迫っています',
+            'network_bucket_exhausted' => ':network は1日の呼び出し上限に達しました',
         ],
         'messages' => [
             'capacity_ram' => 'サーバーのメモリ使用率は :percent% で、アラートしきい値の :threshold% を超えています。',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'ディスクの空き容量は :free で、ディスク保護しきい値の :threshold に近づいています。まもなくアップロードが停止します。',
             'ai_provider_failure' => ':model モデルでエラーが発生しました: :error',
             'nightwatch_burst' => '過去1時間に Nightwatch で :count 件の問題が発生しました。',
+            'network_bucket_today' => ':network は1日の呼び出し上限の :percent% です（:capacity 中 :calls）。',
+            'network_bucket_urgent' => ':network は1日の呼び出し上限の :percent% です（:capacity 中 :calls）。',
+            'network_bucket_exhausted' => ':network は1日の呼び出し上限に達しました（:capacity 中 :calls）。このネットワークへの公開は :reset まで待機します。',
         ],
         'resolved_body' => 'このアラートは解除されました。同じ状態が再発すると再び通知されます。',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'リストア訓練',
             'restore_drill_line' => '前回のリストア訓練は :date でした。今すぐ実行してください。',
             'restore_drill_never' => 'リストア訓練はまだ記録されていません。今すぐ実行してください。',
+            'bucket_accounts' => '共通の上限を使うアカウント',
+            'bucket_accounts_line' => ':network: :account（:owner）が1日の呼び出しの :percent%（:calls）を使用しました。',
         ],
         'preview' => [
             'urgent' => 'すぐに対応が必要な問題があります。',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'サブスクリプションが終了したため、この投稿は公開されませんでした。再度サブスクリプションを登録してから、もう一度お試しください。',
         'suspended' => 'アカウントが停止されているため、この投稿は公開されませんでした。サポートにお問い合わせのうえ、もう一度お試しください。',
         'unavailable' => ':network は現在ご利用いただけません。復旧してからもう一度お試しください。',
+        'network_limit' => ':network は現在新しい投稿を受け付けられません。再試行し、受け付けられるようになり次第この投稿を公開します。',
         'retry' => '再試行',
         'retry_started' => '投稿の公開を再試行しています。',
         'retry_failed' => '投稿の再試行に失敗しました。もう一度お試しください。',

@@ -65,8 +65,15 @@ $direction = Locale::tryFrom(app()->getLocale())?->direction() ?? 'ltr';
                 @if(! empty($items['cleared']))
                 <p style="margin: 0; font-weight: 600; line-height: 24px">{{ __('rxdesk.alerts.digest.cleared') }}</p>
                 <p style="margin: 4px 0 0; line-height: 24px">{{ __('rxdesk.alerts.digest.cleared_line') }}</p>
-                <ul style="margin: 8px 0 0; padding-left: 20px; padding-right: 20px; line-height: 24px"> @foreach($items['cleared'] as $clearedKey)
-                  <li>{{ __('rxdesk.alerts.conditions.' . $clearedKey) }}</li>
+                <ul style="margin: 8px 0 0; padding-left: 20px; padding-right: 20px; line-height: 24px"> @foreach($items['cleared'] as $cleared)
+                  <li>{{ $cleared['title'] }}</li>
+                  @endforeach
+                </ul>
+                @endif
+                @if(! empty($items['bucket_accounts']['rows']))
+                <p style="margin: 24px 0 0; font-weight: 600; line-height: 24px">{{ __('rxdesk.alerts.digest.bucket_accounts') }}</p>
+                <ul style="margin: 8px 0 0; padding-left: 20px; padding-right: 20px; line-height: 24px"> @foreach($items['bucket_accounts']['rows'] as $row)
+                  <li>{{ __('rxdesk.alerts.digest.bucket_accounts_line', ['network' => $row['network'], 'account' => $row['account'], 'owner' => $row['owner'], 'percent' => $row['percent'], 'calls' => $row['calls']]) }}</li>
                   @endforeach
                 </ul>
                 @endif

@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Speicherplatz fast erschöpft',
             'ai_provider_failure' => 'KI-Anbieterfehler',
             'nightwatch_burst' => 'Viele neue Probleme auf einmal',
+            'network_bucket_today' => ':network nähert sich dem täglichen Aufruflimit',
+            'network_bucket_urgent' => ':network ist nahe am täglichen Aufruflimit',
+            'network_bucket_exhausted' => ':network hat das tägliche Aufruflimit erreicht',
         ],
         'messages' => [
             'capacity_ram' => 'Der Arbeitsspeicher des Servers liegt bei :percent %, über dem Alarmschwellenwert von :threshold %.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'Der freie Speicherplatz beträgt :free, nahe der Schutzschwelle von :threshold. Uploads werden bald gestoppt.',
             'ai_provider_failure' => 'Das Modell :model ist fehlgeschlagen: :error',
             'nightwatch_burst' => 'In der letzten Stunde wurden :count Probleme in Nightwatch geöffnet.',
+            'network_bucket_today' => ':network liegt bei :percent % des täglichen Aufruflimits (:calls von :capacity).',
+            'network_bucket_urgent' => ':network liegt bei :percent % des täglichen Aufruflimits (:calls von :capacity).',
+            'network_bucket_exhausted' => ':network hat das tägliche Aufruflimit erreicht (:calls von :capacity). Veröffentlichungen dorthin warten bis :reset.',
         ],
         'resolved_body' => 'Dieser Alarm hat sich erledigt. Er wird erneut gesendet, wenn die Bedingung wieder auftritt.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Wiederherstellungstest',
             'restore_drill_line' => 'Der letzte Wiederherstellungstest war am :date. Führen Sie jetzt einen durch.',
             'restore_drill_never' => 'Es ist noch kein Wiederherstellungstest erfasst. Führen Sie jetzt einen durch.',
+            'bucket_accounts' => 'Konten mit gemeinsamem Limit',
+            'bucket_accounts_line' => ':network: :account (:owner) hat :percent % der täglichen Aufrufe genutzt (:calls).',
         ],
         'preview' => [
             'urgent' => 'Ein Problem braucht jetzt Aufmerksamkeit.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Dein Abo ist ausgelaufen, deshalb wurde dieser Beitrag nicht veröffentlicht. Schließe das Abo erneut ab und versuche es dann noch einmal.',
         'suspended' => 'Dein Konto ist gesperrt, deshalb wurde dieser Beitrag nicht veröffentlicht. Wende dich an den Support und versuche es dann noch einmal.',
         'unavailable' => ':network ist gerade nicht verfügbar. Versuche es erneut, sobald es wieder da ist.',
+        'network_limit' => ':network kann gerade keine neuen Beiträge annehmen. Wir versuchen es erneut und veröffentlichen diesen Beitrag, sobald es wieder geht.',
         'retry' => 'Erneut versuchen',
         'retry_started' => 'Der Beitrag wird erneut veröffentlicht.',
         'retry_failed' => 'Der Beitrag konnte nicht erneut veröffentlicht werden. Versuche es noch einmal.',

@@ -6,9 +6,11 @@ use App\Console\Commands\RxDesk\DigestCommand;
 use App\Enums\Alerts\AdminAlertKey;
 use App\Enums\Alerts\AlertLevel;
 use App\Mail\AdminAlert as AdminAlertMail;
+use App\Models\AccountNetworkCall;
 use App\Models\AdminAlert;
 use App\Models\NightwatchIssue;
 use App\Models\RestoreDrill;
+use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -74,9 +76,39 @@ test('the digest sends one mail with cleared alerts, new issues and failed jobs'
     $this->artisan(DigestCommand::class)->assertExitCode(0);
 
     Mail::assertQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->level === AlertLevel::Digest
-        && $mail->items['cleared'] === [AdminAlertKey::CapacityLoad->value]
+        && array_column($mail->items['cleared'], 'key') === [AdminAlertKey::CapacityLoad->value]
         && $mail->items['issues'][0]['title'] === 'Something broke'
         && $mail->items['failed_jobs'] === 1);
+});
+
+test('the digest names the Accounts that used a shared bucket the previous UTC day', function () {
+    $this->travelTo(now('Asia/Bangkok')->startOfDay()->addHours(8));
+    config(['rxdesk.network_limits.buckets.tiktok' => 100]);
+
+    $user = User::factory()->create();
+    $user->account->update(['name' => 'Acme']);
+
+    $previousDay = now('UTC')->subDay()->startOfDay()->toDateString();
+
+    AccountNetworkCall::factory()->create([
+        'account_id' => $user->account_id,
+        'network' => 'tiktok',
+        'date' => $previousDay,
+        'calls' => 40,
+    ]);
+    AccountNetworkCall::factory()->create([
+        'network' => 'tiktok',
+        'date' => $previousDay,
+        'calls' => 5,
+    ]);
+
+    $this->artisan(DigestCommand::class)->assertExitCode(0);
+
+    Mail::assertQueued(AdminAlertMail::class, fn (AdminAlertMail $mail): bool => $mail->level === AlertLevel::Digest
+        && $mail->items['bucket_accounts']['total'] === 1
+        && $mail->items['bucket_accounts']['rows'][0]['account'] === 'Acme'
+        && $mail->items['bucket_accounts']['rows'][0]['network'] === 'TikTok'
+        && $mail->items['bucket_accounts']['rows'][0]['percent'] === 40.0);
 });
 
 test('the digest and heartbeat are scheduled in selling mode', function () {

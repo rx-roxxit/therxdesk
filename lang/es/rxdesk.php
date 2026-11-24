@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Espacio en disco casi agotado',
             'ai_provider_failure' => 'Fallo del proveedor de IA',
             'nightwatch_burst' => 'Ráfaga de nuevos problemas',
+            'network_bucket_today' => ':network está cerca de su límite diario de llamadas',
+            'network_bucket_urgent' => ':network está muy cerca de su límite diario de llamadas',
+            'network_bucket_exhausted' => ':network alcanzó su límite diario de llamadas',
         ],
         'messages' => [
             'capacity_ram' => 'La memoria del servidor está al :percent %, por encima del umbral de alerta del :threshold %.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'El espacio libre en disco es :free, cerca del umbral de protección de disco de :threshold. Las subidas se detendrán pronto.',
             'ai_provider_failure' => 'El modelo :model falló: :error',
             'nightwatch_burst' => 'Se abrieron :count problemas en Nightwatch durante la última hora.',
+            'network_bucket_today' => ':network está al :percent % de su límite diario de llamadas (:calls de :capacity).',
+            'network_bucket_urgent' => ':network está al :percent % de su límite diario de llamadas (:calls de :capacity).',
+            'network_bucket_exhausted' => ':network alcanzó su límite diario de llamadas (:calls de :capacity). La publicación esperará hasta :reset.',
         ],
         'resolved_body' => 'Esta alerta se ha resuelto. Volverá a enviarse si la condición reaparece.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Prueba de restauración',
             'restore_drill_line' => 'La última prueba de restauración fue el :date. Haz una ahora.',
             'restore_drill_never' => 'Todavía no hay ninguna prueba de restauración registrada. Haz una ahora.',
+            'bucket_accounts' => 'Cuentas que comparten un límite',
+            'bucket_accounts_line' => ':network: :account (:owner) usó el :percent % de las llamadas diarias (:calls).',
         ],
         'preview' => [
             'urgent' => 'Un problema necesita atención ahora.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Tu suscripción terminó, así que esta publicación no se publicó. Vuelve a suscribirte y luego inténtalo de nuevo.',
         'suspended' => 'Tu cuenta está suspendida, así que esta publicación no se publicó. Contacta con soporte y luego inténtalo de nuevo.',
         'unavailable' => ':network no está disponible ahora mismo. Inténtalo de nuevo cuando vuelva.',
+        'network_limit' => ':network no puede aceptar publicaciones nuevas ahora mismo. Lo reintentaremos y publicaremos esta publicación en cuanto pueda.',
         'retry' => 'Reintentar',
         'retry_started' => 'Reintentando la publicación.',
         'retry_failed' => 'No se pudo reintentar la publicación. Inténtalo de nuevo.',

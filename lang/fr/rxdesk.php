@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Espace disque presque épuisé',
             'ai_provider_failure' => 'Échec du fournisseur d’IA',
             'nightwatch_burst' => 'Pic de nouveaux problèmes',
+            'network_bucket_today' => ':network approche de sa limite quotidienne d’appels',
+            'network_bucket_urgent' => ':network est proche de sa limite quotidienne d’appels',
+            'network_bucket_exhausted' => ':network a atteint sa limite quotidienne d’appels',
         ],
         'messages' => [
             'capacity_ram' => 'La mémoire du serveur est à :percent %, au-dessus du seuil d\'alerte de :threshold %.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'L\'espace disque libre est de :free, proche du seuil de protection du disque de :threshold. Les envois vont bientôt s\'arrêter.',
             'ai_provider_failure' => 'Le modèle :model a échoué : :error',
             'nightwatch_burst' => ':count problèmes ont été ouverts dans Nightwatch au cours de la dernière heure.',
+            'network_bucket_today' => ':network est à :percent % de sa limite quotidienne d’appels (:calls sur :capacity).',
+            'network_bucket_urgent' => ':network est à :percent % de sa limite quotidienne d’appels (:calls sur :capacity).',
+            'network_bucket_exhausted' => ':network a atteint sa limite quotidienne d’appels (:calls sur :capacity). La publication attendra jusqu’à :reset.',
         ],
         'resolved_body' => 'Cette alerte est résolue. Elle sera renvoyée si la condition réapparaît.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Test de restauration',
             'restore_drill_line' => 'Le dernier test de restauration a eu lieu le :date. Lancez-en un maintenant.',
             'restore_drill_never' => 'Aucun test de restauration n\'est encore enregistré. Lancez-en un maintenant.',
+            'bucket_accounts' => 'Comptes partageant une limite',
+            'bucket_accounts_line' => ':network : :account (:owner) a utilisé :percent % des appels quotidiens (:calls).',
         ],
         'preview' => [
             'urgent' => 'Un problème demande une attention immédiate.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Votre abonnement a pris fin, donc cette publication n\'a pas été faite. Réabonnez-vous, puis réessayez.',
         'suspended' => 'Votre compte est suspendu, donc cette publication n\'a pas été faite. Contactez l\'assistance, puis réessayez.',
         'unavailable' => ':network est indisponible pour le moment. Réessayez quand il sera de retour.',
+        'network_limit' => ':network ne peut pas accepter de nouvelles publications pour le moment. Nous réessaierons et publierons cette publication dès que possible.',
         'retry' => 'Réessayer',
         'retry_started' => 'Nouvelle tentative de publication.',
         'retry_failed' => 'Impossible de réessayer la publication. Réessayez.',

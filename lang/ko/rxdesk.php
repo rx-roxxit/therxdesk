@@ -236,6 +236,9 @@ return [
             'disk_guard' => '디스크 공간 거의 소진',
             'ai_provider_failure' => 'AI 제공자 오류',
             'nightwatch_burst' => '새 문제 급증',
+            'network_bucket_today' => ':network이(가) 일일 호출 한도에 가까워지고 있습니다',
+            'network_bucket_urgent' => ':network이(가) 일일 호출 한도에 근접했습니다',
+            'network_bucket_exhausted' => ':network이(가) 일일 호출 한도에 도달했습니다',
         ],
         'messages' => [
             'capacity_ram' => '서버 메모리가 :percent%로, 경고 기준인 :threshold%를 넘었습니다.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => '디스크 여유 공간이 :free로, 디스크 보호 기준인 :threshold에 가깝습니다. 곧 업로드가 중단됩니다.',
             'ai_provider_failure' => ':model 모델 실패: :error',
             'nightwatch_burst' => '지난 한 시간 동안 Nightwatch에서 :count개의 문제가 열렸습니다.',
+            'network_bucket_today' => ':network이(가) 일일 호출 한도의 :percent%입니다(:capacity 중 :calls).',
+            'network_bucket_urgent' => ':network이(가) 일일 호출 한도의 :percent%입니다(:capacity 중 :calls).',
+            'network_bucket_exhausted' => ':network이(가) 일일 호출 한도에 도달했습니다(:capacity 중 :calls). 이 네트워크 게시는 :reset까지 기다립니다.',
         ],
         'resolved_body' => '이 경고는 해제되었습니다. 같은 상황이 다시 발생하면 다시 알려드립니다.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => '복원 훈련',
             'restore_drill_line' => '마지막 복원 훈련은 :date에 진행되었습니다. 지금 진행하세요.',
             'restore_drill_never' => '아직 복원 훈련 기록이 없습니다. 지금 진행하세요.',
+            'bucket_accounts' => '공유 한도를 사용하는 계정',
+            'bucket_accounts_line' => ':network: :account(:owner)이(가) 일일 호출의 :percent%(:calls)를 사용했습니다.',
         ],
         'preview' => [
             'urgent' => '지금 주의가 필요한 문제가 있습니다.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => '구독이 종료되어 이 게시물이 게시되지 않았습니다. 다시 구독한 후 다시 시도하세요.',
         'suspended' => '계정이 정지되어 이 게시물이 게시되지 않았습니다. 지원팀에 문의한 후 다시 시도하세요.',
         'unavailable' => ':network은(는) 현재 사용할 수 없습니다. 네트워크가 복구되면 다시 시도하세요.',
+        'network_limit' => ':network은(는) 지금 새 게시물을 받을 수 없습니다. 다시 시도하고 가능해지는 대로 이 게시물을 게시하겠습니다.',
         'retry' => '다시 시도',
         'retry_started' => '게시물을 다시 게시하는 중입니다.',
         'retry_failed' => '게시물을 다시 시도하지 못했습니다. 다시 시도하세요.',

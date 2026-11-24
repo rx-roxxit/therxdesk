@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Espaço em disco quase esgotado',
             'ai_provider_failure' => 'Falha no provedor de IA',
             'nightwatch_burst' => 'Surto de novos problemas',
+            'network_bucket_today' => ':network está perto do limite diário de chamadas',
+            'network_bucket_urgent' => ':network está muito perto do limite diário de chamadas',
+            'network_bucket_exhausted' => ':network atingiu o limite diário de chamadas',
         ],
         'messages' => [
             'capacity_ram' => 'A memória do servidor está em :percent%, acima do limite de alerta de :threshold%.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'O espaço livre em disco é :free, perto do limite de proteção de disco de :threshold. Os uploads vão parar em breve.',
             'ai_provider_failure' => 'O modelo :model falhou: :error',
             'nightwatch_burst' => ':count problemas foram abertos no Nightwatch na última hora.',
+            'network_bucket_today' => ':network está em :percent% do limite diário de chamadas (:calls de :capacity).',
+            'network_bucket_urgent' => ':network está em :percent% do limite diário de chamadas (:calls de :capacity).',
+            'network_bucket_exhausted' => ':network atingiu o limite diário de chamadas (:calls de :capacity). A publicação vai esperar até :reset.',
         ],
         'resolved_body' => 'Este alerta foi resolvido. Ele será enviado de novo se a condição voltar.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Teste de restauração',
             'restore_drill_line' => 'O último teste de restauração foi em :date. Faça um agora.',
             'restore_drill_never' => 'Nenhum teste de restauração foi registrado ainda. Faça um agora.',
+            'bucket_accounts' => 'Contas que compartilham um limite',
+            'bucket_accounts_line' => ':network: :account (:owner) usou :percent% das chamadas diárias (:calls).',
         ],
         'preview' => [
             'urgent' => 'Um problema precisa de atenção agora.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Sua assinatura terminou, então esta publicação não foi publicada. Assine novamente e tente outra vez.',
         'suspended' => 'Sua conta está suspensa, então esta publicação não foi publicada. Fale com o suporte e tente outra vez.',
         'unavailable' => ':network não está disponível no momento. Tente novamente quando ele voltar.',
+        'network_limit' => ':network não pode receber novas publicações agora. Vamos tentar de novo e publicar esta publicação assim que puder.',
         'retry' => 'Tentar novamente',
         'retry_started' => 'Tentando publicar novamente.',
         'retry_failed' => 'Não foi possível tentar publicar novamente. Tente outra vez.',

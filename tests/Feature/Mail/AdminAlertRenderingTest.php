@@ -58,18 +58,33 @@ test('the digest shows only the sections that have items', function () {
 
     $empty = (new AdminAlertMail(AlertLevel::Digest, null, [], [
         'cleared' => [],
+        'bucket_accounts' => ['rows' => [], 'total' => 0],
         'issues' => [],
         'failed_jobs' => 0,
         'restore_drill' => ['due' => false, 'last_performed_at' => null],
     ]))->render();
 
     expect($empty)->not->toContain(__('rxdesk.alerts.digest.cleared'))
+        ->and($empty)->not->toContain(__('rxdesk.alerts.digest.bucket_accounts'))
         ->and($empty)->not->toContain(__('rxdesk.alerts.digest.issues'))
         ->and($empty)->not->toContain(__('rxdesk.alerts.digest.failed_jobs'))
         ->and($empty)->not->toContain(__('rxdesk.alerts.digest.restore_drill'));
 
     $full = (new AdminAlertMail(AlertLevel::Digest, null, [], [
-        'cleared' => [AdminAlertKey::CapacityRam->value],
+        'cleared' => [[
+            'key' => AdminAlertKey::CapacityRam->value,
+            'title' => __('rxdesk.alerts.conditions.capacity_ram'),
+        ]],
+        'bucket_accounts' => [
+            'rows' => [[
+                'network' => 'TikTok',
+                'account' => 'Acme',
+                'owner' => 'owner@example.com',
+                'calls' => 40,
+                'percent' => 80.0,
+            ]],
+            'total' => 1,
+        ],
         'issues' => [['title' => 'Boom', 'url' => null]],
         'failed_jobs' => 3,
         'restore_drill' => ['due' => false, 'last_performed_at' => null],
@@ -77,6 +92,8 @@ test('the digest shows only the sections that have items', function () {
 
     expect($full)->toContain(__('rxdesk.alerts.digest.cleared'))
         ->and($full)->toContain(__('rxdesk.alerts.conditions.capacity_ram'))
+        ->and($full)->toContain(__('rxdesk.alerts.digest.bucket_accounts'))
+        ->and($full)->toContain('Acme')
         ->and($full)->toContain('Boom')
         ->and($full)->toContain(__('rxdesk.alerts.digest.failed_jobs'));
 });

@@ -236,6 +236,9 @@ return [
             'disk_guard' => 'Miejsce na dysku prawie wyczerpane',
             'ai_provider_failure' => 'Awaria dostawcy AI',
             'nightwatch_burst' => 'Nasilenie nowych problemów',
+            'network_bucket_today' => ':network zbliża się do dziennego limitu wywołań',
+            'network_bucket_urgent' => ':network jest blisko dziennego limitu wywołań',
+            'network_bucket_exhausted' => ':network osiągnął dzienny limit wywołań',
         ],
         'messages' => [
             'capacity_ram' => 'Pamięć serwera wynosi :percent%, powyżej progu alertu :threshold%.',
@@ -245,6 +248,9 @@ return [
             'disk_guard' => 'Wolne miejsce na dysku to :free, blisko progu ochrony dysku :threshold. Przesyłanie wkrótce się zatrzyma.',
             'ai_provider_failure' => 'Model :model nie powiódł się: :error',
             'nightwatch_burst' => 'W ostatniej godzinie w Nightwatch otwarto problemy: :count.',
+            'network_bucket_today' => ':network jest na poziomie :percent% dziennego limitu wywołań (:calls z :capacity).',
+            'network_bucket_urgent' => ':network jest na poziomie :percent% dziennego limitu wywołań (:calls z :capacity).',
+            'network_bucket_exhausted' => ':network osiągnął dzienny limit wywołań (:calls z :capacity). Publikacja poczeka do :reset.',
         ],
         'resolved_body' => 'Ten alert został wycofany. Wróci, jeśli warunek się powtórzy.',
         'digest' => [
@@ -257,6 +263,8 @@ return [
             'restore_drill' => 'Test odtwarzania',
             'restore_drill_line' => 'Ostatni test odtwarzania odbył się :date. Przeprowadź go teraz.',
             'restore_drill_never' => 'Nie zapisano jeszcze żadnego testu odtwarzania. Przeprowadź go teraz.',
+            'bucket_accounts' => 'Konta współdzielące limit',
+            'bucket_accounts_line' => ':network: :account (:owner) wykorzystał :percent% dziennych wywołań (:calls).',
         ],
         'preview' => [
             'urgent' => 'Problem wymaga teraz uwagi.',
@@ -316,6 +324,7 @@ return [
         'lapsed' => 'Twoja subskrypcja się zakończyła, więc ten post nie został opublikowany. Subskrybuj ponownie, a następnie spróbuj jeszcze raz.',
         'suspended' => 'Twoje konto jest zawieszone, więc ten post nie został opublikowany. Skontaktuj się z pomocą techniczną, a następnie spróbuj jeszcze raz.',
         'unavailable' => ':network jest teraz niedostępny. Spróbuj ponownie, gdy znów będzie dostępny.',
+        'network_limit' => ':network nie może teraz przyjmować nowych postów. Spróbujemy ponownie i opublikujemy ten post, gdy tylko będzie to możliwe.',
         'retry' => 'Spróbuj ponownie',
         'retry_started' => 'Ponawianie publikacji posta.',
         'retry_failed' => 'Nie udało się ponowić publikacji posta. Spróbuj ponownie.',
