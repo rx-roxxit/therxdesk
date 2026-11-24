@@ -25,6 +25,10 @@ class NetworkCallClassifier
 
         $segments = $request->pathSegments()->all();
 
+        if (in_array('oauth', $segments, true)) {
+            return null;
+        }
+
         foreach ($this->targets() as $network => $urls) {
             foreach ($urls as $url) {
                 $base = Uri::of($url);

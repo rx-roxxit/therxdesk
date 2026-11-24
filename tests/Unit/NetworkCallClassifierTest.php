@@ -23,6 +23,8 @@ test('a host or path outside the platform apis is not counted', function (string
     'google drive' => ['https://www.googleapis.com/drive/v3/files'],
     'graph api' => ['https://graph.facebook.com/v25.0/me'],
     'youtube cdn' => ['https://i.ytimg.com/vi/abc/hqdefault.jpg'],
+    'tiktok oauth token' => ['https://open.tiktokapis.com/v2/oauth/token/'],
+    'pinterest oauth token' => ['https://api.pinterest.com/v5/oauth/token'],
     'another host' => ['https://example.com/v2/user/info/'],
 ]);
 
