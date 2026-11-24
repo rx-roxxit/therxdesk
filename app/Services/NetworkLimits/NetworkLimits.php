@@ -55,7 +55,19 @@ class NetworkLimits
 
     public function isExhausted(string $network): bool
     {
-        return $this->bucketRow($network)?->exhausted_at !== null;
+        $row = $this->bucketRow($network);
+
+        if ($row === null) {
+            return false;
+        }
+
+        $capacity = $this->capacity($network);
+
+        if ($capacity !== null && (int) $row->calls >= $capacity) {
+            return true;
+        }
+
+        return $row->exhausted_at !== null;
     }
 
     /**
