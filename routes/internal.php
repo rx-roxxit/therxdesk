@@ -18,6 +18,8 @@ use App\Http\Controllers\Internal\BusinessController;
 use App\Http\Controllers\Internal\CatalogSettingController;
 use App\Http\Controllers\Internal\ComplimentaryPlanController;
 use App\Http\Controllers\Internal\HealthController;
+use App\Http\Controllers\Internal\NetworkLimitController;
+use App\Http\Controllers\Internal\NetworkLimitThresholdController;
 use App\Http\Controllers\Internal\OfferController;
 use App\Http\Controllers\Internal\OperatorController;
 use App\Http\Controllers\Internal\PlanController;
@@ -81,6 +83,15 @@ Route::middleware('internal:admin')->group(function (): void {
 
     Route::get('health', HealthController::class)
         ->name('internal.health');
+
+    Route::get('network-limits', [NetworkLimitController::class, 'show'])
+        ->name('internal.network-limits.show');
+
+    Route::get('network-limits/{network}/accounts', [NetworkLimitController::class, 'accounts'])
+        ->name('internal.network-limits.accounts');
+
+    Route::patch('network-limits/thresholds', [NetworkLimitThresholdController::class, 'update'])
+        ->name('internal.network-limits.thresholds.update');
 
     Route::get('business', BusinessController::class)
         ->name('internal.business');

@@ -86,6 +86,19 @@ prints them. `selling.sh down` removes the file.
 - `GET /internal/v1/health` (admin): `queue` (`available`, `waits`, `max_wait_seconds`), `failed` (`total`,
   `last_24h`), `backup` (`last_run_at`, null until a run), `restore_drill` (`last_performed_at`, `due_at`, `due`),
   `disk`, and `nightwatch` (`open`, `recent`). The site token answers 404.
+- `GET /internal/v1/network-limits` (admin): the app's own daily network call budgets for the current UTC day.
+  `date` (`Y-m-d`), `reset_at` (ISO, the next 00:00 UTC), `thresholds` (`today_percent`, `urgent_percent`,
+  `account_digest_percent`) and `networks`, one row per network with a positive capacity: `network`, `label`,
+  `calls`, `capacity`, `percent` (1 decimal), `status` (`normal`, `today`, `urgent`, `exhausted`),
+  `exhausted_at` (ISO or null), `reset_at` and `top_accounts`. `top_accounts` is empty until the bucket reaches
+  `today_percent`, then up to 5 rows of `account_id`, `name`, `owner_email`, `calls` and `percent`.
+- `GET /internal/v1/network-limits/{network}/accounts` (admin): paginated at the configured page size, ordered by
+  calls then Account id. `per_page` is ignored. A row is `account_id`, `name`, `owner_email`, `calls` and
+  `percent`. An unknown network key answers 404, and the site token answers 404.
+- `PATCH /internal/v1/network-limits/thresholds` (admin): any of `today_percent` (1–99), `urgent_percent` (2–100)
+  and `account_digest_percent` (1–100). `today_percent` must stay below `urgent_percent`, checked against the
+  stored singleton when only one field is sent; answers the settings object. Every write records
+  `network-limit-thresholds.update` with the singleton as target and the values before and after.
 - `GET /internal/v1/business` (admin): the metrics payload. `generated_at`, `today`, `current` (`accounts`,
   `mrr_cents`, `paying_accounts`, `status_counts` for every `BusinessStatus`, `plan_mix`), a `waterfall` for the
   `30`, `90` and `365` day windows (`new`, `expansion`, `contraction`, `churn`), `churn` for the same windows plus
