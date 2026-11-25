@@ -285,7 +285,8 @@ test('one credit left still allows a call and the balance may reach zero', funct
         ->assertJsonPath('ai_credits.remaining', 0)
         ->assertJsonPath('ai_credits.low', true);
 
-    expect(AiCreditUsage::query()->sum('credits'))->toBe(1000);
+    // MySQL returns a SUM() as a decimal string; the engine-agnostic read casts it.
+    expect((int) AiCreditUsage::query()->sum('credits'))->toBe(1000);
 });
 
 test('a trial keeps one allowance across a calendar month boundary', function () {
