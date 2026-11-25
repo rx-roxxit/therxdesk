@@ -18,6 +18,7 @@ use App\Console\Commands\Repurpose\PollRepurposes;
 use App\Console\Commands\ResolveTikTokVideoIds;
 use App\Console\Commands\RssFeed\PollRssFeeds;
 use App\Console\Commands\RxDesk\BackupCommand;
+use App\Console\Commands\RxDesk\BillingReconcileCommand;
 use App\Console\Commands\RxDesk\BusinessSnapshotCommand;
 use App\Console\Commands\RxDesk\CapacityCommand;
 use App\Console\Commands\RxDesk\DigestCommand;
@@ -80,6 +81,13 @@ Schedule::job(new FinalizeAccountDailySnapshots(daysAgo: 1))
 
 Schedule::command(LifecycleCommand::class)
     ->dailyAt('01:00')
+    ->timezone('UTC')
+    ->when(fn (): bool => ! config('trypost.self_hosted'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(BillingReconcileCommand::class)
+    ->dailyAt('02:45')
     ->timezone('UTC')
     ->when(fn (): bool => ! config('trypost.self_hosted'))
     ->withoutOverlapping()

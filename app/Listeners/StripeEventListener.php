@@ -45,43 +45,46 @@ class StripeEventListener
         }
 
         try {
-            $type = data_get($event->payload, 'type');
-            $stripeCustomerId = data_get($event->payload, 'data.object.customer');
-
-            if (! $stripeCustomerId) {
-                return;
-            }
-
-            /** @var Account|null $account */
-            $account = Cashier::findBillable($stripeCustomerId);
-
-            if (! $account) {
-                return;
-            }
-
-            $subscription = $this->subscriptionFor($account, $type, $event->payload);
-
-            match ($type) {
-                StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_CREATED => $this->handleSubscriptionCreated($account, $subscription, $event->payload),
-                StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_UPDATED => $this->handleSubscriptionUpdated($account, $subscription, $event->payload),
-                StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_DELETED => $this->handleSubscriptionDeleted($account, $subscription, $event->payload),
-                default => null,
-            };
-        } catch (TrialEndFailed $e) {
-            $this->releaseProcessed($eventId);
-
+            $this->process($event);
+        } catch (Throwable $e) {
+            // The marker is written only after the handler finished, so a
+            // failed delivery answers non-2xx and Stripe redelivers it. A
+            // swallowed error would lose the event for good.
             Log::error("Stripe webhook error: {$e->getMessage()}", [
                 'exception' => $e,
                 'payload' => $event->payload,
             ]);
 
             throw $e;
-        } catch (Throwable $e) {
-            Log::error("Stripe webhook error: {$e->getMessage()}", [
-                'exception' => $e,
-                'payload' => $event->payload,
-            ]);
         }
+
+        $this->markProcessed($eventId);
+    }
+
+    private function process(WebhookHandled $event): void
+    {
+        $type = data_get($event->payload, 'type');
+        $stripeCustomerId = data_get($event->payload, 'data.object.customer');
+
+        if (! $stripeCustomerId) {
+            return;
+        }
+
+        /** @var Account|null $account */
+        $account = Cashier::findBillable($stripeCustomerId);
+
+        if (! $account) {
+            return;
+        }
+
+        $subscription = $this->subscriptionFor($account, $type, $event->payload);
+
+        match ($type) {
+            StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_CREATED => $this->handleSubscriptionCreated($account, $subscription, $event->payload),
+            StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_UPDATED => $this->handleSubscriptionUpdated($account, $subscription, $event->payload),
+            StripeEvent::TYPE_CUSTOMER_SUBSCRIPTION_DELETED => $this->handleSubscriptionDeleted($account, $subscription, $event->payload),
+            default => null,
+        };
     }
 
     /**
@@ -348,11 +351,10 @@ class StripeEventListener
     }
 
     /**
-     * Stripe redelivers the same event id on a timeout/non-2xx response (and
-     * it can otherwise reach us more than once, e.g. a duplicated local
-     * forwarding setup). Cache::add is atomic, so only the first delivery of
-     * a given event id returns false here — every side effect further down
-     * (plan_id updates, PostHog dispatches) only ever runs once per event.
+     * The marker is written by markProcessed() only after the handler ran, so
+     * an event that failed is never skipped when Stripe redelivers it. The
+     * key outlives Stripe's three-day retry window, so a late duplicate is
+     * still recognised.
      */
     private function alreadyProcessed(?string $eventId): bool
     {
@@ -360,20 +362,16 @@ class StripeEventListener
             return false;
         }
 
-        return ! Cache::add("stripe_webhook_event:{$eventId}", true, now()->addDay());
+        return Cache::has("stripe_webhook_event:{$eventId}");
     }
 
-    /**
-     * A handler that will answer non-2xx gives the event id back, so Stripe's
-     * redelivery runs the handler again instead of being skipped.
-     */
-    private function releaseProcessed(?string $eventId): void
+    private function markProcessed(?string $eventId): void
     {
         if (! $eventId) {
             return;
         }
 
-        Cache::forget("stripe_webhook_event:{$eventId}");
+        Cache::put("stripe_webhook_event:{$eventId}", true, now()->addDays(3));
     }
 
     /**

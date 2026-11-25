@@ -229,7 +229,8 @@ test('a trial-end call that fails answers non-2xx, keeps the facts and is retrie
     $subscription = Subscription::query()->where('stripe_id', 'sub_repeat')->firstOrFail();
 
     expect($subscription->trial_skipped_at)->not->toBeNull()
-        ->and($subscription->trial_ended_at)->not->toBeNull();
+        ->and($subscription->trial_ended_at)->not->toBeNull()
+        ->and(Cache::has('stripe_webhook_event:evt_repeat_failed'))->toBeFalse();
 
     $stripe->failures = [];
 
@@ -453,6 +454,42 @@ test('the first paid invoice records the first payment and is never replaced', f
     ]));
 
     expect($account->fresh()->first_invoice_id)->toBe('in_first');
+});
+
+test('a handled event is marked so a second delivery is skipped', function () {
+    $account = trialAccount();
+    $stripe = fakeTrialWebhookStripe();
+
+    TrialCard::query()->create(['fingerprint' => 'fp_once', 'account_id' => $account->id]);
+
+    $payload = [
+        'id' => 'evt_marked_once',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_marked_once',
+            'customer' => 'cus_trial',
+            'status' => 'trialing',
+            'default_payment_method' => [
+                'id' => 'pm_once',
+                'object' => 'payment_method',
+                'card' => ['fingerprint' => 'fp_once'],
+            ],
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ];
+
+    (new StripeEventListener)->handle(new WebhookHandled($payload));
+
+    expect(Cache::has('stripe_webhook_event:evt_marked_once'))->toBeTrue();
+
+    (new StripeEventListener)->handle(new WebhookHandled($payload));
+
+    $ends = collect($stripe->requests)->filter(
+        fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+            && str_contains($request['url'], '/v1/subscriptions/sub_marked_once'),
+    );
+
+    expect($ends)->toHaveCount(1);
 });
 
 test('a repeat delivery of a created event never ends its own trial', function () {
