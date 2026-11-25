@@ -429,6 +429,24 @@ test('plan store sends the owner to Stripe checkout on the selected plan and mon
         ->assertSessionHas(CapturePlan::INTERVAL_SESSION_KEY, 'monthly');
 });
 
+test('plan store refuses while the first charge of a trial is being retried', function () {
+    completeWelcomeThroughSoftware($this->user);
+    givePlanPrice(Plan::where('slug', 'mini')->firstOrFail(), Interval::Monthly, 'price_socials_monthly');
+
+    $this->user->account->subscriptions()->create([
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_past_due',
+        'stripe_status' => 'past_due',
+        'stripe_price' => 'price_socials_monthly',
+    ]);
+
+    $this->mock(StartSubscriptionCheckout::class)->shouldNotReceive('redirect');
+
+    $this->actingAs($this->user->fresh())
+        ->post(route('app.welcome.plan.store'), ['plan' => 'mini', 'interval' => 'monthly'])
+        ->assertRedirect(route('app.welcome.plan'));
+});
+
 test('plan store opens the yearly price when yearly is picked', function () {
     completeWelcomeThroughSoftware($this->user);
     $plus = Plan::where('slug', 'plus')->firstOrFail();
