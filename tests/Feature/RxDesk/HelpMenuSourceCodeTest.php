@@ -12,6 +12,16 @@ test('the help menu links to the fork source code, not to TryPost services', fun
         ->not->toContain('github.com/trypostit');
 });
 
-test('the source code label is english in every locale', function (string $locale) {
-    expect(__('rxdesk.help.source_code', [], $locale))->toBe('Source code');
+test('the source code label is written in every locale', function (string $locale) {
+    $label = __('rxdesk.help.source_code', [], $locale);
+
+    expect($label)->not->toBeEmpty();
+
+    if ($locale === Locale::English->value) {
+        expect($label)->toBe('Source code');
+
+        return;
+    }
+
+    expect($label)->not->toBe('Source code');
 })->with(Locale::values());
