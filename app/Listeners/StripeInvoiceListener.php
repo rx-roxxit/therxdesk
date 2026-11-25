@@ -84,9 +84,11 @@ class StripeInvoiceListener
      */
     private function recordPaidWithoutTrial(Account $account, array $payload): void
     {
-        $stripeSubscriptionId = data_get($payload, 'data.object.subscription');
+        $stripeSubscriptionId = StripeValue::invoiceSubscriptionId(
+            (array) data_get($payload, 'data.object', []),
+        );
 
-        if (! is_string($stripeSubscriptionId) || blank($stripeSubscriptionId)) {
+        if ($stripeSubscriptionId === null) {
             return;
         }
 

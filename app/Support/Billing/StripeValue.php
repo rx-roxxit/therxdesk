@@ -31,4 +31,25 @@ final class StripeValue
     {
         return is_numeric($seconds) ? CarbonImmutable::createFromTimestampUTC((int) $seconds) : null;
     }
+
+    /**
+     * The subscription an invoice belongs to. Stripe's newer API moves it from
+     * the invoice's `subscription` field to `parent.subscription_details`, and
+     * the old field is sent as null, so both places are read.
+     *
+     * @param  array<string, mixed>  $invoice
+     */
+    public static function invoiceSubscriptionId(array $invoice): ?string
+    {
+        $subscription = data_get($invoice, 'subscription')
+            ?? data_get($invoice, 'parent.subscription_details.subscription');
+
+        if (is_string($subscription) && filled($subscription)) {
+            return $subscription;
+        }
+
+        $id = data_get($subscription, 'id');
+
+        return is_string($id) && filled($id) ? $id : null;
+    }
 }
