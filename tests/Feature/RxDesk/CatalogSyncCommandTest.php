@@ -25,6 +25,45 @@ test('the sync gives every seeded Plan a Product and two Prices and fills their 
         ->and(AuditLog::where('action', 'plan.sync')->where('actor', 'cli')->count())->toBe(4);
 });
 
+test('an empty Catalog is seeded from the committed default before it syncs', function () {
+    fakeCatalogStripe();
+
+    PlanPrice::query()->delete();
+    Plan::query()->delete();
+
+    expect(Artisan::call('rxdesk:catalog-sync'))->toBe(0)
+        ->and(Artisan::output())->toContain('Seeding the default Catalog.')
+        ->and(Plan::count())->toBe(4)
+        ->and(Plan::whereNotNull('stripe_product_id')->count())->toBe(4)
+        ->and(PlanPrice::count())->toBe(8)
+        ->and(Plan::where('slug', 'mini')->firstOrFail()->priceFor(Interval::Monthly)?->stripe_price_id)->not->toBeNull();
+});
+
+test('--if-needed leaves a complete Catalog untouched and makes no Stripe call', function () {
+    fakeCatalogStripe();
+    Artisan::call('rxdesk:catalog-sync');
+
+    $stripe = fakeCatalogStripe();
+    $stripe->requests = [];
+
+    expect(Artisan::call('rxdesk:catalog-sync', ['--if-needed' => true]))->toBe(0)
+        ->and(Artisan::output())->toContain('already has its Stripe Products and Prices')
+        ->and($stripe->requests)->toBe([]);
+});
+
+test('--if-needed syncs a Catalog that is missing its Stripe ids', function () {
+    fakeCatalogStripe();
+
+    $mini = Plan::where('slug', 'mini')->firstOrFail();
+    $mini->update(['stripe_product_id' => null]);
+    $stripe = fakeCatalogStripe();
+    $stripe->requests = [];
+
+    expect(Artisan::call('rxdesk:catalog-sync', ['--if-needed' => true]))->toBe(0)
+        ->and($mini->fresh()->stripe_product_id)->not->toBeNull()
+        ->and($stripe->requestsFor('post', '/v1/products'))->not->toBe([]);
+});
+
 test('a Stripe key change creates new Products and Prices and keeps the old rows resolving', function () {
     fakeCatalogStripe();
     Artisan::call('rxdesk:catalog-sync');
