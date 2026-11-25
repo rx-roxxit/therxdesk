@@ -28,8 +28,9 @@ mode does not meter AI.
   price is never selectable. A changed slot is proved with one short real call before it saves.
 - **The worst-case cost table** (`App\Services\Ai\AiCostTable`) prices every active Plan's whole monthly allowance at
   the text model's output rate, against the 10% of its discounted monthly price. It is computed live (no cache), so
-  a Plan credit change, token rate, text model or running general Offer moves it at once. A change that pushes a
-  Plan past the line stops with `requires_confirmation`.
+  a Plan credit change, token rate, text model or running general Offer moves it at once. An **AI-settings** change
+  (token rate, Trial credits or a model slot) that pushes a Plan past the line stops with `requires_confirmation`;
+  a Plan, Offer or Catalog change only moves the table.
 - **The slot applies at call time.** `AiSettings::apply()` writes the effective model into the provider's text
   default right before each prompt (writing assistant, alt text, idea generation, the repurpose shortener), so a
   pick takes effect on the next call. Self-hosted keeps the environment's model and never overrides it.

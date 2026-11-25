@@ -27,8 +27,8 @@ The dialog closes and the list opens on the Drafts tab, with the draft under "Un
 - Journey: `$V/drive.sh compose-draft`. The caption is `Verify draft <ISO time>`, recorded in
   `result.json` → `notes.caption`.
 - The view switch exposes `@schedule-view-<key>` (`@schedule-view-list`, `-calendar`, `-board`, and `-grid` only when
-  the workspace has an Instagram-family profile grid); the journey clicks `@schedule-view-list` and waits for the path
-  `/schedule`. The LinkedIn fixture cannot open a Grid entry.
+  the page is scoped to one channel whose Instagram-family profile has a grid); the journey clicks
+  `@schedule-view-list` and waits for the path `/schedule`. The LinkedIn fixture cannot open a Grid entry.
 - End state: the URL is `/schedule?tab=drafts` and a card with the caption is visible (`05-draft-in-list.png`).
 - The journey proves the List entry, one LinkedIn channel and Save draft. Board, Grid, sidebar, calendar-slot,
   multi-channel grouping, previews, resume, AI, labels and media are separate paths in this feature; prove one of

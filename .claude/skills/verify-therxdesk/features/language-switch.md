@@ -9,7 +9,8 @@ and the choice is saved on the user.
   `@sidebar-language-<code>`, e.g. `@sidebar-language-ja`), 16 locales. The trigger reads "Language: English".
 - Language picker on the auth pages (login, register, and forgot/reset via the same layout) for guests
   (`LanguageSelect`): `@language-picker-trigger`, `@language-picker-option-<code>`.
-- The same `LanguageSelect` also sits on Settings → Preferences (`@preferences-language-*`).
+- The same `LanguageSelect` also sits on Settings → Preferences (`@preferences-language-*`) and in the Welcome
+  header for a signed-in Owner (`@welcome-language`); both save to the account.
 - The calendar header and dates follow the new locale.
 
 ## How to get to it (user POV)

@@ -13,8 +13,9 @@ invoices, and manages the subscription on Stripe's Customer Portal.
   the monthly price charged at once; it does not start a new Trial, including during a generic Trial).
 - Status strip (`@billing-status-strip`, line `@billing-current-plan-status`) renders from the Account's state:
   "Trial until <date>, then $X a month" (`@billing-current-plan-trial-icon`), "Renews on <date> · $X a month",
-  "Cancels on <date>", or a past-due strip: "Payment past due" with "Update your payment method to keep your
-  subscription active." and `@billing-update-payment`. The renewal date comes from Stripe's
+  "Cancels on <date>", or a past-due strip showing only "Update your payment method to keep your subscription
+  active." (`billing.past_due_notice.description`) with `@billing-update-payment`; the "Payment past due" title is
+  the sidebar banner, and the badge reads "Past due". The renewal date comes from Stripe's
   current period (`renewsAt`), so an active Plan shows no strip when there is no Stripe customer to read.
 - Usage (anchor `#usage`): Storage used of Quota (`@billing-usage-storage`,
   `@billing-usage-storage-line`) and AI credits used of total with their renewal date in the Owner's zone
