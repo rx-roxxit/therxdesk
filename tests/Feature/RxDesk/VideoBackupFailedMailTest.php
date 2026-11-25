@@ -49,9 +49,9 @@ test('the email asks to reconnect Drive only when Google rejected the connection
     $mail->assertSeeInHtml(e(route('app.settings.preferences')), false);
 });
 
-test('the email is English whatever language the recipient picked', function (Locale $locale) {
+test('the email is written in the language the recipient picked', function (Locale $locale) {
     $mail = (new VideoBackupFailed($this->post))->locale($locale->value);
 
-    $mail->assertHasSubject('A video backup failed in Acme Store');
-    $mail->assertSeeInHtml('Open the post and choose Retry once the problem is fixed.');
+    $mail->assertHasSubject(__('rxdesk.video_backup_failed.subject', ['workspace' => 'Acme Store'], $locale->value));
+    $mail->assertSeeInHtml(__('rxdesk.video_backup_failed.next_steps', [], $locale->value));
 })->with(Locale::cases());
