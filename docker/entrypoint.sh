@@ -81,6 +81,17 @@ php artisan migrate --force
 echo "[entrypoint] syncing the What's New entries"
 php artisan changelog:sync
 
+# 7b) Catalog. A first deploy has no Plans, and /welcome/plan would 404 and
+#     Checkout would have no Price. The command seeds the committed default
+#     Catalog and fills the Stripe ids; --if-needed makes a normal restart a
+#     local check with no Stripe call. A Stripe failure must not keep the app
+#     down: the operator reruns it once Stripe answers.
+if [ "${TARGET}" = "production" ]; then
+    echo "[entrypoint] checking the Catalog"
+    php artisan rxdesk:catalog-sync --if-needed \
+        || echo "[entrypoint] Catalog sync failed; rerun: php artisan rxdesk:catalog-sync" >&2
+fi
+
 # 8) storage:link if missing.
 if [ ! -L public/storage ]; then
     echo "[entrypoint] linking storage"
