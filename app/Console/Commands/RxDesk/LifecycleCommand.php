@@ -57,21 +57,15 @@ class LifecycleCommand extends Command
 
     private function purgeIfDue(Account $account): void
     {
-        if (! $account->deletionIsDue()) {
-            return;
-        }
-
-        if ($account->isSuspended() || $account->hasAppAccess() || $account->hasPendingFirstCharge()) {
-            return;
-        }
-
-        if (filled($account->data_purged_at)) {
+        if (! $account->canBePurged()) {
             return;
         }
 
         $neverPaid = $account->isNeverPaid();
 
-        DeleteAccountData::execute($account);
+        if (! DeleteAccountData::executeIfLapsed($account)) {
+            return;
+        }
 
         $this->line($neverPaid
             ? "Deleted never-paid Account {$account->id} entirely."

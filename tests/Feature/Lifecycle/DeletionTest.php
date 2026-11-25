@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Account\DeleteAccountData;
 use App\Actions\Account\LiftSuspension;
 use App\Actions\Account\SyncDeletionClock;
 use App\Jobs\Media\DeleteMediaFiles;
@@ -156,6 +157,27 @@ test('a lapse stores 30 days from now and a never-paid signup 30 days from signu
 
     expect($newcomer->account->fresh()->deletion_scheduled_at->timestamp)
         ->toBe($signedUpAt->copy()->addDays(Account::DELETION_GRACE_DAYS)->timestamp);
+});
+
+test('a payment that lands after the sweep read the Account keeps its data', function () {
+    Storage::fake();
+
+    $owner = customerAccount();
+    $account = $owner->account;
+    $workspace = Workspace::factory()->create(['account_id' => $account->id]);
+
+    $account->forceFill(['deletion_scheduled_at' => now()->subMinute()])->save();
+
+    // The subscription comes back after the sweep's own checks ran but before
+    // it took the row lock: the purge must re-read the Account and stop.
+    $account->subscriptions()->where('stripe_id', 'sub_keep')->update([
+        'stripe_status' => 'active',
+        'ends_at' => null,
+    ]);
+
+    expect(DeleteAccountData::executeIfLapsed($account->fresh()))->toBeFalse()
+        ->and($account->fresh()->data_purged_at)->toBeNull()
+        ->and(Workspace::find($workspace->id))->not->toBeNull();
 });
 
 test('nothing is deleted while the app is self-hosted', function () {
