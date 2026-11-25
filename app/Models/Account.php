@@ -406,6 +406,24 @@ class Account extends Model
     }
 
     /**
+     * The lifecycle sweep may remove this Account's data: its clock has run
+     * out and nothing has given it access since. Read under the row lock so a
+     * payment that lands mid-sweep is seen before anything is deleted.
+     */
+    public function canBePurged(): bool
+    {
+        if (! $this->deletionIsDue()) {
+            return false;
+        }
+
+        if (filled($this->data_purged_at)) {
+            return false;
+        }
+
+        return ! $this->isSuspended() && ! $this->hasAppAccess() && ! $this->hasPendingFirstCharge();
+    }
+
+    /**
      * Whole days until the deletion clock fires, zero once it has passed.
      */
     public function deletionDaysLeft(): ?int
