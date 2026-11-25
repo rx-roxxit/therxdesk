@@ -234,8 +234,26 @@ class StripeEventListener
         $subscription->trial_started_at = StripeValue::timestamp(data_get($payload, 'data.object.trial_start')) ?? now();
         $subscription->save();
 
-        if (TrialAccounts::claim($account, $subscription->stripe_id) === TrialClaim::Taken) {
+        // A delivery that already decided this Trial is a repeat may have
+        // stopped before Stripe ended it, so a redelivery reads the decision
+        // from the row instead of asking the claims again: they answer `Owned`
+        // for a slot this subscription wrote itself.
+        if (blank($subscription->trial_skipped_at)) {
+            $this->claimTrial($account, $subscription, $payload);
+        }
+
+        if (filled($subscription->trial_skipped_at)) {
             $this->endRepeatTrial($subscription);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function claimTrial(Account $account, Subscription $subscription, array $payload): void
+    {
+        if (TrialAccounts::claim($account, $subscription->stripe_id) === TrialClaim::Taken) {
+            $this->markTrialSkipped($subscription);
 
             return;
         }
@@ -247,7 +265,7 @@ class StripeEventListener
         }
 
         if (TrialCards::claim($fingerprint, $account, $subscription->stripe_id) === TrialClaim::Taken) {
-            $this->endRepeatTrial($subscription);
+            $this->markTrialSkipped($subscription);
         }
     }
 
@@ -259,15 +277,20 @@ class StripeEventListener
      */
     private function endRepeatTrial(Subscription $subscription): void
     {
-        $subscription->trial_skipped_at ??= now();
-        $subscription->trial_ended_at ??= now();
-        $subscription->save();
+        $this->markTrialSkipped($subscription);
 
         try {
             Cashier::stripe()->subscriptions->update($subscription->stripe_id, ['trial_end' => 'now']);
         } catch (Throwable $e) {
             throw new TrialEndFailed($subscription->stripe_id, $e);
         }
+    }
+
+    private function markTrialSkipped(Subscription $subscription): void
+    {
+        $subscription->trial_skipped_at ??= now();
+        $subscription->trial_ended_at ??= now();
+        $subscription->save();
     }
 
     /**
