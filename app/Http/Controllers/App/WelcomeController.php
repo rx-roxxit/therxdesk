@@ -254,6 +254,13 @@ class WelcomeController extends Controller
             return back()->with('flash.error', __('rxdesk.country.blocked'));
         }
 
+        // The first charge of a Trial is being retried at Stripe: a second
+        // checkout here would open a second subscription. The step already
+        // shows the Update card state for it.
+        if ($user->accountOrFail()->hasPendingFirstCharge()) {
+            return redirect()->route('app.welcome.plan');
+        }
+
         $interval = Interval::from((string) $request->validated('interval'));
         $plan = Plan::query()
             ->active()
