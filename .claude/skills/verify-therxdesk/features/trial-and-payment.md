@@ -55,10 +55,9 @@ Expected: `stripe_status` `active`; `trial_started_at`, `trial_ended_at`, `trial
 fingerprint and a null `stripe_subscription_id` (the seeded row wins: the repeat card was never claimed). The journey
 still ends on the Schedule with `hasActiveSubscription` true and Mini.
 
-Known product gap (confirmed live November 24, 2026): the sandbox invoice payload can carry `subscription: null` with
-the id under `parent.subscription`, while `StripeInvoiceListener` reads only the top-level field. The charge then sets
-`first_paid_at` / `first_invoice_id` but leaves `paid_without_trial_at` null. Record the observed value; do not paper
-over it in the verification skill.
+Stripe's newer invoice payload carries `subscription: null` and puts the id under
+`parent.subscription_details.subscription`. `StripeValue::invoiceSubscriptionId()` reads both, so `paid_without_trial_at`
+must be set on this path too; a null there is a regression, not a known gap.
 
 ## 2. Never paid, the first charge fails
 
