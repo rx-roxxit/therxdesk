@@ -172,6 +172,39 @@ test('a repeat card ends the trial at creation and its first charge is marked pa
         ->and($account->fresh()->first_invoice_id)->toBe('in_repeat');
 });
 
+test('a paid invoice in the newer API shape finds its subscription under parent', function () {
+    $account = trialAccount();
+    fakeTrialWebhookStripe();
+
+    $subscription = new Subscription;
+    $subscription->forceFill([
+        'account_id' => $account->id,
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_parent',
+        'stripe_status' => 'active',
+        'trial_started_at' => now(),
+        'trial_skipped_at' => now(),
+        'trial_ended_at' => now(),
+    ])->save();
+
+    (new StripeInvoiceListener)->handle(new WebhookReceived([
+        'id' => 'evt_parent_invoice',
+        'type' => 'invoice.payment_succeeded',
+        'data' => ['object' => [
+            'id' => 'in_parent',
+            'customer' => 'cus_trial',
+            'subscription' => null,
+            'parent' => ['subscription_details' => ['subscription' => 'sub_parent']],
+            'status' => 'paid',
+            'amount_paid' => 1190,
+        ]],
+    ]));
+
+    expect($subscription->fresh()->paid_without_trial_at)->not->toBeNull()
+        ->and($account->fresh()->first_paid_at)->not->toBeNull()
+        ->and($account->fresh()->first_invoice_id)->toBe('in_parent');
+});
+
 test('a first-ever card keeps its trial and is claimed', function () {
     $account = trialAccount();
     $stripe = fakeTrialWebhookStripe();
