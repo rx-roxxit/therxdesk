@@ -17,7 +17,7 @@ Owner. There is no Signup code: registration is upstream's open form (ticket #47
   a half-configured pair behaves asymmetrically. Blank keys skip the check. `POST /register` is also limited to 5 a
   minute per IP, and the 6th answers 429.
 - Selling mode: a new Owner lands on `/welcome`. Self-hosted `/register` still 404s without an invite (upstream).
-- The `new_signups` Availability switch starts **off**: `/register` shows "Signups are closed for now" instead of
+- The `new_signups` Availability switch starts **off**: `/register` shows "Signups are closed for now." instead of
   the form, and a POST is refused. An Invite link still opens the form and registers. The System admin opens it
   with `PATCH /internal/v1/availability/new_signups`.
 

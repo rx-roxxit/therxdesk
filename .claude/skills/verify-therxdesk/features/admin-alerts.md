@@ -4,10 +4,12 @@ The System admin gets one email alert system: `[URGENT]` at once, `[RESOLVED]` w
 `[TODAY]` at most once every 6 hours per condition, and `[DIGEST]` at 08:00 Asia/Bangkok only when
 there is something to report. The scheduler dispatches a heartbeat job every 5 minutes, and a
 capacity command every 5 minutes reads host RAM and load, the Horizon queue wait, free disk and the
-Nightwatch burst. Nightwatch's webhook feeds the TODAY burst alert and the digest. `GET
-/internal/v1/health` gives the admin app the figures. There is no admin alert screen in this checkout. Alerts are queued email; the capacity check also drives the
-publisher-facing shared-bucket exhaustion reason, and health feeds the admin app's health screen. All three scheduled
-jobs run only in selling mode (`routes/console.php`), and the commands themselves return success without doing
+Nightwatch burst and clears stale network-bucket alerts. Nightwatch's webhook feeds the TODAY burst alert and
+the digest. `GET /internal/v1/health` gives the admin app the figures. There is no admin alert screen in this
+checkout. Alerts are queued email; the publisher-facing shared-bucket exhaustion reason is set by a post that
+hits the limit (`availability.md`), not by the capacity check, and health feeds the admin app's health screen. All
+three scheduled jobs run only in selling mode (`routes/console.php`), and the commands themselves return success
+without doing
 anything while self-hosted, so the selling overlay is required to exercise them.
 
 ## Alerts

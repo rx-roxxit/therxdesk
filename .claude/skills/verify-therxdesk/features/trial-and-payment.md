@@ -7,8 +7,8 @@ these paths prove Stripe sends them and the app answers.
 The paths share one setup: a fresh fixture, a Stripe test clock, and a sandbox Customer on that clock, pointed at by
 the fixture Account. A current Operator must already exist if the path asserts the Thai purchase document; neither
 helper creates one. `stripe-clock.sh` moves the clock so a Trial can end, a renewal can fail and Smart Retries can
-run out without waiting days. `fixture.sh up` deletes the fixture Account's `trial_cards` rows, so `4242` can start a
-Trial again on every run.
+run out without waiting days. `fixture.sh up` deletes the fixture Account's Trial records (`trial_cards` and
+`trial_accounts`), so `4242` can start a Trial again on every run.
 
 ## Setup (once per path)
 
@@ -149,8 +149,8 @@ it is `canceled`.
   falls behind once a path has moved the clock, and `date -d '+N days'` then jumps backwards. Step the retries
   (4 days at a time) and read the subscription between them.
 - A journey answers "needs selling mode": run `selling.sh up`.
-- A repeat card is charged when you expected a Trial: `fixture.sh up` clears the fixture's `trial_cards`; a run
-  without it keeps the previous claim.
+- A repeat card is charged when you expected a Trial: `fixture.sh up` clears the fixture's `trial_cards` and
+  `trial_accounts`; a run without it keeps the previous claim.
 - `advance` does not reach `ready`: `stripe-clock.sh status` shows the clock; Stripe leaves it `pending` while an
   event is delivered. Run `advance` again with the same target.
 - A run leaves the clock and its Customer: `cleanup.sh` deletes the Customer through `fixture.sh down` and the clock

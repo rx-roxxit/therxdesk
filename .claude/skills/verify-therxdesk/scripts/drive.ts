@@ -1638,8 +1638,8 @@ const JOURNEYS: Record<string, (run: Run) => Promise<void>> = {
         await page.locator(tid('@plan-card-mini')).waitFor();
         run.check(
             'the plan step has no reviews',
-            (await page.locator(tid('@welcome-plan-reviews')).count()) === 0,
-            await page.locator(tid('@welcome-plan-reviews')).count(),
+            (await page.locator('[data-testid*="review"]').count()) === 0,
+            await page.locator('[data-testid*="review"]').count(),
         );
         run.check(
             'the plan step shows the four Plans',

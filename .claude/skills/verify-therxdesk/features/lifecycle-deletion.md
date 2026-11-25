@@ -19,8 +19,8 @@ through `/internal/v1` by typing the Owner's email.
   one is recorded in `lifecycle_emails`, so it goes out once per recipient.
 - **The Lapsed plan step** shows `Your subscription ended. Your data will be deleted on <date> unless you subscribe
   again.` (`@welcome-plan-lapsed-deletion`). A never-paid signup gets no such line.
-- **Deletion at day 30** removes what `DeleteUser` removes for an Owner (workspaces, posts, R2 media, channels,
-  Invites, Members, and Support chat transcripts once they exist) and keeps the Owner's User, the empty Account and
+- **Deletion at day 30** runs `PurgeAccountData`, which removes the Owner's workspaces, posts, R2 media, channels,
+  Invites, Members and Support chat conversations, and keeps the Owner's User, the empty Account and
   the Stripe customer. The Owner can sign in and subscribe again with no Trial.
 - **Never-paid deletion** removes the User and the Account too, and sends no email.
 - **The CLI** (`rxdesk:export`, `rxdesk:delete`) both require `--account=<uuid>`, support `--dry-run`, and are off

@@ -199,9 +199,9 @@ prints them. `selling.sh down` removes the file.
   `429` with `code: "daily_limit"`, the translated message, `retry_after` and a `Retry-After` header. A provider
   failure or an empty answer answers `502` with `code: "unavailable"` and the generic `rxdesk.ai.unavailable`
   message; no answer or error names a provider or model. Each AI call writes one `ask_the_desk` ledger row with
-  `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) stores the caller's aggregates and
-  question verbatim. “Names no customer” is a caller contract, not server-side anonymization: pass synthetic
-  aggregates only. Cleanup has no Ask-specific helper, so a live call leaves transcript and ledger rows behind.
+  `credits: 0` and no Account, and the 30-day transcript (`ask_the_desk_messages`) stores the caller's question and
+  the answer verbatim; the aggregates go only into the prompt, never the table. “Names no customer” is a caller
+  contract, not server-side anonymization: pass synthetic aggregates only. Cleanup has no Ask-specific helper, so a live call leaves transcript and ledger rows behind.
   Self-hosted answers 404, and the site token answers 404.
 - The **cost table** (`cost` on the AI settings) is computed live: one row per active Plan, ordered `sort` then
   `name`, with `id`, `slug`, `name`, `ai_credits_per_month`, `monthly_cents`, `discounted_monthly_cents`,

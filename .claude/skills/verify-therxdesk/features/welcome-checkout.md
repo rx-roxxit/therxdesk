@@ -44,7 +44,8 @@ until the webhook gives the Account access, and lands on the Schedule.
 - Pressing a card button before the email is verified opens `@verify-email-dialog` with `@verify-email-close`
   ("Not now") and `@verify-email-resend`, which sends the existing verification email (Mailpit). The link returns to
   `/welcome/plan`.
-- The full-price journeys (`welcome-plan`, `welcome-checkout`) use the fixture with no Offer. The Offer journey
+- The full-price journeys cover two Accounts: `welcome-checkout` uses the fixture with no Offer, and `welcome-plan`
+  registers its own guest (below). The Offer journey
   creates its own two link Offers with `offer.sh up` and drives both banner states; `OfferSeeder` only seeds
   trial-only local rows, because a discount Offer must create its Stripe coupon through `/internal/v1/offers`.
 - Stripe Checkout (hosted, sandbox): the Owner's language (never `auto`), a required billing address, a required

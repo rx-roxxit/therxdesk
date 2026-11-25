@@ -10,9 +10,10 @@ date that defaults to 30 days ahead (ADR 0006). There is no Checkout, no card, n
   the Quota and the AI credits normally follow that Plan at once. A per-Account Quota or AI-credit override still wins,
   and an active generic Trial allowance wins for AI credits. Audited as `account.complimentary.give`.
 - **End.** `POST /internal/v1/accounts/{uuid}/complimentary/end` with an optional `ends_at`, defaulting to 30 days
-  ahead; an earlier date (now, or in the past) ends it at once. Audited as `account.complimentary.end`. When the end
-  passes the Account is Lapsed, `SyncDeletionClock` starts the 30-day data-deletion clock and the plan step shows
-  `@welcome-plan-lapsed-deletion` (`lifecycle-deletion.md`).
+  ahead; an earlier date (now, or in the past) ends it at once. Audited as `account.complimentary.end`. Once the end
+  passes the Account is Lapsed and the plan step shows `@welcome-plan-lapsed-deletion` (`lifecycle-deletion.md`). The
+  30-day data-deletion clock starts on the next daily `rxdesk:lifecycle` sweep, not at the ending itself, so with a
+  future `ends_at` it can trail the end by up to a day.
 - **Plan step.** `/welcome/plan` shows the Plan, `Plan given by The RX Desk`, and the end date (`No end date` without
   one) in place of the cards: `@welcome-plan-complimentary`, `@welcome-plan-complimentary-plan`,
   `@welcome-plan-complimentary-until` or `@welcome-plan-complimentary-no-end`, and a Continue button
