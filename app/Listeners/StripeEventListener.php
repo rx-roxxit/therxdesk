@@ -25,6 +25,7 @@ use App\Support\Billing\StripeValue;
 use App\Support\Billing\SubscriptionPlanSync;
 use App\Support\Billing\TrialAccounts;
 use App\Support\Billing\TrialCards;
+use Closure;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -102,9 +103,11 @@ class StripeEventListener
         $this->redeemOffer($account, $payload);
         $this->recordTrialStart($account, $subscription, $payload);
 
-        TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Created, $payload, $previousPlan);
-        TrackTrialStarted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_TRIALING && blank($subscription?->trial_skipped_at), (string) $account->id, $payload);
-        TrackCheckoutCompleted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_ACTIVE, (string) $account->id, $payload);
+        $this->track(function () use ($account, $payload, $previousPlan, $subscription): void {
+            TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Created, $payload, $previousPlan);
+            TrackTrialStarted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_TRIALING && blank($subscription?->trial_skipped_at), (string) $account->id, $payload);
+            TrackCheckoutCompleted::dispatchIf(PostHogService::shouldTrack() && $this->currentStatus($payload) === StripeSubscription::STATUS_ACTIVE, (string) $account->id, $payload);
+        });
 
         SyncDeletionClock::execute($account->refresh());
     }
@@ -125,9 +128,11 @@ class StripeEventListener
         $this->recordTrialEnd($subscription, $payload);
         $this->recordCancellationFacts($subscription, $payload);
 
-        TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Updated, $payload, $previousPlan);
-        TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $this->convertedFromTrial($payload) && $this->isNowActive($payload), (string) $account->id, $payload);
-        TrackPlanChanged::dispatchIf(PostHogService::shouldTrack() && $this->priceChanged($payload), (string) $account->id, $payload);
+        $this->track(function () use ($account, $payload, $previousPlan): void {
+            TrackBilling::dispatchIf(PostHogService::shouldTrack(), (string) $account->id, BillingEvent::Updated, $payload, $previousPlan);
+            TrackTrialConverted::dispatchIf(PostHogService::shouldTrack() && $this->convertedFromTrial($payload) && $this->isNowActive($payload), (string) $account->id, $payload);
+            TrackPlanChanged::dispatchIf(PostHogService::shouldTrack() && $this->priceChanged($payload), (string) $account->id, $payload);
+        });
 
         SyncDeletionClock::execute($account->refresh());
     }
@@ -152,13 +157,26 @@ class StripeEventListener
             $account->update(['plan_id' => null]);
         }
 
-        TrackBilling::dispatchIf(
-            PostHogService::shouldTrack() && $this->claimCancellation($payload),
-            (string) $account->id,
-            BillingEvent::Cancelled,
-            $payload,
-            $previousPlan,
-        );
+        $this->track(function () use ($account, $payload, $previousPlan): void {
+            TrackBilling::dispatchIf(
+                PostHogService::shouldTrack() && $this->claimCancellation($payload),
+                (string) $account->id,
+                BillingEvent::Cancelled,
+                $payload,
+                $previousPlan,
+            );
+        });
+    }
+
+    /**
+     * Tracking never costs the billing facts: a dispatch that fails is
+     * reported and dropped, while every state write above it stays fatal so
+     * Stripe redelivers. The dispatch runs inside rescue()'s closure, so its
+     * PendingDispatch is destroyed (and pushed) before the guard returns.
+     */
+    private function track(Closure $dispatch): void
+    {
+        rescue($dispatch);
     }
 
     /**
