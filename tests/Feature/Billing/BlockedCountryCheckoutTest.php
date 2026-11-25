@@ -38,7 +38,7 @@ function fakeCheckoutStripe(string $subscriptionStatus = 'trialing'): ClientInte
 {
     $client = new class($subscriptionStatus) implements ClientInterface
     {
-        /** @var list<array{method: string, url: string, params: array<string, mixed>}> */
+        /** @var list<array{method: string, url: string, params: array<string, mixed>, headers: array<int, string>}> */
         public array $requests = [];
 
         public bool $failCancel = false;
@@ -48,7 +48,17 @@ function fakeCheckoutStripe(string $subscriptionStatus = 'trialing'): ClientInte
         public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
         {
             $verb = strtoupper((string) $method);
-            $this->requests[] = ['method' => $verb, 'url' => $absUrl, 'params' => $params];
+            $this->requests[] = ['method' => $verb, 'url' => $absUrl, 'params' => $params, 'headers' => $headers];
+
+            if ($verb === 'POST' && str_contains($absUrl, '/v1/refunds')) {
+                return [json_encode([
+                    'id' => 're_blocked',
+                    'object' => 'refund',
+                    'status' => 'succeeded',
+                    'amount' => 1190,
+                    'currency' => 'usd',
+                ]), 200, []];
+            }
 
             if ($verb === 'DELETE' && $this->failCancel) {
                 return [json_encode(['error' => ['type' => 'api_error', 'message' => 'Stripe is down']]), 500, []];
@@ -118,6 +128,36 @@ test('a completed checkout billed to a blocked country records the facts and can
     expect(collect($stripe->requests)->contains(
         fn (array $request): bool => str_contains($request['url'], '/refunds'),
     ))->toBeFalse();
+});
+
+test('a blocked-country checkout that charged is refunded before it is cancelled', function () {
+    $account = blockedCheckoutAccount();
+    $stripe = fakeCheckoutStripe(subscriptionStatus: 'active');
+
+    (new StripeCheckoutSessionListener)->handle(new WebhookReceived(blockedCheckoutPayload([
+        'data' => ['object' => [
+            'payment_status' => 'paid',
+            'payment_intent' => 'pi_blocked',
+            'amount_total' => 1190,
+        ]],
+    ])));
+
+    $refund = collect($stripe->requests)->first(
+        fn (array $request): bool => $request['method'] === 'POST' && str_contains($request['url'], '/refunds'),
+    );
+
+    expect($refund)->not->toBeNull()
+        ->and($refund['params']['payment_intent'])->toBe('pi_blocked')
+        ->and($refund['params']['reason'])->toBe('requested_by_customer')
+        ->and($refund['headers'])->toContain('Idempotency-Key: rxdesk-blocked-country-refund-cs_blocked');
+
+    $verbs = collect($stripe->requests)
+        ->filter(fn (array $request): bool => in_array($request['method'], ['POST', 'DELETE'], true))
+        ->pluck('method')
+        ->all();
+
+    expect($verbs)->toBe(['POST', 'DELETE'])
+        ->and(Subscription::query()->where('stripe_id', 'sub_blocked')->firstOrFail()->stripe_status)->toBe('canceled');
 });
 
 test('an allowed billing country is a no-op', function () {
