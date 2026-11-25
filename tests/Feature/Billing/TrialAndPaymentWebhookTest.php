@@ -12,6 +12,7 @@ use App\Models\Account;
 use App\Models\Offer;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\TrialAccount;
 use App\Models\TrialCard;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
@@ -242,6 +243,50 @@ test('a trial-end call that fails answers non-2xx, keeps the facts and is retrie
 
     expect($endAttempts)->toHaveCount(2)
         ->and($subscription->fresh()->trial_skipped_at)->not->toBeNull();
+});
+
+test('a decided repeat trial is ended again from stored facts even when the claims are its own', function () {
+    $account = trialAccount();
+    $stripe = fakeTrialWebhookStripe();
+
+    $subscription = new Subscription;
+    $subscription->forceFill([
+        'account_id' => $account->id,
+        'type' => Account::SUBSCRIPTION_NAME,
+        'stripe_id' => 'sub_owned',
+        'stripe_status' => 'trialing',
+        'trial_started_at' => now(),
+        'trial_skipped_at' => now(),
+        'trial_ended_at' => now(),
+    ])->save();
+
+    TrialAccount::query()->create(['account_id' => $account->id, 'stripe_subscription_id' => 'sub_owned']);
+    TrialCard::query()->create([
+        'fingerprint' => 'fp_owned',
+        'account_id' => $account->id,
+        'stripe_subscription_id' => 'sub_owned',
+    ]);
+
+    (new StripeEventListener)->handle(new WebhookHandled([
+        'id' => 'evt_owned_created',
+        'type' => 'customer.subscription.created',
+        'data' => ['object' => [
+            'id' => 'sub_owned',
+            'customer' => 'cus_trial',
+            'status' => 'trialing',
+            'default_payment_method' => [
+                'id' => 'pm_owned',
+                'object' => 'payment_method',
+                'card' => ['fingerprint' => 'fp_owned'],
+            ],
+            'items' => ['data' => [['price' => ['id' => 'price_x']]]],
+        ]],
+    ]));
+
+    expect(collect($stripe->requests)->contains(
+        fn (array $request): bool => strtoupper((string) $request['method']) === 'POST'
+            && str_contains($request['url'], '/v1/subscriptions/sub_owned'),
+    ))->toBeTrue();
 });
 
 test('a past_due subscription that never paid has no app access and waits for its first charge', function () {
