@@ -42,12 +42,13 @@ final class AnswerSupportQuestion
             throw new RuntimeException('The Support chat answer was empty.');
         }
 
-        app(AiCredits::class)->charge(
+        app(AiCredits::class)->record(
             $user->account,
             $user,
             $workspace,
             AiFeature::SupportChat,
-            $response->usage,
+            $response->usage->promptTokens,
+            $response->usage->completionTokens,
             $response->meta->model,
         );
 

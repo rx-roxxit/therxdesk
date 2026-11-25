@@ -82,19 +82,27 @@ class CaptionAdapter
     {
         app(AiSettings::class)->apply(AiFeature::CaptionShortener);
 
-        $result = (new PostContentShortener(
-            platformLabel: $platform->label(),
-            limit: $limit,
-        ))->prompt($caption);
-
-        app(AiCredits::class)->charge(
+        $credits = app(AiCredits::class);
+        $reservation = $credits->reserve(
             $workspace->account,
             $user,
             $workspace,
             AiFeature::CaptionShortener,
-            $result->usage,
-            $result->meta->model,
+            $credits->estimate(AiFeature::CaptionShortener, $caption),
         );
+
+        try {
+            $result = (new PostContentShortener(
+                platformLabel: $platform->label(),
+                limit: $limit,
+            ))->prompt($caption);
+        } catch (Throwable $exception) {
+            $credits->release($reservation);
+
+            throw $exception;
+        }
+
+        $credits->reconcile($reservation, $result->usage, $result->meta->model);
 
         return trim((string) $result->text);
     }

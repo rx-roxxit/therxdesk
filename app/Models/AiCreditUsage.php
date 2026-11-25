@@ -32,6 +32,7 @@ class AiCreditUsage extends Model
         'workspace_id',
         'feature',
         'model',
+        'reserved_at',
         'prompt_tokens',
         'completion_tokens',
         'total_tokens',
@@ -45,6 +46,7 @@ class AiCreditUsage extends Model
     {
         return [
             'feature' => AiFeature::class,
+            'reserved_at' => 'datetime',
             'prompt_tokens' => 'integer',
             'completion_tokens' => 'integer',
             'total_tokens' => 'integer',

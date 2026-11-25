@@ -12,6 +12,7 @@ use App\Services\Ai\AiCredits;
 use App\Services\Ai\AiSettings;
 use App\Support\AiPromptRules;
 use Illuminate\Support\Str;
+use Throwable;
 
 class GenerateIdea
 {
@@ -22,17 +23,25 @@ class GenerateIdea
     {
         app(AiSettings::class)->apply(AiFeature::IdeaGeneration);
 
-        $response = (new IdeaGenerator($user->locale, $business, $audience, $notes))
-            ->prompt('Suggest one content idea.');
-
-        app(AiCredits::class)->charge(
+        $credits = app(AiCredits::class);
+        $reservation = $credits->reserve(
             $workspace->account,
             $user,
             $workspace,
             AiFeature::IdeaGeneration,
-            $response->usage,
-            $response->meta->model,
+            $credits->estimate(AiFeature::IdeaGeneration, $business.' '.$audience.' '.$notes),
         );
+
+        try {
+            $response = (new IdeaGenerator($user->locale, $business, $audience, $notes))
+                ->prompt('Suggest one content idea.');
+        } catch (Throwable $exception) {
+            $credits->release($reservation);
+
+            throw $exception;
+        }
+
+        $credits->reconcile($reservation, $response->usage, $response->meta->model);
 
         $title = Str::substr(trim((string) data_get($response, 'title')), 0, 255);
 

@@ -10,6 +10,7 @@ use App\Enums\Ai\AiFeature;
 use App\Enums\Alerts\AdminAlertKey;
 use App\Enums\Alerts\AlertLevel;
 use App\Enums\SocialAccount\Platform;
+use App\Exceptions\Ai\AiCreditsExhausted;
 use App\Mail\AdminAlert as AdminAlertMail;
 use App\Models\Account;
 use App\Models\AiCreditUsage;
@@ -100,6 +101,74 @@ test('a faked call writes one ledger row and returns the remaining credits', fun
         ->and($row->completion_tokens)->toBe(100)
         ->and($row->total_tokens)->toBe(300)
         ->and($row->credits)->toBe(3);
+});
+
+test('a reservation holds credits until the real usage replaces it', function () {
+    CatalogSetting::current()->forceFill(['tokens_per_credit' => 100])->save();
+
+    $reservation = $this->credits->reserve(
+        $this->account,
+        $this->owner,
+        $this->workspace,
+        AiFeature::WritingAssistant,
+        22,
+    );
+
+    expect($reservation)->not->toBeNull()
+        ->and($this->credits->remaining($this->account))->toBe(978);
+
+    $this->credits->reconcile($reservation, new Usage(promptTokens: 200, completionTokens: 100), 'test-model');
+
+    $row = $reservation->fresh();
+
+    expect($this->credits->remaining($this->account))->toBe(997)
+        ->and($row->credits)->toBe(3)
+        ->and($row->total_tokens)->toBe(300)
+        ->and($row->reserved_at)->toBeNull();
+});
+
+test('two parallel reservations cannot both take the last credit', function () {
+    seedCreditUsage($this->account, 999);
+
+    $reservation = $this->credits->reserve(
+        $this->account,
+        $this->owner,
+        $this->workspace,
+        AiFeature::WritingAssistant,
+        1,
+    );
+
+    expect($reservation)->not->toBeNull();
+
+    $this->credits->reserve($this->account, $this->owner, $this->workspace, AiFeature::WritingAssistant, 1);
+})->throws(AiCreditsExhausted::class);
+
+test('a released reservation gives its credits back', function () {
+    $reservation = $this->credits->reserve(
+        $this->account,
+        $this->owner,
+        $this->workspace,
+        AiFeature::WritingAssistant,
+        10,
+    );
+
+    $this->credits->release($reservation);
+
+    expect($this->credits->remaining($this->account))->toBe(1000)
+        ->and(AiCreditUsage::query()->count())->toBe(0);
+});
+
+test('a reservation from a call that stopped counting after fifteen minutes', function () {
+    $row = seedCreditUsage($this->account, 10);
+    $row->forceFill(['reserved_at' => now()->subMinutes(16)])->save();
+
+    expect($this->credits->remaining($this->account))->toBe(1000);
+});
+
+test('the reservation estimate covers the prompt and a bounded completion', function () {
+    CatalogSetting::current()->forceFill(['tokens_per_credit' => 100])->save();
+
+    expect($this->credits->estimate(AiFeature::WritingAssistant, str_repeat('a', 400)))->toBe(22);
 });
 
 test('an account with no credits left is refused for the owner and a member', function () {
