@@ -125,6 +125,7 @@ class AccountController
      *     denial: RefundDenial|null,
      *     invoice: StripeInvoice|null,
      *     amount_paid: int,
+     *     refundable: bool,
      *     currency: string|null,
      *     paid_at: CarbonImmutable|null,
      *     payment: array{payment_intent: string}|array{charge: string}|null
@@ -147,6 +148,7 @@ class AccountController
             'charge' => [
                 'invoice_id' => $eligibility['invoice']->id,
                 'amount_paid' => $eligibility['amount_paid'],
+                'refundable' => $eligibility['refundable'],
                 'currency' => $eligibility['currency'],
                 'paid_at' => $eligibility['paid_at']?->toIso8601String(),
             ],

@@ -22,10 +22,15 @@ use Stripe\Invoice as StripeInvoice;
 final class RefundEligibility
 {
     /**
+     * `amount_paid` is the part of the charge that is not refunded yet, so a
+     * retry after a refund that succeeded but a cancel that failed refunds
+     * nothing and only cancels.
+     *
      * @return array{
      *     denial: RefundDenial|null,
      *     invoice: StripeInvoice|null,
      *     amount_paid: int,
+     *     refundable: bool,
      *     currency: string|null,
      *     paid_at: CarbonImmutable|null,
      *     payment: array{payment_intent: string}|array{charge: string}|null
@@ -37,8 +42,14 @@ final class RefundEligibility
             return self::denied(RefundDenial::NotThai);
         }
 
-        if ($account->subscription(Account::SUBSCRIPTION_NAME) === null) {
+        $subscription = $account->subscription(Account::SUBSCRIPTION_NAME);
+
+        if ($subscription === null) {
             return self::denied(RefundDenial::NoSubscription);
+        }
+
+        if ($subscription->canceled()) {
+            return self::denied(RefundDenial::AlreadyCancelled);
         }
 
         if (blank($account->stripe_id)) {
@@ -51,16 +62,18 @@ final class RefundEligibility
             return self::denied(RefundDenial::NoRecentCharge);
         }
 
-        $payment = self::paymentReference(self::withPayments($invoice));
+        $refundable = max(0, (int) $invoice->amount_paid - (int) ($invoice->amount_refunded ?? 0));
+        $payment = $refundable > 0 ? self::paymentReference(self::withPayments($invoice)) : null;
 
-        if ($payment === null) {
+        if ($refundable > 0 && $payment === null) {
             return self::denied(RefundDenial::NoRefundablePayment, $invoice);
         }
 
         return [
             'denial' => null,
             'invoice' => $invoice,
-            'amount_paid' => (int) $invoice->amount_paid,
+            'amount_paid' => $refundable,
+            'refundable' => $refundable > 0,
             'currency' => $invoice->currency,
             'paid_at' => self::paidAt($invoice),
             'payment' => $payment,
@@ -68,14 +81,19 @@ final class RefundEligibility
     }
 
     /**
-     * @return array{denial: RefundDenial, invoice: StripeInvoice|null, amount_paid: int, currency: string|null, paid_at: CarbonImmutable|null, payment: null}
+     * @return array{denial: RefundDenial, invoice: StripeInvoice|null, amount_paid: int, refundable: bool, currency: string|null, paid_at: CarbonImmutable|null, payment: null}
      */
     private static function denied(RefundDenial $denial, ?StripeInvoice $invoice = null): array
     {
+        $refundable = $invoice === null
+            ? 0
+            : max(0, (int) $invoice->amount_paid - (int) ($invoice->amount_refunded ?? 0));
+
         return [
             'denial' => $denial,
             'invoice' => $invoice,
-            'amount_paid' => $invoice === null ? 0 : (int) $invoice->amount_paid,
+            'amount_paid' => $refundable,
+            'refundable' => $refundable > 0,
             'currency' => $invoice?->currency,
             'paid_at' => $invoice === null ? null : self::paidAt($invoice),
             'payment' => null,

@@ -30,23 +30,30 @@ function refundAccount(string $country = 'TH'): Account
     return $account->fresh();
 }
 
-function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice = true): ClientInterface
-{
-    $client = new class($paidAt, $amountPaid, $withInvoice) implements ClientInterface
+function fakeRefundStripe(
+    int $paidAt,
+    int $amountPaid = 1190,
+    bool $withInvoice = true,
+    int $amountRefunded = 0,
+    bool $failCancel = false,
+): ClientInterface {
+    $client = new class($paidAt, $amountPaid, $withInvoice, $amountRefunded, $failCancel) implements ClientInterface
     {
-        /** @var list<array{method: string, url: string, params: array<string, mixed>}> */
+        /** @var list<array{method: string, url: string, params: array<string, mixed>, headers: array<int, string>}> */
         public array $requests = [];
 
         public function __construct(
             public int $paidAt,
             public int $amountPaid,
             public bool $withInvoice,
+            public int $amountRefunded,
+            public bool $failCancel,
         ) {}
 
         public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
         {
             $verb = strtoupper((string) $method);
-            $this->requests[] = ['method' => $verb, 'url' => $absUrl, 'params' => $params];
+            $this->requests[] = ['method' => $verb, 'url' => $absUrl, 'params' => $params, 'headers' => $headers];
 
             if ($verb === 'GET' && preg_match('#/v1/invoices/(in_[^/?]+)#', $absUrl, $matches) === 1) {
                 return [json_encode([
@@ -55,6 +62,7 @@ function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice
                     'customer' => 'cus_thai',
                     'status' => 'paid',
                     'amount_paid' => $this->amountPaid,
+                    'amount_refunded' => $this->amountRefunded,
                     'currency' => 'usd',
                     'payments' => [
                         'object' => 'list',
@@ -79,6 +87,7 @@ function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice
                         'customer' => 'cus_thai',
                         'status' => 'paid',
                         'amount_paid' => $this->amountPaid,
+                        'amount_refunded' => $this->amountRefunded,
                         'currency' => 'usd',
                         'payment_intent' => 'pi_thai',
                         'created' => $this->paidAt,
@@ -88,11 +97,14 @@ function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice
             }
 
             if ($verb === 'POST' && str_contains($absUrl, '/v1/refunds')) {
+                $amount = (int) ($params['amount'] ?? $this->amountPaid);
+                $this->amountRefunded += $amount;
+
                 return [json_encode([
                     'id' => 're_thai',
                     'object' => 'refund',
                     'status' => 'succeeded',
-                    'amount' => $this->amountPaid,
+                    'amount' => $amount,
                     'currency' => 'usd',
                 ]), 200, []];
             }
@@ -106,6 +118,12 @@ function fakeRefundStripe(int $paidAt, int $amountPaid = 1190, bool $withInvoice
             }
 
             if ($verb === 'DELETE' && str_contains($absUrl, '/v1/subscriptions/')) {
+                if ($this->failCancel) {
+                    return [json_encode([
+                        'error' => ['type' => 'api_error', 'message' => 'Stripe cannot cancel now'],
+                    ]), 500, []];
+                }
+
                 return [json_encode([
                     'id' => 'sub_thai',
                     'object' => 'subscription',
@@ -170,7 +188,8 @@ test('inside the window it refunds the charge, cancels at once and audits the ac
 
     expect($refundRequest)->not->toBeNull()
         ->and($refundRequest['params']['amount'])->toBe(1190)
-        ->and($refundRequest['params']['payment_intent'])->toBe('pi_thai');
+        ->and($refundRequest['params']['payment_intent'])->toBe('pi_thai')
+        ->and($refundRequest['headers'])->toContain('Idempotency-Key: rxdesk-refund-in_thai');
 
     $cancel = collect($stripe->requests)->first(
         fn (array $request): bool => $request['method'] === 'DELETE',
@@ -209,6 +228,76 @@ test('outside the seven-day window it refuses and changes nothing', function () 
         ->and(Subscription::query()->where('stripe_id', 'sub_thai')->firstOrFail()->stripe_status)->toBe('active')
         ->and($account->fresh()->hasAppAccess())->toBeTrue()
         ->and(AuditLog::query()->where('action', 'account.refund_and_cancel')->exists())->toBeFalse();
+});
+
+test('only the part of the charge that was not refunded yet is refunded', function () use ($refund) {
+    $account = refundAccount();
+    $stripe = fakeRefundStripe(now()->subDay()->timestamp, amountRefunded: 190);
+
+    $refund($account)
+        ->assertOk()
+        ->assertJsonPath('amount_paid', 1000)
+        ->assertJsonPath('refund_id', 're_thai');
+
+    $refundRequest = collect($stripe->requests)->first(
+        fn (array $request): bool => $request['method'] === 'POST' && str_contains($request['url'], '/refunds'),
+    );
+
+    expect($refundRequest['params']['amount'])->toBe(1000);
+});
+
+test('an already refunded charge is cancelled without a second refund', function () use ($refund) {
+    $account = refundAccount();
+    $stripe = fakeRefundStripe(now()->subDay()->timestamp, amountRefunded: 1190);
+
+    $refund($account)
+        ->assertOk()
+        ->assertJsonPath('amount_paid', 0)
+        ->assertJsonPath('refund_id', null);
+
+    expect(collect($stripe->requests)->contains(
+        fn (array $request): bool => $request['method'] === 'POST' && str_contains($request['url'], '/refunds'),
+    ))->toBeFalse()
+        ->and(Subscription::query()->where('stripe_id', 'sub_thai')->firstOrFail()->stripe_status)->toBe('canceled');
+});
+
+test('a refund that succeeded is not repeated when the cancel is retried', function () use ($refund) {
+    $account = refundAccount();
+    $stripe = fakeRefundStripe(now()->subDay()->timestamp, failCancel: true);
+
+    $refund($account)->assertStatus(502);
+
+    expect(Subscription::query()->where('stripe_id', 'sub_thai')->firstOrFail()->stripe_status)->toBe('active');
+
+    $stripe->failCancel = false;
+
+    $refund($account)
+        ->assertOk()
+        ->assertJsonPath('amount_paid', 0)
+        ->assertJsonPath('refund_id', null);
+
+    $refunds = collect($stripe->requests)->filter(
+        fn (array $request): bool => $request['method'] === 'POST' && str_contains($request['url'], '/refunds'),
+    );
+
+    expect($refunds)->toHaveCount(1)
+        ->and(Subscription::query()->where('stripe_id', 'sub_thai')->firstOrFail()->stripe_status)->toBe('canceled');
+});
+
+test('the customer detail stops offering the action once the Subscription is cancelled', function () {
+    $account = refundAccount();
+    fakeRefundStripe(now()->subDay()->timestamp);
+
+    Subscription::query()->where('stripe_id', 'sub_thai')->firstOrFail()->forceFill([
+        'stripe_status' => 'canceled',
+        'ends_at' => now(),
+    ])->save();
+
+    $this->withHeaders($this->adminHeaders)
+        ->getJson(route('internal.accounts.show', $account->id))
+        ->assertOk()
+        ->assertJsonPath('refund.allowed', false)
+        ->assertJsonPath('refund.reason', 'already_cancelled');
 });
 
 test('a non-Thai buyer is refused before Stripe is called', function () use ($refund) {
