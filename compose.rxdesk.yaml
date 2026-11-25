@@ -6,12 +6,18 @@
 #
 # What differs from upstream's compose.prod.yaml:
 # - The image is built here with The RX Desk's build args, never pulled.
+# - This stack serves three hosts through one Caddy: the app, the admin app and
+#   the website (see docker/Caddyfile.rxdesk). The admin and site stacks join
+#   this stack's `edge` and `api` networks as external networks named
+#   therxdesk-prod_edge and therxdesk-prod_api, so start this stack first: it
+#   creates them.
 # - Only Caddy publishes host ports (80 and 443). The app, Postgres and Redis
 #   publish nothing. Docker-published ports skip ufw, so none are left open.
 # - Caddy has a fixed address on a named network with a fixed private subnet,
 #   and TRUSTED_PROXIES is exactly that address, so $request->ip() is the
 #   client's and a request that bypasses Caddy cannot fake it.
-# - Telemetry, billing and the extra signup paths are off, explicitly.
+# - Postgres and Redis stay on this stack's private `internal` network.
+# - Telemetry and the extra signup paths are off, explicitly.
 # - Every setting comes from the env file; nothing here is a secret.
 
 name: therxdesk-prod
@@ -52,7 +58,7 @@ services:
       TRUSTED_PROXIES: *caddy-ip
 
       # ===== The RX Desk =====
-      SELF_HOSTED: "true"
+      SELF_HOSTED: "false"
       RXDESK_DEFAULT_QUOTA: ${RXDESK_DEFAULT_QUOTA:-5GB}
       RXDESK_DISK_GUARD_THRESHOLD: ${RXDESK_DISK_GUARD_THRESHOLD:-10GB}
       RXDESK_INTERNAL_ADMIN_TOKEN: ${RXDESK_INTERNAL_ADMIN_TOKEN:-}
@@ -60,7 +66,18 @@ services:
       RXDESK_ALERT_RECIPIENT: ${RXDESK_ALERT_RECIPIENT:-admin@therxdesk.com}
       RXDESK_SUPPORT_EMAIL: ${RXDESK_SUPPORT_EMAIL:-support@therxdesk.com}
       RXDESK_HEARTBEAT_URL: ${RXDESK_HEARTBEAT_URL:-}
+
+      # ===== Stripe (Cashier) =====
+      # The app creates Products, Prices, coupons and the portal config itself.
+      # The webhook is https://<APP_DOMAIN>/stripe/webhook.
+      STRIPE_KEY: ${STRIPE_KEY:?set STRIPE_KEY}
+      STRIPE_SECRET: ${STRIPE_SECRET:?set STRIPE_SECRET}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET}
+
+      # ===== Nightwatch =====
       NIGHTWATCH_WEBHOOK_SECRET: ${NIGHTWATCH_WEBHOOK_SECRET:-}
+      NIGHTWATCH_ENABLED: ${NIGHTWATCH_ENABLED:-false}
+      NIGHTWATCH_TOKEN: ${NIGHTWATCH_TOKEN:-}
       # Cloudflare Turnstile on /register; blank keys skip the check.
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
@@ -88,7 +105,6 @@ services:
 
       # ===== Off on purpose =====
       POSTHOG_ENABLED: "false"
-      NIGHTWATCH_ENABLED: "false"
       CHANGELOG_ENABLED: "false"
       TELESCOPE_ENABLED: "false"
       GOOGLE_AUTH_ENABLED: "false"
@@ -203,15 +219,15 @@ services:
       GOOGLE_PHOTOS_ENABLED: "false"
       CANVA_ENABLED: "false"
 
-      # ===== AI (optional: leave blank to disable) =====
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # ===== AI (selling mode: Anthropic only) =====
+      AI_TEXT_PROVIDER: anthropic
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ANTHROPIC_TEXT_MODEL: ${ANTHROPIC_TEXT_MODEL:-claude-haiku-5-5}
     volumes:
       - storage:/var/www/html/storage/app
     networks:
       - edge
+      - api
       - internal
     depends_on:
       pgsql:
@@ -258,6 +274,7 @@ services:
     logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?set APP_DOMAIN}
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN}
     ports:
       - "80:80"
       - "443:443"
@@ -274,15 +291,22 @@ services:
         condition: service_healthy
 
 networks:
-  # Caddy and the app. The subnet is fixed so Caddy's address is known before
-  # anything starts; Docker hands the other containers addresses from the upper
-  # half only, so they can never take Caddy's.
+  # Caddy, the app and, as external joiners, the admin and site stacks. The
+  # subnet is fixed so Caddy's address is known before anything starts; Docker
+  # hands the other containers addresses from the upper half only, so they can
+  # never take Caddy's.
   edge:
+    name: therxdesk-prod_edge
     ipam:
       config:
         - subnet: ${EDGE_SUBNET:-172.30.0.0/24}
           ip_range: ${EDGE_DYNAMIC_RANGE:-172.30.0.128/25}
           gateway: ${EDGE_GATEWAY:-172.30.0.1}
+  # The main app, the admin app and the site meet here for /internal/v1. It has
+  # no route out.
+  api:
+    name: therxdesk-prod_api
+    internal: true
   # Postgres and Redis (and the app, which also sits on edge). Postgres and
   # Redis have no route out and publish nothing.
   internal:
