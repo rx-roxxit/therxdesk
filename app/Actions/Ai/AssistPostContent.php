@@ -16,6 +16,7 @@ use App\Services\Ai\AiCredits;
 use App\Services\Ai\AiSettings;
 use App\Services\Repurpose\CaptionAdapter;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 final class AssistPostContent
 {
@@ -35,17 +36,25 @@ final class AssistPostContent
 
         app(AiSettings::class)->apply(AiFeature::WritingAssistant);
 
-        $response = (new PostWritingAssistant($mode, $currentContent, $user->locale, $platform, $previousContent, $limit))
-            ->prompt($mode->requiresPrompt() ? trim((string) $prompt) : 'Revise the existing caption as instructed.');
-
-        app(AiCredits::class)->charge(
+        $credits = app(AiCredits::class);
+        $reservation = $credits->reserve(
             $workspace->account,
             $user,
             $workspace,
             AiFeature::WritingAssistant,
-            $response->usage,
-            $response->meta->model,
+            $credits->estimate(AiFeature::WritingAssistant, $currentContent.' '.$prompt),
         );
+
+        try {
+            $response = (new PostWritingAssistant($mode, $currentContent, $user->locale, $platform, $previousContent, $limit))
+                ->prompt($mode->requiresPrompt() ? trim((string) $prompt) : 'Revise the existing caption as instructed.');
+        } catch (Throwable $exception) {
+            $credits->release($reservation);
+
+            throw $exception;
+        }
+
+        $credits->reconcile($reservation, $response->usage, $response->meta->model);
 
         $text = trim((string) $response);
 

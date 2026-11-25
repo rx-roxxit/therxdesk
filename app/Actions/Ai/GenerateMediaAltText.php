@@ -13,6 +13,7 @@ use App\Services\Ai\AiCredits;
 use App\Services\Ai\AiSettings;
 use App\Support\PostMediaRules;
 use Laravel\Ai\Files\Image;
+use Throwable;
 
 final class GenerateMediaAltText
 {
@@ -20,19 +21,27 @@ final class GenerateMediaAltText
     {
         app(AiSettings::class)->apply(AiFeature::AltText);
 
-        $response = (new MediaAltTextGenerator($user->locale))->prompt(
-            'Write the alt text for this image.',
-            attachments: [Image::fromStorage($asset->path)],
-        );
-
-        app(AiCredits::class)->charge(
+        $credits = app(AiCredits::class);
+        $reservation = $credits->reserve(
             $workspace->account,
             $user,
             $workspace,
             AiFeature::AltText,
-            $response->usage,
-            $response->meta->model,
+            $credits->estimate(AiFeature::AltText),
         );
+
+        try {
+            $response = (new MediaAltTextGenerator($user->locale))->prompt(
+                'Write the alt text for this image.',
+                attachments: [Image::fromStorage($asset->path)],
+            );
+        } catch (Throwable $exception) {
+            $credits->release($reservation);
+
+            throw $exception;
+        }
+
+        $credits->reconcile($reservation, $response->usage, $response->meta->model);
 
         return mb_substr(trim((string) $response), 0, PostMediaRules::ALT_TEXT_MAX_LENGTH);
     }

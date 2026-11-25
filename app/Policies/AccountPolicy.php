@@ -39,18 +39,10 @@ class AccountPolicy
         }
 
         if ($user->id === $account->owner_id) {
-            return Response::deny(
-                __('rxdesk.ai_credits.exhausted_owner', [
-                    'date' => $credits->renewsAt($account)
-                        ->timezone($user->timezone ?: config('app.timezone'))
-                        ->locale(app()->getLocale())
-                        ->isoFormat('LL'),
-                ]),
-                AiCredits::DENIAL_OWNER,
-            );
+            return Response::deny($credits->denialMessage($account, $user), AiCredits::DENIAL_OWNER);
         }
 
-        return Response::deny(__('rxdesk.ai_credits.exhausted_member'), AiCredits::DENIAL_MEMBER);
+        return Response::deny($credits->denialMessage($account, $user), AiCredits::DENIAL_MEMBER);
     }
 
     public function swapPlan(User $user, Account $account, Plan $target): Response
