@@ -15,6 +15,7 @@ enum RefundDenial: string
 {
     case NotThai = 'not_thai';
     case NoSubscription = 'no_subscription';
+    case AlreadyCancelled = 'already_cancelled';
     case NoStripeCustomer = 'no_stripe_customer';
     case NoRecentCharge = 'no_recent_charge';
     case NoRefundablePayment = 'no_refundable_payment';
@@ -25,6 +26,7 @@ enum RefundDenial: string
         return match ($this) {
             self::NotThai => 'Refund and cancel is only available for a Thai buyer.',
             self::NoSubscription => 'This Account has no subscription to cancel.',
+            self::AlreadyCancelled => 'This Account\'s Subscription is already cancelled.',
             self::NoStripeCustomer => 'This Account has no Stripe customer.',
             self::NoRecentCharge => 'This Account has no paid charge in the last seven days.',
             self::NoRefundablePayment => 'This charge has no refundable payment.',

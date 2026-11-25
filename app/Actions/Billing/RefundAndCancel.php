@@ -40,7 +40,7 @@ class RefundAndCancel
      *     invoice_id: string,
      *     amount_paid: int,
      *     currency: string|null,
-     *     refund_id: string,
+     *     refund_id: string|null,
      *     subscription_id: string,
      *     status: string,
      *     ends_at: string,
@@ -68,7 +68,18 @@ class RefundAndCancel
 
             $before = $this->snapshot($subscription);
 
-            $refund = $this->refund($eligibility['payment'], $eligibility['amount_paid']);
+            // A retry after a refund that succeeded but a cancel that failed
+            // finds nothing left to refund, so it only cancels.
+            $refund = null;
+
+            if ($eligibility['refundable']) {
+                $refund = $this->refund(
+                    $eligibility['payment'],
+                    $eligibility['amount_paid'],
+                    $eligibility['invoice']->id,
+                );
+            }
+
             $this->cancelAtStripe($subscription);
         } catch (ApiErrorException $exception) {
             throw RefundFailed::because($exception);
@@ -88,7 +99,7 @@ class RefundAndCancel
             'invoice_id' => $invoiceId,
             'amount_paid' => $amountPaid,
             'currency' => $eligibility['currency'],
-            'refund_id' => $refund->id,
+            'refund_id' => $refund?->id,
         ]);
 
         $account = $account->fresh();
@@ -98,7 +109,7 @@ class RefundAndCancel
             'invoice_id' => $invoiceId,
             'amount_paid' => $amountPaid,
             'currency' => $eligibility['currency'],
-            'refund_id' => $refund->id,
+            'refund_id' => $refund?->id,
             'subscription_id' => $subscription->stripe_id,
             'status' => StripeSubscription::STATUS_CANCELED,
             'ends_at' => $cancelledAt->toIso8601String(),
@@ -109,12 +120,17 @@ class RefundAndCancel
     /**
      * @param  array{payment_intent: string}|array{charge: string}  $payment
      */
-    private function refund(array $payment, int $amountPaid): StripeRefund
+    private function refund(array $payment, int $amountPaid, string $invoiceId): StripeRefund
     {
-        return Cashier::stripe()->refunds->create([
-            ...$payment,
-            'amount' => $amountPaid,
-        ]);
+        // The invoice is the refund's own identity: a retried request for the
+        // same charge reuses Stripe's first refund instead of sending another.
+        return Cashier::stripe()->refunds->create(
+            [
+                ...$payment,
+                'amount' => $amountPaid,
+            ],
+            ['idempotency_key' => "rxdesk-refund-{$invoiceId}"],
+        );
     }
 
     private function cancelAtStripe(Subscription $subscription): void
