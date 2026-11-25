@@ -21,10 +21,10 @@ use Throwable;
 
 /**
  * A completed Checkout billed to a country The RX Desk does not sell in (the
- * EU/UK block) is cancelled at once. A normal Checkout is still in its Trial
- * and nothing is charged; a repeat card's charge is not refunded here, only
- * recorded as a fact. The register form already refuses a blocked country;
- * this guards a false or changed billing address at Stripe.
+ * EU/UK block) is refunded when it charged and cancelled at once. A normal
+ * Checkout is still in its Trial and nothing is charged. The register form
+ * already refuses a blocked country; this guards a false or changed billing
+ * address at Stripe.
  *
  * The same event records the checkout facts the refund action reads (billing
  * country, billing name, purchase date) for every selling-mode checkout, and
@@ -79,6 +79,8 @@ class StripeCheckoutSessionListener
             }
 
             $this->recordBlock($account, (string) $country, data_get($event->payload, 'data.object.payment_status'));
+
+            $this->refundChargedSession($account, $event->payload);
 
             $this->cancelSubscription($account, data_get($event->payload, 'data.object.subscription'));
         } catch (Throwable $e) {
@@ -171,8 +173,49 @@ class StripeCheckoutSessionListener
     }
 
     /**
-     * Cancels at Stripe (no refund call), then ends the local subscription so
-     * access stops before the deleted webhook arrives.
+     * A blocked-country Checkout that charged (a repeat card, which skips its
+     * Trial) gets the money back before the Subscription is cancelled. A Trial
+     * that charged nothing is left alone. The session is the idempotency key,
+     * so a redelivered event never refunds twice.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function refundChargedSession(Account $account, array $payload): void
+    {
+        if (data_get($payload, 'data.object.payment_status') !== 'paid') {
+            return;
+        }
+
+        $paymentIntent = data_get($payload, 'data.object.payment_intent');
+
+        if (! is_string($paymentIntent) || blank($paymentIntent)) {
+            Log::warning('A blocked-country Checkout was paid without a payment intent to refund.', [
+                'account_id' => $account->id,
+                'session_id' => data_get($payload, 'data.object.id'),
+            ]);
+
+            return;
+        }
+
+        $sessionId = data_get($payload, 'data.object.id');
+        $options = [];
+
+        if (is_string($sessionId) && filled($sessionId)) {
+            $options['idempotency_key'] = "rxdesk-blocked-country-refund-{$sessionId}";
+        }
+
+        Cashier::stripe()->refunds->create(
+            [
+                'payment_intent' => $paymentIntent,
+                'reason' => 'requested_by_customer',
+            ],
+            $options,
+        );
+    }
+
+    /**
+     * Cancels at Stripe, then ends the local subscription so access stops
+     * before the deleted webhook arrives.
      */
     private function cancelSubscription(Account $account, mixed $stripeSubscriptionId): void
     {
