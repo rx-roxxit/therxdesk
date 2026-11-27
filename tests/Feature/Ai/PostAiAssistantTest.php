@@ -80,6 +80,7 @@ test('assistant validates the prompt, content and platform', function (array $pa
     'unknown platform' => [['mode' => 'generate', 'prompt' => 'announce our summer launch today', 'platform' => 'myspace'], 'platform'],
     'unknown content type' => [['mode' => 'generate', 'prompt' => 'announce our summer launch today', 'content_type' => 'x_story'], 'content_type'],
     'prompt under four words' => [['mode' => 'generate', 'prompt' => 'make it pop'], 'prompt'],
+    'short thai prompt without spaces' => [['mode' => 'generate', 'prompt' => 'ช่วยเขียนโพสต์'], 'prompt'],
     'prompt over the length limit' => [['mode' => 'generate', 'prompt' => str_repeat('word ', 2000).'x'], 'prompt'],
 ]);
 
@@ -98,6 +99,7 @@ test('assistant accepts prompts that meet the word and length rules', function (
         ->assertOk();
 })->with([
     'japanese prompt' => ['新商品を紹介'],
+    'thai prompt without spaces' => ['ช่วยเขียนโพสต์โปรโมทคอร์สเรียนทำน้ำแข็ง'],
     'prompt at the length limit' => [str_repeat('word ', 1999).'words'],
 ]);
 

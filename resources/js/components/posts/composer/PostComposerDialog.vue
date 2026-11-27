@@ -3538,7 +3538,7 @@ const onDialogOpenChange = (value: boolean): void => {
                                     <Button
                                         type="button"
                                         size="lg"
-                                        class="rounded-l-none rounded-r-xl max-sm:min-w-0 max-sm:flex-1 aria-disabled:cursor-not-allowed aria-disabled:bg-border-strong aria-disabled:text-subtle-foreground aria-disabled:hover:bg-border-strong aria-disabled:active:translate-y-0"
+                                        class="rounded-l-none rounded-r-xl max-sm:min-w-0 max-sm:flex-1 aria-disabled:cursor-not-allowed aria-disabled:bg-border-strong aria-disabled:text-subtle-foreground aria-disabled:hover:bg-border-strong aria-disabled:active:translate-y-0 dark:aria-disabled:bg-border-strong dark:aria-disabled:text-subtle-foreground dark:aria-disabled:hover:bg-border-strong"
                                         data-testid="composer-submit"
                                         :data-schedule-mode="scheduleMode"
                                         :disabled="

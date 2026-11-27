@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Ai\Agents\PostWritingAssistant;
 use App\Enums\SocialAccount\Platform;
+use App\Enums\User\Theme;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Models\Workspace;
@@ -167,5 +168,69 @@ test('switching channel after a suggestion resets the panel and never writes to 
     $page->assertVisible('@writing-assistant-mode-shorten')
         ->assertMissing('@writing-assistant-replace')
         ->assertMissing('@writing-assistant-suggestion')
+        ->assertNoJavaScriptErrors();
+});
+
+test('in dark mode the disabled generate button looks different from its enabled state', function () {
+    [$user, $accounts] = writingAssistantSetup([Platform::LinkedIn]);
+    $user->update(['theme' => Theme::Dark]);
+
+    $page = openWritingAssistant($user, $accounts)
+        ->click('@writing-assistant-mode-generate');
+
+    waitFor($page, '@writing-assistant-generate');
+
+    $page->assertDisabled('@writing-assistant-generate')
+        ->assertVisible('@writing-assistant-prompt-hint');
+
+    $disabledStyle = $page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('[data-testid="writing-assistant-generate"]');
+            const style = getComputedStyle(button);
+            return { background: style.backgroundColor, color: style.color };
+        })()
+    JS);
+
+    $page->fill('@writing-assistant-prompt', 'announce our summer launch')
+        ->assertEnabled('@writing-assistant-generate')
+        ->assertMissing('@writing-assistant-prompt-hint');
+
+    letPageRun($page, 300);
+
+    $enabledStyle = $page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('[data-testid="writing-assistant-generate"]');
+            const style = getComputedStyle(button);
+            return { background: style.backgroundColor, color: style.color };
+        })()
+    JS);
+
+    expect($disabledStyle['background'])->not->toBe($enabledStyle['background'])
+        ->and($disabledStyle['color'])->not->toBe($enabledStyle['color']);
+
+    $page->assertNoJavaScriptErrors();
+});
+
+test('thai prompts without spaces meet the four-word rule and generate suggestions', function () {
+    [$user, $accounts] = writingAssistantSetup([Platform::LinkedIn]);
+    PostWritingAssistant::fake(['แคปชั่นเปิดตัวคอร์สใหม่']);
+
+    $page = openWritingAssistant($user, $accounts)
+        ->click('@writing-assistant-mode-generate')
+        ->fill('@writing-assistant-prompt', 'ช่วยเขียนโพสต์')
+        ->assertDisabled('@writing-assistant-generate')
+        ->assertVisible('@writing-assistant-prompt-hint');
+
+    PostWritingAssistant::assertNeverPrompted();
+
+    $page->fill('@writing-assistant-prompt', 'ช่วยเขียนโพสต์โปรโมทคอร์สเรียนทำน้ำแข็ง')
+        ->assertEnabled('@writing-assistant-generate')
+        ->assertMissing('@writing-assistant-prompt-hint')
+        ->click('@writing-assistant-generate');
+
+    waitFor($page, '@writing-assistant-suggestion');
+    waitForText($page, '@writing-assistant-suggestion', 'แคปชั่นเปิดตัวคอร์สใหม่');
+
+    $page->assertSeeIn('@writing-assistant-suggestion', 'แคปชั่นเปิดตัวคอร์สใหม่')
         ->assertNoJavaScriptErrors();
 });
