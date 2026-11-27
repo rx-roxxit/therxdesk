@@ -72,7 +72,7 @@ class WorkspaceController extends Controller
             return null;
         }
 
-        if (! $user->account?->hasActiveSubscription()) {
+        if (! $user->account?->hasAppAccess()) {
             return redirect()->route('app.billing.index')
                 ->with('flash.error', __('workspaces.subscription_required'));
         }
