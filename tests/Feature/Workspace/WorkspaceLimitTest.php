@@ -33,10 +33,29 @@ $onPlan = function (string $slug): User {
     $workspace->members()->attach($user->id, membershipPivot('admin'));
     $user->update(['current_workspace_id' => $workspace->id]);
 
-    // The controller guard checks hasActiveSubscription() *before* the cap.
+    // The controller guard checks hasAppAccess() *before* the cap.
     // Without this, GET at the Socials cap still renders, but store flashes
     // subscription_required instead of limit_reached.
     subscribeAccount($user->account);
+
+    return $user->fresh();
+};
+
+$onComplimentaryPlan = function (string $slug, array $overrides = []): User {
+    $user = User::factory()->create();
+    $user->account->forceFill([
+        'plan_id' => Plan::where('slug', $slug)->value('id'),
+        'complimentary_since' => now()->subDay(),
+        'complimentary_until' => null,
+        ...$overrides,
+    ])->save();
+
+    $workspace = Workspace::factory()->create([
+        'account_id' => $user->account_id,
+        'user_id' => $user->id,
+    ]);
+    $workspace->members()->attach($user->id, membershipPivot('admin'));
+    $user->update(['current_workspace_id' => $workspace->id]);
 
     return $user->fresh();
 };
@@ -398,4 +417,85 @@ test('a failed limit_hit dispatch still sends the user away from the create page
         ->get(route('app.workspaces.create'))
         ->assertRedirect(route('app.workspaces.index'))
         ->assertSessionHas('flash.error', __('workspaces.limit_reached'));
+});
+
+test('a complimentary owner on an unlimited plan can open create and store an additional workspace', function () use ($onComplimentaryPlan) {
+    $user = $onComplimentaryPlan('unlimited');
+
+    $this->actingAs($user)
+        ->postJson(route('app.workspaces.creation-check.store'))
+        ->assertOk()
+        ->assertExactJson(['allowed' => true]);
+
+    $this->actingAs($user)
+        ->get(route('app.workspaces.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('workspaces/Create', false));
+
+    $this->actingAs($user)
+        ->post(route('app.workspaces.store'), ['name' => 'Second'])
+        ->assertRedirect(route('app.posts.index'));
+
+    expect($user->account->workspaces()->count())->toBe(2);
+    $this->assertDatabaseHas('workspaces', [
+        'account_id' => $user->account_id,
+        'name' => 'Second',
+    ]);
+});
+
+test('a complimentary owner on a capped plan still hits the workspace limit', function () use ($onComplimentaryPlan) {
+    $user = $onComplimentaryPlan('capped');
+
+    $this->actingAs($user)
+        ->postJson(route('app.workspaces.creation-check.store'))
+        ->assertOk()
+        ->assertExactJson(['allowed' => false]);
+
+    $this->actingAs($user)
+        ->get(route('app.workspaces.create'))
+        ->assertRedirect(route('app.workspaces.index'))
+        ->assertSessionHas('flash.error', __('workspaces.limit_reached'));
+
+    $this->actingAs($user)
+        ->post(route('app.workspaces.store'), ['name' => 'Second'])
+        ->assertRedirect(route('app.workspaces.index'))
+        ->assertSessionHas('flash.error', __('workspaces.limit_reached'));
+
+    expect($user->account->workspaces()->count())->toBe(1);
+});
+
+test('a lapsed complimentary owner cannot open create or store an additional workspace', function () use ($onComplimentaryPlan) {
+    $user = $onComplimentaryPlan('unlimited', [
+        'complimentary_until' => now()->subMinute(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('app.workspaces.create'))
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('workspaces.subscription_required'));
+
+    $this->actingAs($user)
+        ->post(route('app.workspaces.store'), ['name' => 'Second'])
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('workspaces.subscription_required'));
+
+    expect($user->account->workspaces()->count())->toBe(1);
+});
+
+test('a suspended complimentary owner cannot open create or store an additional workspace', function () use ($onComplimentaryPlan) {
+    $user = $onComplimentaryPlan('unlimited', [
+        'suspended_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('app.workspaces.create'))
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('workspaces.subscription_required'));
+
+    $this->actingAs($user)
+        ->post(route('app.workspaces.store'), ['name' => 'Second'])
+        ->assertRedirect(route('app.billing.index'))
+        ->assertSessionHas('flash.error', __('workspaces.subscription_required'));
+
+    expect($user->account->workspaces()->count())->toBe(1);
 });
